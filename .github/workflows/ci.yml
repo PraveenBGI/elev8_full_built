@@ -1,0 +1,46 @@
+name: CI
+
+# Runs on GitHub's own runners, in the cloud. This is what "not run in local"
+# means in practice: nobody's laptop needs to run the full build/lint/test
+# cycle -- it happens here, on every push and PR, before anything reaches
+# main. Vercel does its own separate build on deploy (see vercel.json note
+# in 01-ARCHITECTURE-AND-PORTABILITY.md); this workflow is the fast, cheap
+# gate that catches problems before that.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Dummy values so the build step succeeds without real secrets in
+          # CI. Real values live only in Vercel's environment (see
+          # 04-BUILD-STANDARDS.md sec 4). This build step is a compile-time
+          # check, it never talks to a real database.
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder"
