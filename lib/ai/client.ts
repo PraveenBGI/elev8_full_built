@@ -23,7 +23,7 @@ const client = new Anthropic({
 });
 
 export const DEFAULT_MODEL =
-  process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-5";
+  process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
 
 type CallClaudeArgs = Omit<
   Anthropic.MessageCreateParamsNonStreaming,
