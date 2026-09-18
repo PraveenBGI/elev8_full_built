@@ -53,10 +53,23 @@ export async function GET() {
       envCheck,
     });
   } catch (err) {
+    // Supabase/Postgrest errors are plain objects, not Error instances, so
+    // `err.message` / `String(err)` alone silently produced "[object Object]".
+    // Pull every field that's actually useful for diagnosing a real failure.
+    const details =
+      err && typeof err === "object"
+        ? {
+            message: "message" in err ? String(err.message) : undefined,
+            code: "code" in err ? String(err.code) : undefined,
+            details: "details" in err ? String(err.details) : undefined,
+            hint: "hint" in err ? String(err.hint) : undefined,
+          }
+        : { message: String(err) };
+
     return NextResponse.json(
       {
         status: "connection_failed",
-        error: err instanceof Error ? err.message : String(err),
+        error: details,
         envCheck,
       },
       { status: 500 },
