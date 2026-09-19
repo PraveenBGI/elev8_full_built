@@ -1,17 +1,29 @@
 /**
  * lib/db/client.ts
  *
- * THE ONLY FILE THAT KNOWS THIS DATABASE IS SUPABASE.
+ * THE ONLY FILE THAT KNOWS THIS DATABASE IS SUPABASE, FOR SERVER-SIDE
+ * ACCESS. Every other server file imports `getDb()` / `getServiceDb()`
+ * from here, never `@supabase/supabase-js` directly. When this platform
+ * moves to plain AWS RDS Postgres, this is the only file that changes
+ * (swap the client for `pg`/`postgres.js` pointed at RDS, keep the same
+ * exported function shapes).
  *
- * Every other file in the app imports `getDb()` / `getServiceDb()` from here,
- * never `@supabase/supabase-js` directly. When this platform moves to plain
- * AWS RDS Postgres, this is the only file that changes (swap the client for
- * `pg`/`postgres.js` pointed at RDS, keep the same exported function shapes).
+ * SERVER-ONLY, enforced by the `server-only` import below, not just by
+ * convention: this file imports `next/headers`, which throws a build
+ * error if ever pulled into a Client Component's bundle. This is a real
+ * bug that shipped once already -- app/login/page.tsx (a Client
+ * Component) originally imported getBrowserDb() from this same file, and
+ * Next.js correctly refused to build because the whole module, including
+ * its server-only import, gets pulled into the client bundle regardless
+ * of which single export is actually used. Browser-safe access now lives
+ * in its own file, lib/db/browser-client.ts, specifically so this can't
+ * happen again.
  *
  * See 01-ARCHITECTURE-AND-PORTABILITY.md §3 and §7.
  */
 
-import { createBrowserClient, createServerClient } from "@supabase/ssr";
+import "server-only";
+import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
@@ -49,7 +61,7 @@ export async function getDb() {
             );
           } catch {
             // Called from a Server Component that can't set cookies — safe to
-            // ignore if you have middleware refreshing the session.
+            // ignore now that proxy.ts refreshes the session on every request.
           }
         },
       },
@@ -58,9 +70,11 @@ export async function getDb() {
 }
 
 /**
- * Service-role client. BYPASSES ROW LEVEL SECURITY. Server-only (never import
- * this in a Client Component). Use only for trusted background jobs
- * (cron, webhooks, migrations/seeding) — never to serve a user request.
+ * Service-role client. BYPASSES ROW LEVEL SECURITY. Server-only (enforced
+ * above at the module level, not just by the runtime check below — the
+ * runtime check stays too, as defense in depth). Use only for trusted
+ * background jobs (cron, webhooks, migrations/seeding) — never to serve a
+ * user request.
  */
 export function getServiceDb() {
   assertSupabaseProvider();
@@ -71,17 +85,5 @@ export function getServiceDb() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } },
-  );
-}
-
-/**
- * Browser client, for the rare case a Client Component needs to talk to the
- * database directly (e.g. a realtime subscription). Still goes through RLS.
- */
-export function getBrowserDb() {
-  assertSupabaseProvider();
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 }

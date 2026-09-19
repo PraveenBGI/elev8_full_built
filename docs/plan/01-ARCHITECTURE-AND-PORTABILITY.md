@@ -25,7 +25,8 @@ function:
 ```
 lib/
   db/
-    client.ts        <- the only file that knows it's Supabase's Postgres client
+    client.ts        <- server-only Supabase client (getDb, getServiceDb); imports next/headers, so hardened with the `server-only` package -- never importable from a Client Component
+    browser-client.ts <- the only lib/db file a Client Component may import (getBrowserDb) -- split out after a real build failure when a Client Component pulled in client.ts and its next/headers import along with it
     schema/           <- generated types from the DB, used everywhere else
   auth/
     adapter.ts        <- getUser(), requireAuth(), signOut() etc.
@@ -41,7 +42,7 @@ lib/
 ```
 
 **Rule**: if you ever write `import { createClient } from '@supabase/supabase-js'`
-outside of `lib/db/client.ts`, `lib/auth/adapter.ts`, or `lib/storage/adapter.ts`,
+outside of `lib/db/client.ts`, `lib/db/browser-client.ts`, `lib/auth/adapter.ts`, or `lib/storage/adapter.ts`,
 that's a mistake. Everything else imports from those three files.
 
 ## 4. Migration discipline
