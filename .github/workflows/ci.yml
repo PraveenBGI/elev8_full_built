@@ -44,3 +44,48 @@ jobs:
           # check, it never talks to a real database.
           NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder"
+
+  # Runs every supabase/migrations/*.sql file against a real, throwaway
+  # Postgres (a GitHub Actions "service container" -- no Docker-in-Docker,
+  # no Supabase CLI needed), plus tests/db/mock_supabase_platform.sql to
+  # stand in for what the real Supabase platform provides. Then runs every
+  # tests/db/*.test.sql file, which RAISE EXCEPTION (nonzero exit) on any
+  # failed assertion. This is what actually catches an RLS policy regression
+  # before it reaches production -- see 04-BUILD-STANDARDS.md sec 2 on
+  # "every migration that adds a table with tenant-scoped data" needing to
+  # be tested, not just written.
+  db-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply platform mock, then every migration in order
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -f tests/db/mock_supabase_platform.sql
+          for f in supabase/migrations/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run db integration tests
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for f in tests/db/*.test.sql; do
+            echo "Running $f"
+            psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f "$f"
+          done
