@@ -1,7 +1,7 @@
 # Progress Tracker
 **Update this file at the end of every session. Read it first, every session, right after `00-MASTER-PLAN.md`.**
 
-Last updated: 2026-09-19 (Phase 0.5 schema spine complete, CI green end to end)
+Last updated: 2026-09-19 (Phase 0.5 approval workflow enforced as a real state machine, CI green)
 
 ## Status legend
 Not started · In progress · Blocked · Done
@@ -11,7 +11,7 @@ Not started · In progress · Blocked · Done
 | Phase | Module | Status | Notes / decisions locked | Open questions |
 |---|---|---|---|---|
 | 0 | Foundation (repo, CI, adapters skeleton) | **Done** | Live at `elev8-full-built.vercel.app`. `/api/health` confirms `"status": "connected"` against a real Supabase project (ref `trnzlhmhknrltqwmtuvs`). Migration applied, RLS proven end to end, CI green, adapter layer in place. 3 real bugs found and fixed during first deploy: `@types/node` peer conflict with vitest, wrong Claude model string (`claude-sonnet-4-5` → `claude-sonnet-5`), `.gitignore` accidentally excluding `.env.example`, and a Supabase-error-serialization bug in `/api/health` (`[object Object]` → readable errors). All fixed, committed, and verified. | None. |
-| 0.5 | Country/State Config Engine | In progress | **Schema, RBAC, and resolver built and verified** (migrations, RLS, `resolve_pillar_config()`, 8 automated role-switching tests, all passing in a permanent CI job). Two real corrections found reading the actual mockups: delegation is per-state not per-pillar (one switch covers all 8 pillars), and an approval workflow + 6 config templates exist and are now schema. **Not yet built: any UI screens** (Country Identity, Master Data, State Cluster management, or the 8 pillar forms themselves). See `docs/modules/config-engine/README.md` for full detail. | Who authors `config_templates` (BGI-only, or can a Country Admin create one)? Should a Country Admin ever get write access to override a delegated state's config, or is the boundary meant to be absolute? |
+| 0.5 | Country/State Config Engine | In progress | **Schema, RBAC, resolver, AND the approval workflow are now a real enforced state machine** (not just status columns anyone with table access could write). Narrow SECURITY DEFINER transition functions are the only way `approval_status` ever changes; a completeness gate blocks submission until all 8 pillars are ready; an auto-revert-to-draft trigger fires on any post-publish edit. `country_saved_configs` added (Country Admin's own private presets, distinct from BGI's `config_templates`). Two real bugs found and fixed by this module's own test suite before reaching any real database — see `docs/modules/config-engine/README.md`. 18 automated assertions across 2 test files, all passing in CI. **Not yet built: any UI screens.** | Who reviews/approves a *country's* own submission — no platform-admin role exists yet, so that path is currently service-role-only. |
 | 1 | Master Data | Not started | — | — |
 | 2 | Identity, Auth & Registration | Blocked | — | Decisions #1–#4 in `00-MASTER-PLAN.md` §4 unresolved |
 | 3 | Company Profile, Supplier/Investor Subscription | Not started | — | — |
@@ -58,6 +58,7 @@ Not started · In progress · Blocked · Done
 ## Phase 0.5 -- fully closed out
 
 Both the schema (this session) and CI itself (previously silently broken, now fixed and green) are done. Remaining before Phase 0.5 is 100% complete: the actual UI screens (Country Identity, Master Data, State Cluster, and the 8 pillar forms). Next session picks up there -- Country Identity first, since it has no pillar dependency and proves the form -> adapter -> RLS chain for this module, the same role `/api/health` played for Phase 0.
+- 2026-09-19 (same day, later) -- Made the approval workflow a genuinely enforced state machine instead of plain status columns: submit/approve/publish/request-clarification as narrow SECURITY DEFINER functions, each with its own authorization check, so nobody (not even country_admin on states, which had unrestricted column write before this) can move approval_status except through an audited, authorized transition. Added a completeness gate (all 8 pillars must be ready_for_review before submission) and an auto-revert-to-draft trigger on post-approval edits. Added country_saved_configs for private per-country presets. Two real bugs caught by the module's own verification before reaching any real database: (1) Postgres grants EXECUTE on new functions to PUBLIC by default, so 'just don't grant it' did not actually restrict the country-level approve/publish functions -- needed explicit REVOKE from PUBLIC, authenticated, AND anon; (2) the test mock itself was missing Supabase's real default grant letting authenticated/anon call auth.uid()/auth.jwt() directly, which is not an application bug, it's the mock lagging reality. 18 assertions across 2 test files, all passing on a fresh clone exactly as CI runs it.
 
 ## How to resume in a new chat
 

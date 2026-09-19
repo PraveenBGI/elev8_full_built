@@ -136,16 +136,44 @@ boundary breaks the build automatically.
 
 ## Open questions
 
-1. **Who authors `config_templates`?** Currently: nobody through the app —
-   they're seeded directly, and RLS only allows admins to *read* them, not
-   write. Confirm this should stay BGI-curated-only rather than something a
-   Country Admin can create.
-2. **Same Supabase project as legacy GBF, or a fresh one?** (Carried over
-   from Phase 0's open question — still unresolved.)
+1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.
+2. **Same Supabase project as legacy GBF, or a fresh one?** (Carried over from Phase 0's open question — still unresolved.)
 3. **Does a Country Admin need write access to override a delegated
    state's config in an emergency**, or is the boundary meant to be
-   absolute (Country Admin can see, never touch, a delegated state's
-   pack)? Current RLS enforces the absolute version. Flag if that's wrong.
+   absolute? **Resolved this session**: absolute. A Country Admin can see a delegated state's config (rollup/audit) but never write it. Two levers instead: `request_state_clarification()` (kicks it back for the State Admin to fix, with required notes) and `set_state_config_control()` (revoke delegation entirely, falls back to the country's config via the resolver, without touching or deleting anything the State Admin authored).
+4. **Who reviews and approves a *country's* own submission?** New question, surfaced while building the approval workflow. There's no platform-wide admin role in this schema yet, so `approve_country_config()`/`publish_country_config()`/`request_country_clarification()` exist (for schema completeness and audit-trail symmetry with the state-level flow) but are only reachable via the Supabase service role — no app-facing role can call them. `submit_country_config_for_approval()` works normally (a Country Admin can submit their own country). This needs a real decision: introduce a platform admin role, or is a country's own submission auto-approved once submitted, or does this stay an ops-only manual action indefinitely?
+
+## Two real bugs caught by this module's own verification (not by inspection)
+
+Both were found because every change here is proven against a real, fresh Postgres before being called done — worth recording exactly how, since it's the argument for keeping doing this.
+
+**1. `REVOKE ... FROM PUBLIC` was not enough to make a function
+service-role-only.** Postgres grants `EXECUTE` on every newly created
+function to `PUBLIC` by default (tables default to *no* access; functions
+default to *open* access — an easy assumption to get backwards). The first
+version of `approve_country_config()` etc. simply omitted a `GRANT` to
+`authenticated`, assuming that meant "nobody but service_role can call
+this." Test 9 proved that assumption wrong: an ordinary `country_admin`
+session reached the function body successfully. Worse, the first fix
+(`REVOKE ... FROM PUBLIC`) *also* didn't fully close it, because this
+project's own default-privileges setup (`ALTER DEFAULT PRIVILEGES ... GRANT
+EXECUTE ON FUNCTIONS TO authenticated`, needed so every *other* function
+works without a manual grant) separately grants `authenticated` its own
+explicit privilege, independent of `PUBLIC`. The real fix revokes from
+`PUBLIC`, `authenticated`, and `anon` explicitly. This is now called out in
+the migration file itself so it isn't silently reintroduced by a future
+function that follows the same "just don't grant it" assumption.
+
+**2. The test mock was missing a real Supabase default**, and it wasn't
+the application code that was wrong. `tests/db/mock_supabase_platform.sql`
+never granted `authenticated`/`anon` direct `EXECUTE` on `auth.uid()`/
+`auth.jwt()`, so a test using the completely standard, documented Supabase
+pattern `created_by: auth.uid()` in a plain insert failed locally — while
+that exact pattern works fine against real Supabase, which grants this by
+default. Fixed the mock, not the pattern. Worth remembering going forward:
+when a test fails, check whether the *mock* is incomplete before assuming
+the application code is wrong — the mock is a hand-maintained approximation
+of a platform neither of us controls the source of.
 
 ## Legacy reference
 

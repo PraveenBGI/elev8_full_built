@@ -29,6 +29,16 @@ $$;
 
 grant usage on schema public to authenticated, anon;
 
+-- Real Supabase explicitly grants authenticated/anon direct EXECUTE on
+-- auth.uid() and auth.jwt() -- this is the documented, supported pattern
+-- for things like `created_by: auth.uid()` in an ordinary insert, not
+-- just inside SECURITY DEFINER functions. Missing this in the mock caused
+-- a test to fail here that would have passed fine against real Supabase --
+-- i.e. the mock was wrong, not the application code.
+grant usage on schema auth to authenticated, anon;
+grant execute on function auth.uid() to authenticated, anon;
+grant execute on function auth.jwt() to authenticated, anon;
+
 -- Real Supabase sets default privileges so every NEW table automatically
 -- grants authenticated/anon base access (RLS is the real gate, not table
 -- grants) -- this must be ALTER DEFAULT PRIVILEGES, not a one-time GRANT,
