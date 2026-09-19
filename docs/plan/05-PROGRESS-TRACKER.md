@@ -1,7 +1,7 @@
 # Progress Tracker
 **Update this file at the end of every session. Read it first, every session, right after `00-MASTER-PLAN.md`.**
 
-Last updated: 2026-09-19 (Phase 0.5 approval workflow enforced as a real state machine, CI green)
+Last updated: 2026-09-19 (Phase 0.5 approval workflow enforced, CI green, confirmed live)
 
 ## Status legend
 Not started · In progress · Blocked · Done
@@ -11,7 +11,7 @@ Not started · In progress · Blocked · Done
 | Phase | Module | Status | Notes / decisions locked | Open questions |
 |---|---|---|---|---|
 | 0 | Foundation (repo, CI, adapters skeleton) | **Done** | Live at `elev8-full-built.vercel.app`. `/api/health` confirms `"status": "connected"` against a real Supabase project (ref `trnzlhmhknrltqwmtuvs`). Migration applied, RLS proven end to end, CI green, adapter layer in place. 3 real bugs found and fixed during first deploy: `@types/node` peer conflict with vitest, wrong Claude model string (`claude-sonnet-4-5` → `claude-sonnet-5`), `.gitignore` accidentally excluding `.env.example`, and a Supabase-error-serialization bug in `/api/health` (`[object Object]` → readable errors). All fixed, committed, and verified. | None. |
-| 0.5 | Country/State Config Engine | In progress | **Schema, RBAC, resolver, AND the approval workflow are now a real enforced state machine** (not just status columns anyone with table access could write). Narrow SECURITY DEFINER transition functions are the only way `approval_status` ever changes; a completeness gate blocks submission until all 8 pillars are ready; an auto-revert-to-draft trigger fires on any post-publish edit. `country_saved_configs` added (Country Admin's own private presets, distinct from BGI's `config_templates`). Two real bugs found and fixed by this module's own test suite before reaching any real database — see `docs/modules/config-engine/README.md`. 18 automated assertions across 2 test files, all passing in CI. **Not yet built: any UI screens.** | Who reviews/approves a *country's* own submission — no platform-admin role exists yet, so that path is currently service-role-only. |
+| 0.5 | Country/State Config Engine | In progress | **Schema, RBAC, resolver, AND the approval workflow are now a real enforced state machine** (not just status columns anyone with table access could write). Narrow SECURITY DEFINER transition functions are the only way `approval_status` ever changes; a completeness gate blocks submission until all 8 pillars are ready; an auto-revert-to-draft trigger fires on any post-publish edit. `country_saved_configs` added (Country Admin's own private presets, distinct from BGI's `config_templates`). Two real bugs found and fixed by this module's own test suite before reaching any real database. 18 automated assertions across 2 test files, all passing in CI. **Confirmed live**: migration applied to the real Supabase project, both CI jobs green on GitHub Actions. **Not yet built: any UI screens.** | Who reviews/approves a *country's* own submission — no platform-admin role exists yet, so that path is currently service-role-only. Needs a decision before or during Phase 1. |
 | 1 | Master Data | Not started | — | — |
 | 2 | Identity, Auth & Registration | Blocked | — | Decisions #1–#4 in `00-MASTER-PLAN.md` §4 unresolved |
 | 3 | Company Profile, Supplier/Investor Subscription | Not started | — | — |
