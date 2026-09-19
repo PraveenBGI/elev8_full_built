@@ -1,7 +1,8 @@
-# Phase 0.5 — Country/State Configuration Engine (schema spine)
+# Phase 0.5 — Country/State Configuration Engine
 
-**Status: schema, RBAC, and resolver built and verified. Pillar-by-pillar UI
-screens are the next session's work, not yet started.**
+**Status: schema, RBAC, resolver, and approval workflow built and
+verified. First UI slice (Country Identity) built this session. Remaining
+pillar/state/master-data screens are not started.**
 
 ## What this session built
 
@@ -133,6 +134,38 @@ container, applies the platform mock and every migration, then runs every
 `tests/db/*.test.sql` file, which fail the build (nonzero exit via `RAISE
 EXCEPTION`) on any wrong result. Any future migration that weakens this
 boundary breaks the build automatically.
+
+## Country Identity UI (this session)
+
+The first pillar-free screen, at `/admin/config-engine/country`. Proves
+form → Server Action → adapter → RLS end to end for this module, the same
+role `/api/health` played for Phase 0.
+
+- `lib/modules/config-engine/schemas.ts` — Zod schema is the real shape
+  enforcement, since `countries`' columns are mostly permissive
+  text/jsonb by design (see the migration's own comments on why).
+- `lib/modules/config-engine/adapter.ts` — the only file querying
+  `countries`/`config_admin_roles` for this module. `getMyAdminScope()`
+  resolves the signed-in user's role from the database, never from a
+  client-supplied value.
+- The Server Action re-checks the caller's role itself rather than
+  trusting the RLS policy alone to produce a clean error message — RLS is
+  still what actually enforces the boundary; this is user-facing
+  messaging, not a substitute for it.
+- Covers Country Identity's scalar fields only. `corporate_classification`,
+  `strategic_control`, `thrust_sectors`, and `master_data` are real jsonb
+  columns already in the schema but have no UI or validation schema yet —
+  that's the next slice.
+
+**Verification ceiling in this sandbox:** the schema/adapter logic has
+real unit tests (`tests/config-engine-schemas.test.ts`, 8 tests) and the
+full app builds clean on a fresh clone (lint, typecheck, test, build all
+verified per the discipline established after the LayoutProps incident).
+What this sandbox cannot verify: the actual Server Action → Supabase round
+trip with a real signed-in Country Admin session, since that needs a live
+Supabase project, not the local Postgres mock used for the SQL-level
+tests. That last mile is confirmed once deployed — the same boundary
+Phase 0's `/api/health` had before real env vars were set.
 
 ## Open questions
 
