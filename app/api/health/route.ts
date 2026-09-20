@@ -6,7 +6,7 @@
  * in Vercel) that it can round-trip a query through lib/db/client.ts and
  * read the seed row from the foundation_healthcheck table.
  *
- * Never used for anything beyond this — real modules get their own routes.
+ * Never used for anything beyond this. Real modules get their own routes.
  */
 
 import { NextResponse } from "next/server";

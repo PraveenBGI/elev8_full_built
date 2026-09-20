@@ -25,8 +25,8 @@ export default async function StagePlaceholderPage({
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-semibold" style={{ color: "var(--elev8-navy)" }}>
-        {stage.icon} {stage.label}
+      <h1 className="mb-1 text-xl font-semibold" style={{ color: "var(--elev8-ink)" }}>
+        {stage.label}
       </h1>
       <p className="mb-6 text-sm" style={{ color: "var(--elev8-g500)" }}>
         {stage.description}
@@ -35,9 +35,8 @@ export default async function StagePlaceholderPage({
         className="rounded-xl border p-6 text-sm"
         style={{ borderColor: "var(--elev8-g100)", background: "#fff", color: "var(--elev8-g500)" }}
       >
-        This stage isn&apos;t built yet. See{" "}
-        <code>05-PROGRESS-TRACKER.md</code> for build order — only Country
-        Identity exists so far.
+        This stage isn&apos;t built yet. See <code>05-PROGRESS-TRACKER.md</code> for
+        build order. Only Country Identity exists so far.
       </div>
     </div>
   );

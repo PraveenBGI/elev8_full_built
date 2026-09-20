@@ -46,7 +46,7 @@ export function SettingsGroup({
           ✓
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block text-[14px] font-medium text-[var(--elev8-navy)]">
+          <span className="block text-[14px] font-medium text-[var(--elev8-ink)]">
             {title}
           </span>
           {!open && (

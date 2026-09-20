@@ -1,22 +1,29 @@
 @import "tailwindcss";
 
 /**
- * Design tokens extracted directly from elev8-country-admin-config_3.html
- * (the real Country Configuration mockup) -- exact hex values, not
- * approximated. See docs/modules/config-engine/README.md for how these
- * were pulled and where they're used.
+ * Design tokens updated to the REAL elev8 brand (public/elev8-logo.png),
+ * sampled directly from the logo's own pixels, not approximated:
+ *   primary blue   #004AA5  (matches the earlier mockup's blue exactly)
+ *   highlight blue #1285C8  (the lighter tone in the wordmark's gradient)
+ *   green accent   #00A651  (the "8" tab shape)
+ *   ink            #231F20  (the "FRAMEWORK" wordmark text)
+ *
+ * Per direct feedback: moderate weights throughout (500/600), never
+ * 700/800 outside a single deliberate emphasis point. No icons/emoji
+ * unless genuinely necessary -- plain, confident typography instead.
  */
 :root {
   --background: #ffffff;
   --foreground: #171717;
 
-  --elev8-navy: #0b1c2e;
   --elev8-blue: #004aa5;
+  --elev8-blue-light: #1285c8;
   --elev8-blue-dk: #003876;
-  --elev8-green: #00a867;
-  --elev8-green-dk: #00875a;
+  --elev8-green: #00a651;
+  --elev8-green-dk: #00874a;
   --elev8-orange: #f5a623;
   --elev8-red: #e5393b;
+  --elev8-ink: #231f20;
 
   --elev8-g50: #f7f9fb;
   --elev8-g100: #eef1f5;
@@ -27,8 +34,8 @@
 
   --elev8-radius-lg: 12px;
   --elev8-radius-md: 8px;
-  --elev8-shadow-sm: 0 1px 3px rgba(11, 28, 46, 0.08);
-  --elev8-shadow-md: 0 6px 24px rgba(11, 28, 46, 0.1);
+  --elev8-shadow-sm: 0 1px 3px rgba(35, 31, 32, 0.06);
+  --elev8-shadow-md: 0 6px 24px rgba(35, 31, 32, 0.08);
 }
 
 @theme inline {
@@ -47,6 +54,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
     sans-serif;
+  font-weight: 400;
 }

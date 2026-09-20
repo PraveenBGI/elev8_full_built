@@ -1,15 +1,16 @@
+import Image from "next/image";
+
 /**
  * app/admin/config-engine/Topbar.tsx
  *
- * Colors and layout ported from elev8-country-admin-config_3.html's
- * `.topbar` CSS exactly (navy background, 3px green bottom border, 58px
- * height). Deliberately DOES NOT include the mockup's Export JSON/Import
- * JSON/Reset/Save Draft/Review & Publish buttons -- those are the static
- * mockup's client-side-localStorage prototype affordances, and building
- * them here would mean shipping buttons that don't actually do anything
- * yet against this schema (Identity has no separate draft/live state,
- * and Review & Publish belongs to the Review stage once it exists). Adding
- * fake buttons to look more finished would be the wrong kind of progress.
+ * Revised to use the real brand: public/elev8-logo.png (the actual logo,
+ * not a text approximation of it), and a light chrome instead of the
+ * earlier invented dark navy bar -- the real logo is designed for a
+ * white/light background, so forcing it onto a dark navy strip fought
+ * the actual brand rather than using it. Colors and weights per direct
+ * feedback: no icons/emoji, moderate font weight (500/600, never
+ * 700/800), a single green accent border as the one deliberate color
+ * moment rather than a fully colored bar.
  */
 
 export function Topbar({
@@ -23,34 +24,36 @@ export function Topbar({
 }) {
   return (
     <div
-      className="flex h-[58px] shrink-0 items-center gap-4 px-5 text-white"
-      style={{
-        background: "var(--elev8-navy)",
-        borderBottom: "3px solid var(--elev8-green)",
-      }}
+      className="flex h-16 shrink-0 items-center gap-5 border-b bg-white px-6"
+      style={{ borderColor: "var(--elev8-green)", borderBottomWidth: 3 }}
     >
-      <div className="flex items-center gap-2 text-[17px] font-extrabold tracking-wide">
-        elev8<b style={{ color: "var(--elev8-green)" }}>8</b>
-      </div>
+      <Image src="/elev8-logo.png" alt="elev8" width={92} height={46} priority />
+
       <div
-        className="border-l pl-3.5 text-[10px] font-bold uppercase tracking-widest"
-        style={{ borderColor: "rgba(255,255,255,.18)", color: "var(--elev8-g400)" }}
+        className="border-l pl-4 text-[11px] font-medium tracking-wide"
+        style={{ borderColor: "var(--elev8-g200)", color: "var(--elev8-g500)" }}
       >
         Country Configuration
       </div>
+
       <div
-        className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold"
-        style={{ background: "rgba(255,255,255,.08)" }}
+        className="rounded-full px-3 py-1 text-[13px] font-medium"
+        style={{ background: "var(--elev8-g50)", color: "var(--elev8-ink)" }}
       >
-        <span aria-hidden>🌐</span>
-        <span>{countryName}</span>
+        {countryName}
       </div>
 
       <div className="flex-1" />
 
-      <div className="flex items-center gap-2 text-[11px] font-bold" style={{ color: "var(--elev8-g400)" }}>
+      <div
+        className="flex items-center gap-2 text-[12px] font-medium"
+        style={{ color: "var(--elev8-g500)" }}
+      >
         <span>{progressPercent}% configured</span>
-        <span className="inline-block h-1.5 w-24 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,.15)" }}>
+        <span
+          className="inline-block h-1.5 w-24 overflow-hidden rounded-full"
+          style={{ background: "var(--elev8-g100)" }}
+        >
           <span
             className="block h-full rounded-full"
             style={{ width: `${progressPercent}%`, background: "var(--elev8-green)" }}
@@ -61,16 +64,16 @@ export function Topbar({
       <form action="/api/auth/sign-out" method="post">
         <button
           type="submit"
-          className="rounded-lg border px-[13px] py-[7px] text-xs font-bold text-white"
-          style={{ background: "rgba(255,255,255,.1)", borderColor: "rgba(255,255,255,.16)" }}
+          className="rounded-md border px-3 py-1.5 text-[13px] font-medium"
+          style={{ borderColor: "var(--elev8-g200)", color: "var(--elev8-ink)" }}
         >
           Sign out
         </button>
       </form>
 
       <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-extrabold"
-        style={{ background: "var(--elev8-green)" }}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-medium text-white"
+        style={{ background: "var(--elev8-blue)" }}
       >
         {userInitial}
       </div>

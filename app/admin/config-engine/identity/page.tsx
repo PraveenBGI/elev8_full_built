@@ -30,7 +30,7 @@ export default async function CountryIdentityPage() {
     return (
       <p className="text-sm" style={{ color: "var(--elev8-g500)" }}>
         Country Identity is managed by your country&apos;s Country Admin.
-        You&apos;re a State Admin — state-level configuration screens are
+        You&apos;re a State Admin. State-level configuration screens are
         not built yet.
       </p>
     );

@@ -43,7 +43,7 @@ function rowToFormInput(row: CountryIdentityRow): CountryIdentityInput {
 }
 
 const inputClass =
-  "w-full rounded-md border border-[var(--elev8-g200)] bg-white px-3 py-2 text-[13px] text-[var(--elev8-navy)] outline-none transition-colors focus:border-[var(--elev8-blue)] focus:ring-2 focus:ring-[var(--elev8-blue)]/15";
+  "w-full rounded-md border border-[var(--elev8-g200)] bg-white px-3 py-2 text-[13px] text-[var(--elev8-ink)] outline-none transition-colors focus:border-[var(--elev8-blue)] focus:ring-2 focus:ring-[var(--elev8-blue)]/15";
 
 function Field({
   label,
@@ -133,11 +133,11 @@ export function CountryIdentityForm({ country }: { country: CountryIdentityRow }
 
   return (
     <div className="max-w-[640px]">
-      <h1 className="text-[22px] font-semibold text-[var(--elev8-navy)]">
+      <h1 className="text-[22px] font-semibold text-[var(--elev8-ink)]">
         Country Identity
       </h1>
       <p className="mt-1.5 mb-7 text-sm leading-relaxed text-[var(--elev8-g500)]">
-        The foundation every other pillar reads from — currency, tax year, and
+        The foundation every other pillar reads from: currency, tax year, and
         classification. Everything else in this platform inherits from what
         you set here.
       </p>
@@ -280,7 +280,7 @@ export function CountryIdentityForm({ country }: { country: CountryIdentityRow }
                   onChange={(e) => set("workingWeek", e.target.value)}
                 />
               </Field>
-              <label className="flex items-center gap-2 pt-6 text-[13px] text-[var(--elev8-navy)]">
+              <label className="flex items-center gap-2 pt-6 text-[13px] text-[var(--elev8-ink)]">
                 <input
                   type="checkbox"
                   checked={form.wtoMember}

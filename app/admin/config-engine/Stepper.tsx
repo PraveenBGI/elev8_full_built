@@ -3,11 +3,11 @@
 /**
  * app/admin/config-engine/Stepper.tsx
  *
- * Visual pattern (colors, spacing, badge states) ported directly from
- * elev8-country-admin-config_3.html's `.stepper`/`.step-item`/`.step-badge`
- * CSS and its buildStepper() logic -- not redesigned. Real routing via
- * next/link instead of the mockup's client-side page-swap, since this is
- * Next.js App Router, not a single static HTML file.
+ * Revised per direct feedback: no icons/emoji (the mockup used an emoji
+ * per stage; a numbered circle already carries that signal without
+ * looking like a chat app), and moderate font weight throughout (500/600,
+ * never 700/800 -- the earlier version's font-extrabold everywhere read
+ * as "bold ugly," not premium).
  */
 
 import Link from "next/link";
@@ -25,8 +25,8 @@ export function Stepper({
 
   return (
     <nav
-      className="w-[290px] shrink-0 overflow-y-auto border-r py-4"
-      style={{ borderColor: "var(--elev8-g100)", background: "var(--white, #fff)" }}
+      className="w-[280px] shrink-0 overflow-y-auto border-r bg-white py-3"
+      style={{ borderColor: "var(--elev8-g100)" }}
     >
       {stages.map((s) => {
         const href = `/admin/config-engine/${s.id}`;
@@ -37,13 +37,11 @@ export function Stepper({
           <Link
             key={s.id}
             href={href}
-            className="flex items-start gap-[11px] px-5 py-[10px] no-underline"
-            style={{
-              background: isActive ? "#EAF6EF" : undefined,
-            }}
+            className="flex items-start gap-3 px-5 py-2.5 no-underline"
+            style={{ background: isActive ? "var(--elev8-g50)" : undefined }}
           >
             <div
-              className="mt-px flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-xs font-extrabold"
+              className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium"
               style={{
                 background: status === "done" ? "var(--elev8-green)" : "var(--elev8-g100)",
                 color: status === "done" ? "#fff" : "var(--elev8-g500)",
@@ -53,13 +51,10 @@ export function Stepper({
             </div>
             <div className="min-w-0 flex-1">
               <div
-                className="text-[13px] font-bold leading-tight"
-                style={{ color: isActive ? "var(--elev8-green-dk)" : "var(--elev8-navy)" }}
+                className="text-[13px] font-medium leading-tight"
+                style={{ color: isActive ? "var(--elev8-blue)" : "var(--elev8-ink)" }}
               >
-                {s.icon} {s.label}
-              </div>
-              <div className="mt-0.5 text-[11px]" style={{ color: "var(--elev8-g500)" }}>
-                {s.description}
+                {s.label}
               </div>
               {s.id !== "welcome" && s.id !== "review" && (
                 <StatusBadge status={status} />
@@ -74,14 +69,14 @@ export function Stepper({
 
 function StatusBadge({ status }: { status: StageStatus }) {
   const styles: Record<StageStatus, { bg: string; color: string; label: string }> = {
-    done: { bg: "#E6F7EE", color: "var(--elev8-green-dk)", label: "Complete" },
+    done: { bg: "#E6F5EC", color: "var(--elev8-green-dk)", label: "Complete" },
     in_progress: { bg: "#FFF6E5", color: "var(--elev8-orange)", label: "In progress" },
     pending: { bg: "var(--elev8-g100)", color: "var(--elev8-g500)", label: "Not started" },
   };
   const s = styles[status];
   return (
     <span
-      className="mt-[5px] inline-block rounded-[10px] px-[7px] py-[2px] text-[9.5px] font-extrabold uppercase tracking-wide"
+      className="mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium"
       style={{ background: s.bg, color: s.color }}
     >
       {s.label}

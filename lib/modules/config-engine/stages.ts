@@ -2,9 +2,11 @@
  * lib/modules/config-engine/stages.ts
  *
  * Ported directly from elev8-country-admin-config_3.html's own `STAGES`
- * constant -- same ids, same order, same icons/labels/descriptions,
- * same mandatory flags. This is the single source of truth for the
- * stepper navigation; don't hand-edit a copy of this list somewhere else.
+ * constant -- same ids, same order, same labels/descriptions, same
+ * mandatory flags. Icons dropped per direct feedback: no icons/emoji
+ * unless genuinely necessary, and a numbered stepper item doesn't need
+ * one. This is the single source of truth for the stepper navigation;
+ * don't hand-edit a copy of this list somewhere else.
  *
  * Only `identity` has a real page right now. Every other stage renders
  * through the placeholder route (app/admin/config-engine/[stage]/page.tsx)
@@ -15,7 +17,6 @@
 export type Stage = {
   id: string;
   num: number;
-  icon: string;
   label: string;
   shortLabel: string;
   description: string;
@@ -28,7 +29,6 @@ export const STAGES: Stage[] = [
   {
     id: "welcome",
     num: 0,
-    icon: "👋",
     label: "Welcome",
     shortLabel: "Welcome",
     description: "Before you begin",
@@ -38,7 +38,6 @@ export const STAGES: Stage[] = [
   {
     id: "identity",
     num: 1,
-    icon: "🌐",
     label: "Country Identity",
     shortLabel: "Identity",
     description:
@@ -49,7 +48,6 @@ export const STAGES: Stage[] = [
   {
     id: "masterdata",
     num: 2,
-    icon: "🗂️",
     label: "Country Master Data",
     shortLabel: "Master Data",
     description:
@@ -60,7 +58,6 @@ export const STAGES: Stage[] = [
   {
     id: "statecluster",
     num: 3,
-    icon: "📍",
     label: "State Cluster",
     shortLabel: "State Cluster",
     description:
@@ -71,18 +68,16 @@ export const STAGES: Stage[] = [
   {
     id: "corridors",
     num: 4,
-    icon: "🛤️",
     label: "Corridor Configuration",
     shortLabel: "Corridors",
     description:
-      "Shared national trade corridor registry — origin, destination, gateway, mode, HS coverage & risk — used by both Import and Export",
+      "Shared national trade corridor registry: origin, destination, gateway, mode, HS coverage, and risk, used by both Import and Export",
     mandatory: false,
     isPillar: false,
   },
   {
     id: "governance",
     num: 5,
-    icon: "🏛️",
     label: "Governance",
     shortLabel: "Governance",
     description: "Authorities, stakeholders, escalation & data governance",
@@ -92,7 +87,6 @@ export const STAGES: Stage[] = [
   {
     id: "procurement",
     num: 6,
-    icon: "🛒",
     label: "Procurement",
     shortLabel: "Procurement",
     description: "Tender types, thresholds, evaluation weighting & supplier KPIs",
@@ -102,7 +96,6 @@ export const STAGES: Stage[] = [
   {
     id: "b2b",
     num: 7,
-    icon: "🤝",
     label: "B2B",
     shortLabel: "B2B",
     description: "Business identities, categories & the national matching engine",
@@ -112,7 +105,6 @@ export const STAGES: Stage[] = [
   {
     id: "import",
     num: 8,
-    icon: "📥",
     label: "Import",
     shortLabel: "Import",
     description: "Import categories, duties & localization intelligence",
@@ -122,7 +114,6 @@ export const STAGES: Stage[] = [
   {
     id: "export",
     num: 9,
-    icon: "📤",
     label: "Export",
     shortLabel: "Export",
     description: "Priority sectors, target markets, incentives & export readiness",
@@ -132,7 +123,6 @@ export const STAGES: Stage[] = [
   {
     id: "investment",
     num: 10,
-    icon: "📈",
     label: "Investment",
     shortLabel: "Investment",
     description: "Priority sectors, incentives, SEZs & investor matching",
@@ -142,7 +132,6 @@ export const STAGES: Stage[] = [
   {
     id: "sustainability",
     num: 11,
-    icon: "🌱",
     label: "Sustainability",
     shortLabel: "Sustainability",
     description: "National ESG / GHG framework & targets",
@@ -152,7 +141,6 @@ export const STAGES: Stage[] = [
   {
     id: "icv",
     num: 12,
-    icon: "🏴",
     label: "ICV / Local Content",
     shortLabel: "ICV",
     description:
@@ -163,7 +151,6 @@ export const STAGES: Stage[] = [
   {
     id: "review",
     num: 13,
-    icon: "🏁",
     label: "Review & Validation",
     shortLabel: "Review",
     description: "Completion, warnings & publish",
