@@ -318,6 +318,38 @@ Registration Types, Units of Measurement, Economic & Industrial Zones,
 Ports/Airports & Customs Points. 29 total database assertions passing
 across 3 test files.
 
+## State Cluster: states list, delegation toggle (this session)
+
+`/admin/config-engine/statecluster` — add/remove states, toggle
+active and thrust-cluster flags, and delegate/revoke a state's
+`config_control`. The delegation toggle is wired directly to
+`set_state_config_control()`, the RPC already built in the
+approval-workflow migration, not a new authorization path — this is the
+first real UI caller of that function.
+
+Added `is_active` to `states` (was missing since the foundation
+migration — the mockup's own note: "Deactivate a state to keep it
+configured but hidden from public matching").
+
+**Deliberately not built**: State Partner (single, with logo upload) and
+Support Partners per state. Both need a storage-upload UI pattern that
+doesn't exist anywhere in the app yet (Phase 0's `lib/storage/adapter.ts`
+exists, but no component has ever used it) — worth building as its own
+reusable piece before the first upload feature, not bolted on here.
+
+**State names are free text, not the mockup's fixed dropdown.** The
+mockup restricts state names to `OMAN_GOVERNORATES`, a fixed list
+specific to that one demo country. Real countries have entirely
+different state/province names, and there's no geo-hierarchy master data
+yet (a Phase 1 concern) to drive a real dropdown from — flagged here as
+an open item, not silently decided by hardcoding one country's list as
+if it were universal.
+
+Verified against real Postgres before any UI was written:
+`tests/db/state-cluster.test.sql` (4 assertions, including exercising
+`set_state_config_control()` against a real state added this session).
+33 total database assertions now pass across all four test files.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.
@@ -327,6 +359,8 @@ across 3 test files.
    absolute? **Resolved this session**: absolute. A Country Admin can see a delegated state's config (rollup/audit) but never write it. Two levers instead: `request_state_clarification()` (kicks it back for the State Admin to fix, with required notes) and `set_state_config_control()` (revoke delegation entirely, falls back to the country's config via the resolver, without touching or deleting anything the State Admin authored).
 4. **Who reviews and approves a *country's* own submission?** New question, surfaced while building the approval workflow. There's no platform-wide admin role in this schema yet, so `approve_country_config()`/`publish_country_config()`/`request_country_clarification()` exist (for schema completeness and audit-trail symmetry with the state-level flow) but are only reachable via the Supabase service role, no app-facing role can call them. `submit_country_config_for_approval()` works normally (a Country Admin can submit their own country). This needs a real decision: introduce a platform admin role, or is a country's own submission auto-approved once submitted, or does this stay an ops-only manual action indefinitely?
 5. **`country_hs_codes` reconciliation with Phase 1.** This table currently holds each country's own ad hoc HS code entries (code, description, category as plain text), not foreign-keyed to any global master, because Phase 1 (Master Data, the platform-wide reference-data phase) doesn't exist yet. Once it does, decide whether `country_hs_codes` becomes a join table referencing a real global HS code master, or stays independent per country. Flagging now so it isn't forgotten once Phase 1 starts.
+6. **State name source.** Currently free text. Once Phase 1's geo-hierarchy master data exists, decide whether State Cluster's "add a state" dropdown should source from it (matching the mockup's own `OMAN_GOVERNORATES`-per-country pattern) rather than staying free text indefinitely.
+7. **File upload UI pattern.** State Partner and Support Partners (this session's "not built yet") both need logo/file uploads. `lib/storage/adapter.ts` exists from Phase 0 but has never had a UI built against it. Worth designing as a reusable component once, since Company Profile, Investment listings, and other future modules will need the same pattern.
 
 ## Two real bugs caught by this module's own verification (not by inspection)
 

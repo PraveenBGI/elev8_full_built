@@ -207,6 +207,26 @@ export const PortAirportSchema = z.object({
 export type PortAirportInput = z.infer<typeof PortAirportSchema>;
 
 /**
+ * State Cluster -- adding/naming a state. The mockup restricts the name
+ * dropdown to a fixed OMAN_GOVERNORATES list, which is specific to that
+ * one demo country. Real countries have different state/province names
+ * entirely, and there's no global geo-hierarchy master yet (that's a
+ * Phase 1 concern), so this is free text for now, not a fixed dropdown --
+ * flagged in docs/modules/config-engine/README.md so it isn't mistaken
+ * for a finished decision. is_active and is_thrust_cluster are plain
+ * booleans; config_control is deliberately NOT settable through this
+ * schema -- it only ever changes through set_state_config_control(),
+ * the existing approval-workflow RPC, never a plain column write, so the
+ * audit trail (config_approval_events) is never bypassed.
+ */
+export const StateSchema = z.object({
+  name: z.string().trim().min(1, "State name is required"),
+  isThrustCluster: z.boolean(),
+});
+
+export type StateInput = z.infer<typeof StateSchema>;
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --

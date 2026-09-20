@@ -20,6 +20,7 @@ import {
   HsCodePackSchema,
   ZoneSchema,
   PortAirportSchema,
+  StateSchema,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
@@ -27,6 +28,7 @@ import {
   type HsCodePackInput,
   type ZoneInput,
   type PortAirportInput,
+  type StateInput,
   type CountryIdentityInput,
 } from "./schemas";
 
@@ -410,6 +412,100 @@ export async function addCountryPortAirport(
 export async function deleteCountryPortAirport(portId: string): Promise<void> {
   const db = await getDb();
   const { error } = await db.from("country_ports_airports").delete().eq("id", portId);
+  if (error) throw error;
+}
+
+/**
+ * State Cluster.
+ */
+export type StateRow = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  is_thrust_cluster: boolean;
+  config_control: "central" | "state";
+  approval_status: string;
+};
+
+export async function listCountryStates(countryId: string): Promise<StateRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("states")
+    .select("id, name, is_active, is_thrust_cluster, config_control, approval_status")
+    .eq("country_id", countryId)
+    .order("name");
+
+  if (error) throw error;
+  return (data ?? []) as StateRow[];
+}
+
+/**
+ * Lightweight existence check for the stepper, same pattern as
+ * countryHasAnyHsCodes.
+ */
+export async function countryHasAnyStates(countryId: string): Promise<boolean> {
+  const db = await getDb();
+  const { count, error } = await db
+    .from("states")
+    .select("id", { count: "exact", head: true })
+    .eq("country_id", countryId);
+
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
+export async function addCountryState(countryId: string, input: StateInput): Promise<void> {
+  const parsed = StateSchema.parse(input);
+  const db = await getDb();
+  // config_control is deliberately not set here -- it keeps the column
+  // default ('central') and only ever changes via
+  // setStateConfigControlAction -> set_state_config_control(), never a
+  // plain insert/update from this function.
+  const { error } = await db.from("states").insert({
+    country_id: countryId,
+    name: parsed.name,
+    is_thrust_cluster: parsed.isThrustCluster,
+  });
+  if (error) throw error;
+}
+
+export async function setStateActive(stateId: string, isActive: boolean): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("states").update({ is_active: isActive }).eq("id", stateId);
+  if (error) throw error;
+}
+
+export async function setStateThrustCluster(stateId: string, isThrust: boolean): Promise<void> {
+  const db = await getDb();
+  const { error } = await db
+    .from("states")
+    .update({ is_thrust_cluster: isThrust })
+    .eq("id", stateId);
+  if (error) throw error;
+}
+
+export async function deleteCountryState(stateId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("states").delete().eq("id", stateId);
+  if (error) throw error;
+}
+
+/**
+ * Wraps the set_state_config_control() RPC built in the approval-workflow
+ * migration -- config_control never changes any other way (see
+ * StateSchema's own comment on why addCountryState leaves it alone).
+ */
+export async function setStateConfigControl(
+  stateId: string,
+  control: "central" | "state",
+  notes?: string,
+): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.rpc("set_state_config_control", {
+    p_state_id: stateId,
+    p_control: control,
+    p_notes: notes ?? null,
+  });
   if (error) throw error;
 }
 

@@ -17,6 +17,7 @@
 import { getUser } from "@/lib/auth/adapter";
 import {
   countryHasAnyHsCodes,
+  countryHasAnyStates,
   getCountryById,
   getCountryPillarReadiness,
   getMyAdminScope,
@@ -50,6 +51,9 @@ export default async function ConfigEngineLayout({
   const hasMasterData =
     scope.role === "country_admin" ? await countryHasAnyHsCodes(scope.countryId) : false;
 
+  const hasStates =
+    scope.role === "country_admin" ? await countryHasAnyStates(scope.countryId) : false;
+
   const statusByStageId: Record<string, StageStatus> = {};
   for (const stage of STAGES) {
     if (stage.isPillar) {
@@ -64,6 +68,8 @@ export default async function ConfigEngineLayout({
       // Same kind of heuristic as Identity -- no dedicated readiness
       // column for this stage yet, only 2 of its 8 sections are built.
       statusByStageId[stage.id] = hasMasterData ? "in_progress" : "pending";
+    } else if (stage.id === "statecluster") {
+      statusByStageId[stage.id] = hasStates ? "in_progress" : "pending";
     } else {
       statusByStageId[stage.id] = "pending";
     }
