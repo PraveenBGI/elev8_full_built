@@ -44,7 +44,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/admin/config-engine/country");
+    router.push("/admin/config-engine/identity");
     router.refresh();
   }
 

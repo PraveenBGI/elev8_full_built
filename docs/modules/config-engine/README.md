@@ -137,7 +137,7 @@ boundary breaks the build automatically.
 
 ## Country Identity UI (this session)
 
-The first pillar-free screen, at `/admin/config-engine/country`. Proves
+The first pillar-free screen, at `/admin/config-engine/identity`. Proves
 form → Server Action → adapter → RLS end to end for this module, the same
 role `/api/health` played for Phase 0.
 
@@ -166,6 +166,47 @@ trip with a real signed-in Country Admin session, since that needs a live
 Supabase project, not the local Postgres mock used for the SQL-level
 tests. That last mile is confirmed once deployed — the same boundary
 Phase 0's `/api/health` had before real env vars were set.
+
+## Country Configuration shell (this session)
+
+Replaced the plain unstyled form with the actual visual structure from
+the mockup: `app/admin/config-engine/layout.tsx` renders a navy Topbar
+(`Topbar.tsx`) and a 290px Stepper sidebar (`Stepper.tsx`) around every
+page in this route group, matching `elev8-country-admin-config_3.html`'s
+`.topbar`/`.stepper`/`.step-item` CSS exactly — real hex colors extracted
+from the mockup's own CSS custom properties (`--navy:#0B1C2E`,
+`--green:#00A867`, etc.), not approximated.
+
+- `lib/modules/config-engine/stages.ts` — the 14 real stages (id, icon,
+  label, description, mandatory flag), ported verbatim from the mockup's
+  own `STAGES` constant. Single source of truth for the stepper.
+- Stepper status is computed from real data: the 8 pillar stages read
+  `pillar_configs.readiness_level` for the signed-in Country Admin's
+  country via the new `getCountryPillarReadiness()` adapter function.
+  Identity uses a heuristic (name + currency present) since there's no
+  dedicated readiness column for non-pillar stages — flagged here, not
+  silently invented.
+- The other 12 stages route through `app/admin/config-engine/[stage]/page.tsx`,
+  which says plainly "this stage isn't built yet" rather than rendering
+  nothing or faking content.
+- Route moved from `/admin/config-engine/country` to
+  `/admin/config-engine/identity` to match the mockup's own stage id.
+
+**What was deliberately left out, and why**: the mockup's topbar also has
+Export JSON / Import JSON / Reset / Save Draft / Review & Publish
+buttons. These are affordances for the mockup's own client-side
+localStorage prototype and don't map to anything real in this schema yet
+(Identity has no separate draft/live state; Review & Publish belongs to
+the Review stage once it exists). Adding non-functional buttons to look
+more finished would be exactly the kind of thing this project exists to
+avoid. They'll appear for real once the stages they belong to are built.
+
+**Identity's real section count**: the mockup's Identity stage actually
+has 7 sections (Country Metrics, Sector Metrics, Business Governance,
+Corporate Classification & MSME Bands, Strategic Control Metrics,
+National Partner, Support Partners). Only Country Metrics has a real
+schema/adapter/tests behind it. The other six render as honestly-labeled
+"Not built yet" cards in the same visual style as the working one.
 
 ## Open questions
 

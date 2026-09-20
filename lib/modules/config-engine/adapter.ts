@@ -121,3 +121,30 @@ export async function updateCountryIdentity(
 
   if (error) throw error;
 }
+
+/**
+ * Country-level readiness per pillar, keyed by pillar id (e.g.
+ * "procurement" -> "not_started"). Used by the stepper (see
+ * app/admin/config-engine/layout.tsx) to show real progress instead of a
+ * fabricated number. Deliberately country-scoped only (state_id is null)
+ * -- this is the Country Admin's own view of their country's pillars, not
+ * a rollup of every delegated state.
+ */
+export async function getCountryPillarReadiness(
+  countryId: string,
+): Promise<Record<string, string>> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("pillar_configs")
+    .select("pillar, readiness_level")
+    .eq("country_id", countryId)
+    .is("state_id", null);
+
+  if (error) throw error;
+
+  const result: Record<string, string> = {};
+  for (const row of data ?? []) {
+    result[row.pillar as string] = row.readiness_level as string;
+  }
+  return result;
+}

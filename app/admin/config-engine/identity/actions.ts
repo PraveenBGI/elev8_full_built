@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * app/admin/config-engine/country/actions.ts
+ * app/admin/config-engine/identity/actions.ts
  *
  * Server Action -- runs only on the server, never ships to the browser.
  * requireAuth() first (per lib/auth/adapter.ts), then re-derives the
@@ -59,6 +59,6 @@ export async function saveCountryIdentityAction(
     };
   }
 
-  revalidatePath("/admin/config-engine/country");
+  revalidatePath("/admin/config-engine/identity");
   return { ok: true };
 }

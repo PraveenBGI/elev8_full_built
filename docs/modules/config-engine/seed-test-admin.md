@@ -46,7 +46,7 @@ end $$;
 
 1. Go to `https://<your-vercel-url>/login`, sign in with that email/password.
 2. You'll land wherever the login page redirects (currently
-   `/admin/config-engine/country` directly).
+   `/admin/config-engine/identity` directly).
 3. You should see the Country Identity form pre-filled with "Oman" and be
    able to edit and save it.
 
