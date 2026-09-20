@@ -283,6 +283,127 @@ export const GovernancePayloadSchema = z.object({
 export type GovernancePayloadInput = z.infer<typeof GovernancePayloadSchema>;
 
 /**
+ * Procurement pillar. Unlike Governance, every section here is genuinely
+ * procurement-specific -- no cross-pillar reference tables needed, the
+ * whole pillar fits in one pillar_configs.payload blob. This validates
+ * the generic getCountryPillarPayload()/updateCountryPillarPayload() pair
+ * built for Governance: no new migration was needed for this pillar at
+ * all, only this schema.
+ *
+ * Enum values ported verbatim from the mockup's own TENDER_TYPE_LABELS /
+ * CONTRACT_TYPES_ALL / OBLIGATION_CATEGORIES_ALL constants.
+ */
+export const TENDER_TYPE_KEYS = [
+  "open",
+  "limited",
+  "restricted",
+  "singleSource",
+  "directAward",
+  "twoStage",
+  "framework",
+  "dialogue",
+  "emergency",
+  "reverseAuction",
+  "prequalified",
+] as const;
+
+export const TENDER_TYPE_LABELS: Record<(typeof TENDER_TYPE_KEYS)[number], string> = {
+  open: "Open Tender",
+  limited: "Limited Tender",
+  restricted: "Restricted Tender",
+  singleSource: "Single Source",
+  directAward: "Direct Award",
+  twoStage: "Two-Stage Tender",
+  framework: "Framework Agreement",
+  dialogue: "Competitive Dialogue",
+  emergency: "Emergency Procurement",
+  reverseAuction: "Reverse Auction",
+  prequalified: "Prequalified Tender",
+};
+
+export const CONTRACT_TYPES = [
+  "Framework Agreement",
+  "Fixed Price",
+  "Cost Reimbursable",
+  "EPC",
+  "Supply-Only",
+  "Service Contract",
+  "PPP",
+] as const;
+
+export const OBLIGATION_CATEGORIES = [
+  "Delivery",
+  "Quality",
+  "Documentation",
+  "Payment",
+  "Compliance",
+  "Sustainability",
+] as const;
+
+const tenderTypesShape = Object.fromEntries(
+  TENDER_TYPE_KEYS.map((k) => [k, z.boolean()]),
+) as Record<(typeof TENDER_TYPE_KEYS)[number], z.ZodBoolean>;
+
+export const ProcurementKpiRowSchema = z.object({
+  area: z.string().trim().min(1),
+  kpi: z.string().trim().min(1),
+  micro: z.coerce.number().min(0).max(100),
+  small: z.coerce.number().min(0).max(100),
+  medium: z.coerce.number().min(0).max(100),
+  large: z.coerce.number().min(0).max(100),
+  mfn: z.coerce.number().min(0).max(100),
+  row: z.coerce.number().min(0).max(100),
+});
+
+export const ProcurementPayloadSchema = z.object({
+  tenderTypes: z.object(tenderTypesShape),
+  contractTypes: z.array(z.enum(CONTRACT_TYPES)),
+  thresholds: z.object({
+    directAward: z.coerce.number().min(0),
+    limited: z.coerce.number().min(0),
+    open: z.coerce.number().min(0),
+  }),
+  evalWeights: z
+    .object({
+      technical: z.coerce.number().min(0).max(100),
+      commercial: z.coerce.number().min(0).max(100),
+      icv: z.coerce.number().min(0).max(100),
+      esg: z.coerce.number().min(0).max(100),
+      compliance: z.coerce.number().min(0).max(100),
+    })
+    .refine(
+      (w) => w.technical + w.commercial + w.icv + w.esg + w.compliance === 100,
+      {
+        message: "Evaluation weights must total 100%.",
+        path: ["technical"],
+      },
+    ),
+  mandatoryDocuments: z.array(z.string().trim().min(1)),
+  prequalification: z.object({
+    required: z.boolean(),
+    minScore: z.coerce.number().min(0).max(100),
+  }),
+  obligationCategories: z.array(z.enum(OBLIGATION_CATEGORIES)),
+  kpi: z.array(ProcurementKpiRowSchema),
+});
+
+export type ProcurementPayloadInput = z.infer<typeof ProcurementPayloadSchema>;
+
+export const DEFAULT_PROCUREMENT_PAYLOAD: ProcurementPayloadInput = {
+  tenderTypes: Object.fromEntries(TENDER_TYPE_KEYS.map((k) => [k, false])) as Record<
+    (typeof TENDER_TYPE_KEYS)[number],
+    boolean
+  >,
+  contractTypes: [],
+  thresholds: { directAward: 0, limited: 0, open: 0 },
+  evalWeights: { technical: 0, commercial: 0, icv: 0, esg: 0, compliance: 0 },
+  mandatoryDocuments: [],
+  prequalification: { required: false, minScore: 0 },
+  obligationCategories: [],
+  kpi: [],
+};
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --

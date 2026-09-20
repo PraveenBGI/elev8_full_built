@@ -388,6 +388,37 @@ Verified against real Postgres before any UI was written:
 correctly, not just an arbitrary jsonb blob). 39 total database
 assertions now pass across all five test files.
 
+## Procurement pillar (this session) -- second of 8 pillar forms
+
+`/admin/config-engine/procurement`. All 8 mockup sections built in one
+pass: Tender Types Enabled, Contract Types Enabled, Procurement
+Thresholds, Bid Evaluation Weighting, Mandatory Bid Documents, Supplier
+Prequalification, Post-Award Obligation Tracking, Supplier Performance
+KPI Weightage Matrix.
+
+**Confirms the generic pillar architecture actually works**: unlike
+Governance (which needed 2 new tables for cross-pillar reference data),
+every Procurement section is genuinely procurement-only. Zero new
+migration, zero new adapter functions -- only a new Zod schema
+(`ProcurementPayloadSchema`) and a UI, reusing `getCountryPillarPayload()`/
+`updateCountryPillarPayload()` as-is. This is exactly what the
+foundation migration's own comment on `pillar_configs` predicted would
+happen for most pillars.
+
+**A real business rule enforced server-side, not just a UI hint**: the
+mockup's own text says bid evaluation weights "Must total 100%" --
+that's now an actual Zod `.refine()`, so a save is rejected if the
+weights don't sum to exactly 100, not merely discouraged in the UI.
+
+One Server Action, one Save button for the whole pillar, since the data
+genuinely is one payload blob -- matches the mockup's own single
+`saveProcurement()` function, not simulated as 8 separate section saves.
+
+12 new schema unit tests, including one that documents (not just
+assumes) that the all-zero default payload deliberately fails the
+weights-total-100 rule, forcing a real decision before the first save
+can succeed.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.

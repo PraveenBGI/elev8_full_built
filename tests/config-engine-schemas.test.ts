@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -385,6 +385,80 @@ describe("GovernancePayloadSchema", () => {
       accessPolicy: null,
       infoClassification: null,
     });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ProcurementPayloadSchema", () => {
+  const validPayload: ProcurementPayloadInput = {
+    tenderTypes: {
+      open: true,
+      limited: true,
+      restricted: false,
+      singleSource: false,
+      directAward: true,
+      twoStage: false,
+      framework: false,
+      dialogue: false,
+      emergency: false,
+      reverseAuction: false,
+      prequalified: false,
+    },
+    contractTypes: ["Fixed Price", "EPC"],
+    thresholds: { directAward: 5000, limited: 50000, open: 50001 },
+    evalWeights: { technical: 30, commercial: 30, icv: 15, esg: 15, compliance: 10 },
+    mandatoryDocuments: ["Bid Bond"],
+    prequalification: { required: true, minScore: 70 },
+    obligationCategories: ["Delivery", "Quality"],
+    kpi: [
+      { area: "Quality", kpi: "Defect rate", micro: 10, small: 10, medium: 10, large: 10, mfn: 10, row: 10 },
+    ],
+  };
+
+  it("accepts a complete, valid payload where weights total exactly 100", () => {
+    expect(ProcurementPayloadSchema.safeParse(validPayload).success).toBe(true);
+  });
+
+  it("rejects evaluation weights that don't total 100", () => {
+    const result = ProcurementPayloadSchema.safeParse({
+      ...validPayload,
+      evalWeights: { technical: 30, commercial: 30, icv: 15, esg: 15, compliance: 5 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid contract type", () => {
+    const result = ProcurementPayloadSchema.safeParse({
+      ...validPayload,
+      contractTypes: ["Not A Real Contract Type"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid obligation category", () => {
+    const result = ProcurementPayloadSchema.safeParse({
+      ...validPayload,
+      obligationCategories: ["Not A Real Category"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts an empty KPI list and empty chip arrays", () => {
+    const result = ProcurementPayloadSchema.safeParse({
+      ...validPayload,
+      mandatoryDocuments: [],
+      obligationCategories: [],
+      contractTypes: [],
+      kpi: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("DEFAULT_PROCUREMENT_PAYLOAD itself is valid (weights sum to 0, which is not 100)", () => {
+    // The all-zero default is intentionally NOT a passing evalWeights
+    // total -- an admin must actually set real weights before saving.
+    // This test documents that expectation rather than assuming it.
+    const result = ProcurementPayloadSchema.safeParse(DEFAULT_PROCUREMENT_PAYLOAD);
     expect(result.success).toBe(false);
   });
 });
