@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -293,6 +293,97 @@ describe("PortAirportSchema", () => {
       type: "Not A Real Type",
       location: null,
       isCustomsPoint: false,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("AuthoritySchema", () => {
+  it("accepts a valid authority", () => {
+    const result = AuthoritySchema.safeParse({
+      name: "National Standards Authority",
+      type: "Standards Authority",
+      domain: "Both",
+      headquarters: "Capital City",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid domain", () => {
+    const result = AuthoritySchema.safeParse({
+      name: "Test Authority",
+      type: "Standards Authority",
+      domain: "Not A Real Domain",
+      headquarters: null,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("StakeholderSchema", () => {
+  it("accepts a valid stakeholder with multiple sectors", () => {
+    const result = StakeholderSchema.safeParse({
+      name: "Ministry of Trade",
+      sectors: ["Consumer Goods", "Industrial"],
+      domain: "Procurement",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an empty sectors array", () => {
+    const result = StakeholderSchema.safeParse({
+      name: "Ministry of Trade",
+      sectors: [],
+      domain: "Procurement",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("GovernancePayloadSchema", () => {
+  it("accepts a realistic full payload", () => {
+    const result = GovernancePayloadSchema.safeParse({
+      escalation: [
+        { level: 1, role: "Department Head" },
+        { level: 2, role: "Director General" },
+      ],
+      dataGovernance: "Centralized",
+      auditFrequency: "Quarterly",
+      accessPolicy: "Role-based",
+      infoClassification: "Public, Internal, Restricted",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an empty escalation list and all-null settings", () => {
+    const result = GovernancePayloadSchema.safeParse({
+      escalation: [],
+      dataGovernance: null,
+      auditFrequency: null,
+      accessPolicy: null,
+      infoClassification: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid audit frequency", () => {
+    const result = GovernancePayloadSchema.safeParse({
+      escalation: [],
+      dataGovernance: null,
+      auditFrequency: "Weekly",
+      accessPolicy: null,
+      infoClassification: null,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an escalation level with an empty role", () => {
+    const result = GovernancePayloadSchema.safeParse({
+      escalation: [{ level: 1, role: "" }],
+      dataGovernance: null,
+      auditFrequency: null,
+      accessPolicy: null,
+      infoClassification: null,
     });
     expect(result.success).toBe(false);
   });

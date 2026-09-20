@@ -227,6 +227,62 @@ export const StateSchema = z.object({
 export type StateInput = z.infer<typeof StateSchema>;
 
 /**
+ * Governance pillar -- Government Authorities and Sector Stakeholders.
+ * Cross-pillar reference data (see the migration's own comment: these
+ * are referenced by Procurement, Investment, Sustainability, and ICV
+ * later, not governance-only), hence real tables, not payload jsonb.
+ */
+export const AUTHORITY_TYPES = [
+  "Procurement Authority",
+  "Investment Authority",
+  "Trade Authority",
+  "Customs Authority",
+  "Sustainability Authority",
+  "Standards Authority",
+] as const;
+
+export const AUTHORITY_DOMAINS = ["Procurement", "Investment", "Sustainability", "Both"] as const;
+
+export const AuthoritySchema = z.object({
+  name: z.string().trim().min(1, "Authority name is required"),
+  type: z.enum(AUTHORITY_TYPES),
+  domain: z.enum(AUTHORITY_DOMAINS),
+  headquarters: z.string().trim().max(200).nullable(),
+});
+
+export type AuthorityInput = z.infer<typeof AuthoritySchema>;
+
+export const StakeholderSchema = z.object({
+  name: z.string().trim().min(1, "Stakeholder name is required"),
+  sectors: z.array(z.string().trim().min(1)),
+  domain: z.enum(AUTHORITY_DOMAINS),
+});
+
+export type StakeholderInput = z.infer<typeof StakeholderSchema>;
+
+/**
+ * Governance pillar -- Escalation Matrix and Data Governance & Access
+ * Policy. Genuinely governance-specific (unlike Authorities/
+ * Stakeholders above), so this is the shape of pillar_configs.payload
+ * where pillar='governance', validated here before it's ever written to
+ * that jsonb column.
+ */
+export const EscalationLevelSchema = z.object({
+  level: z.number().int().min(1),
+  role: z.string().trim().min(1, "Role is required"),
+});
+
+export const GovernancePayloadSchema = z.object({
+  escalation: z.array(EscalationLevelSchema),
+  dataGovernance: z.string().trim().max(200).nullable(),
+  auditFrequency: z.enum(["Monthly", "Quarterly", "Annually"]).nullable(),
+  accessPolicy: z.string().trim().max(200).nullable(),
+  infoClassification: z.string().trim().max(300).nullable(),
+});
+
+export type GovernancePayloadInput = z.infer<typeof GovernancePayloadSchema>;
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --

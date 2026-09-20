@@ -21,6 +21,8 @@ import {
   ZoneSchema,
   PortAirportSchema,
   StateSchema,
+  AuthoritySchema,
+  StakeholderSchema,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
@@ -29,6 +31,8 @@ import {
   type ZoneInput,
   type PortAirportInput,
   type StateInput,
+  type AuthorityInput,
+  type StakeholderInput,
   type CountryIdentityInput,
 } from "./schemas";
 
@@ -506,6 +510,182 @@ export async function setStateConfigControl(
     p_control: control,
     p_notes: notes ?? null,
   });
+  if (error) throw error;
+}
+
+/**
+ * Generic pillar_configs read/write -- COUNTRY-LEVEL ONLY (state_id is
+ * always null here; a Country Admin editing their own country's pillar
+ * config). Every one of the 8 pillars uses this same pair of functions
+ * for its own payload; only the Zod schema per pillar differs. This is
+ * NOT the company-facing read path -- that's resolve_pillar_config() in
+ * SQL, called from server code that needs the resolved (possibly
+ * state-delegated) view. This is the admin edit path only, and it goes
+ * straight to the country-level row, which is exactly what an admin
+ * editing their own country's Governance pillar should do.
+ */
+export async function getCountryPillarPayload<T>(
+  countryId: string,
+  pillar: string,
+): Promise<T | null> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("pillar_configs")
+    .select("payload")
+    .eq("country_id", countryId)
+    .is("state_id", null)
+    .eq("pillar", pillar)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.payload as T) ?? null;
+}
+
+export async function updateCountryPillarPayload(
+  countryId: string,
+  pillar: string,
+  payload: Record<string, unknown>,
+  readinessLevel?: string,
+): Promise<void> {
+  const db = await getDb();
+
+  const { data: existing, error: readError } = await db
+    .from("pillar_configs")
+    .select("id")
+    .eq("country_id", countryId)
+    .is("state_id", null)
+    .eq("pillar", pillar)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  if (existing) {
+    const { error } = await db
+      .from("pillar_configs")
+      .update({
+        payload,
+        ...(readinessLevel ? { readiness_level: readinessLevel } : {}),
+      })
+      .eq("id", existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await db.from("pillar_configs").insert({
+      country_id: countryId,
+      state_id: null,
+      pillar,
+      payload,
+      readiness_level: readinessLevel ?? "configuration_in_progress",
+    });
+    if (error) throw error;
+  }
+}
+
+/**
+ * Governance pillar -- Government Authorities.
+ */
+export type AuthorityRow = {
+  id: string;
+  ref: string;
+  name: string;
+  type: string;
+  domain: string;
+  headquarters: string | null;
+};
+
+export async function listCountryAuthorities(countryId: string): Promise<AuthorityRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("country_authorities")
+    .select("id, ref, name, type, domain, headquarters")
+    .eq("country_id", countryId)
+    .order("ref");
+
+  if (error) throw error;
+  return (data ?? []) as AuthorityRow[];
+}
+
+export async function addCountryAuthority(
+  countryId: string,
+  input: AuthorityInput,
+): Promise<void> {
+  const parsed = AuthoritySchema.parse(input);
+  const db = await getDb();
+
+  const { count, error: countError } = await db
+    .from("country_authorities")
+    .select("id", { count: "exact", head: true })
+    .eq("country_id", countryId);
+  if (countError) throw countError;
+
+  const ref = `A${String((count ?? 0) + 1).padStart(3, "0")}`;
+
+  const { error } = await db.from("country_authorities").insert({
+    country_id: countryId,
+    ref,
+    name: parsed.name,
+    type: parsed.type,
+    domain: parsed.domain,
+    headquarters: parsed.headquarters,
+  });
+  if (error) throw error;
+}
+
+export async function deleteCountryAuthority(authorityId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("country_authorities").delete().eq("id", authorityId);
+  if (error) throw error;
+}
+
+/**
+ * Governance pillar -- Sector Stakeholders.
+ */
+export type StakeholderRow = {
+  id: string;
+  ref: string;
+  name: string;
+  sectors: string[];
+  domain: string;
+};
+
+export async function listCountryStakeholders(countryId: string): Promise<StakeholderRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("country_stakeholders")
+    .select("id, ref, name, sectors, domain")
+    .eq("country_id", countryId)
+    .order("ref");
+
+  if (error) throw error;
+  return (data ?? []) as StakeholderRow[];
+}
+
+export async function addCountryStakeholder(
+  countryId: string,
+  input: StakeholderInput,
+): Promise<void> {
+  const parsed = StakeholderSchema.parse(input);
+  const db = await getDb();
+
+  const { count, error: countError } = await db
+    .from("country_stakeholders")
+    .select("id", { count: "exact", head: true })
+    .eq("country_id", countryId);
+  if (countError) throw countError;
+
+  const ref = `S${String((count ?? 0) + 1).padStart(3, "0")}`;
+
+  const { error } = await db.from("country_stakeholders").insert({
+    country_id: countryId,
+    ref,
+    name: parsed.name,
+    sectors: parsed.sectors,
+    domain: parsed.domain,
+  });
+  if (error) throw error;
+}
+
+export async function deleteCountryStakeholder(stakeholderId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("country_stakeholders").delete().eq("id", stakeholderId);
   if (error) throw error;
 }
 
