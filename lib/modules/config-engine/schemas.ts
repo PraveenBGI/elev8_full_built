@@ -159,6 +159,20 @@ export const FreeTradeAgreementSchema = z.object({
 export type FreeTradeAgreementInput = z.infer<typeof FreeTradeAgreementSchema>;
 
 /**
+ * Country Master Data -- HS Code Packs. Named bundles of the codes
+ * from HS Code Coverage above, so Import/Export can apply a whole set in
+ * one click. codes is a list of code strings (matching country_hs_codes.
+ * code), not ids -- see the migration's own comment on why.
+ */
+export const HsCodePackSchema = z.object({
+  name: z.string().trim().min(1, "Pack name is required"),
+  description: z.string().trim().max(300).nullable(),
+  codes: z.array(z.string().trim().min(1)),
+});
+
+export type HsCodePackInput = z.infer<typeof HsCodePackSchema>;
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --

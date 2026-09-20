@@ -22,14 +22,21 @@ import {
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
+  type HsCodePackInput,
 } from "@/lib/modules/config-engine/schemas";
-import type { FreeTradeAgreementRow, HsCodeRow } from "@/lib/modules/config-engine/adapter";
+import type {
+  FreeTradeAgreementRow,
+  HsCodePackRow,
+  HsCodeRow,
+} from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "../SettingsGroup";
 import {
   addFtaAction,
   addHsCodeAction,
+  addHsCodePackAction,
   deleteFtaAction,
   deleteHsCodeAction,
+  deleteHsCodePackAction,
   saveRegistrationTypesAction,
   saveTaxSettingsAction,
   saveUnitsOfMeasurementAction,
@@ -75,7 +82,6 @@ function Field({
 }
 
 const UPCOMING_SECTIONS = [
-  "HS Code Packs",
   "Economic & Industrial Zones",
   "Ports, Airports & Customs Points",
 ];
@@ -202,6 +208,169 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
           style={{ background: "var(--elev8-blue)" }}
         >
           Add
+        </button>
+      </form>
+      {error && (
+        <p className="mt-2 text-sm" style={{ color: "var(--elev8-red)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function HsCodePackList({
+  initialPacks,
+  availableCodes,
+}: {
+  initialPacks: HsCodePackRow[];
+  availableCodes: HsCodeRow[];
+}) {
+  const [packs, setPacks] = useState(initialPacks);
+  const [draft, setDraft] = useState<HsCodePackInput>({
+    name: "",
+    description: null,
+    codes: [],
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [isPending, startTransition] = useTransition();
+
+  function toggleCode(code: string) {
+    setDraft((d) => ({
+      ...d,
+      codes: d.codes.includes(code)
+        ? d.codes.filter((c) => c !== code)
+        : [...d.codes, code],
+    }));
+  }
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+
+    startTransition(async () => {
+      const result = await addHsCodePackAction(draft);
+      if (!result.ok) {
+        setError(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
+        return;
+      }
+      setPacks((rows) => [...rows, { id: `pending-${draft.name}`, ...draft }]);
+      setDraft({ name: "", description: null, codes: [] });
+    });
+  }
+
+  function handleDelete(id: string) {
+    startTransition(async () => {
+      const result = await deleteHsCodePackAction(id);
+      if (result.ok) {
+        setPacks((rows) => rows.filter((r) => r.id !== id));
+      }
+    });
+  }
+
+  return (
+    <div>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Reusable bundles of the codes above. Import and Export can apply a
+        whole pack in one click instead of toggling codes one at a time.
+      </p>
+
+      {packs.length > 0 && (
+        <div className="mb-5 space-y-3">
+          {packs.map((p) => (
+            <div
+              key={p.id}
+              className="rounded-md border p-3"
+              style={{ borderColor: "var(--elev8-g200)", background: "var(--elev8-g50)" }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[13px] font-medium" style={{ color: "var(--elev8-ink)" }}>
+                    {p.name}
+                  </div>
+                  {p.description && (
+                    <div className="text-[12px]" style={{ color: "var(--elev8-g500)" }}>
+                      {p.description}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(p.id)}
+                  disabled={isPending}
+                  className="text-[12px] font-medium"
+                  style={{ color: "var(--elev8-red)" }}
+                >
+                  Remove pack
+                </button>
+              </div>
+              <div className="mt-2 text-[12px]" style={{ color: "var(--elev8-g500)" }}>
+                {p.codes.length > 0 ? p.codes.join(", ") : "No codes in this pack"}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={handleAdd} className="rounded-md border p-4" style={{ borderColor: "var(--elev8-g200)" }}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Pack name" error={fieldErrors.name}>
+            <input
+              className={inputClass}
+              value={draft.name}
+              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+            />
+          </Field>
+          <Field label="Description">
+            <input
+              className={inputClass}
+              value={draft.description ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value || null }))}
+            />
+          </Field>
+        </div>
+
+        <div className="mt-3">
+          <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+            Codes in this pack ({draft.codes.length} selected)
+          </label>
+          {availableCodes.length === 0 ? (
+            <p className="text-[12.5px]" style={{ color: "var(--elev8-g500)" }}>
+              Add codes to HS Code Coverage above before building a pack.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableCodes.map((h) => {
+                const selected = draft.codes.includes(h.code);
+                return (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => toggleCode(h.code)}
+                    className="rounded-full px-3 py-1 text-[12px]"
+                    style={{
+                      background: selected ? "#E6F5EC" : "var(--elev8-g100)",
+                      color: selected ? "var(--elev8-green-dk)" : "var(--elev8-g600)",
+                    }}
+                  >
+                    {h.code}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="mt-4 rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          Add pack
         </button>
       </form>
       {error && (
@@ -639,17 +808,24 @@ export function MasterDataForm({
   ftas,
   registrationTypes,
   unitsOfMeasurement,
+  hsCodePacks,
 }: {
   hsCodes: HsCodeRow[];
   taxSettings: TaxSettingsInput;
   ftas: FreeTradeAgreementRow[];
   registrationTypes: string[];
   unitsOfMeasurement: string[];
+  hsCodePacks: HsCodePackRow[];
 }) {
   const hsSummary =
     hsCodes.length === 0
       ? "No codes added"
       : `${hsCodes.length} code${hsCodes.length === 1 ? "" : "s"}`;
+
+  const hsCodePacksSummary =
+    hsCodePacks.length === 0
+      ? "No packs added"
+      : `${hsCodePacks.length} pack${hsCodePacks.length === 1 ? "" : "s"}`;
 
   const taxSummary =
     [taxSettings.vatGstName, taxSettings.taxAuthority].filter(Boolean).join(", ") ||
@@ -687,6 +863,14 @@ export function MasterDataForm({
           defaultOpen
         >
           <HsCodeTable initialHsCodes={hsCodes} />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="HS Code Packs"
+          summary={hsCodePacksSummary}
+          isComplete={hsCodePacks.length > 0}
+        >
+          <HsCodePackList initialPacks={hsCodePacks} availableCodes={hsCodes} />
         </SettingsGroup>
 
         <SettingsGroup

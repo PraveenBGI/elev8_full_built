@@ -13,8 +13,10 @@ import { requireAuth } from "@/lib/auth/adapter";
 import {
   addCountryHsCode,
   addCountryFta,
+  addCountryHsCodePack,
   deleteCountryHsCode,
   deleteCountryFta,
+  deleteCountryHsCodePack,
   getMyAdminScope,
   updateCountryTaxSettings,
   updateCountryRegistrationTypes,
@@ -25,10 +27,12 @@ import {
   TaxSettingsSchema,
   FreeTradeAgreementSchema,
   ChipListSchema,
+  HsCodePackSchema,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
   type ChipListInput,
+  type HsCodePackInput,
 } from "@/lib/modules/config-engine/schemas";
 
 export type ActionResult =
@@ -203,6 +207,50 @@ export async function saveUnitsOfMeasurementAction(items: ChipListInput): Promis
     await updateCountryUnitsOfMeasurement(scope.countryId, parsed.data);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function addHsCodePackAction(input: HsCodePackInput): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = HsCodePackSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await addCountryHsCodePack(scope.countryId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function deleteHsCodePackAction(packId: string): Promise<ActionResult> {
+  try {
+    await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await deleteCountryHsCodePack(packId);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Delete failed." };
   }
 
   revalidatePath("/admin/config-engine/masterdata");

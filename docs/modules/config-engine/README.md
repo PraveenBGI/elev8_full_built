@@ -288,6 +288,20 @@ VAT/GST System, Free Trade Agreements, Business Registration Types, Units
 of Measurement. Remaining: HS Code Packs, Economic & Industrial Zones,
 Ports/Airports & Customs Points.
 
+## HS Code Packs (this session)
+
+Named, reusable bundles of the codes from HS Code Coverage, so Import
+and Export can apply a whole set in one click instead of toggling codes
+individually. A real `country_hs_code_packs` table, with `codes` stored
+as `text[]` referencing code strings (not a foreign key to
+`country_hs_codes.id`), matching the mockup's own approach: pack
+membership is a string-equality check. This means removing an HS code
+from Coverage doesn't need to cascade into every pack that referenced
+it, it just silently stops matching, the same behavior the mockup has.
+
+**Master Data is now 6 of 8 sections built.** Remaining: Economic &
+Industrial Zones, Ports/Airports & Customs Points.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.

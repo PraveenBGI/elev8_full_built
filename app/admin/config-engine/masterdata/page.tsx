@@ -12,6 +12,7 @@ import {
   getCountryUnitsOfMeasurement,
   getMyAdminScope,
   listCountryFtas,
+  listCountryHsCodePacks,
   listCountryHsCodes,
 } from "@/lib/modules/config-engine/adapter";
 import { MasterDataForm } from "./MasterDataForm";
@@ -38,13 +39,14 @@ export default async function MasterDataPage() {
     );
   }
 
-  const [hsCodes, taxSettings, ftas, registrationTypes, unitsOfMeasurement] =
+  const [hsCodes, taxSettings, ftas, registrationTypes, unitsOfMeasurement, hsCodePacks] =
     await Promise.all([
       listCountryHsCodes(scope.countryId),
       getCountryTaxSettings(scope.countryId),
       listCountryFtas(scope.countryId),
       getCountryRegistrationTypes(scope.countryId),
       getCountryUnitsOfMeasurement(scope.countryId),
+      listCountryHsCodePacks(scope.countryId),
     ]);
 
   return (
@@ -54,6 +56,7 @@ export default async function MasterDataPage() {
       ftas={ftas}
       registrationTypes={registrationTypes}
       unitsOfMeasurement={unitsOfMeasurement}
+      hsCodePacks={hsCodePacks}
     />
   );
 }

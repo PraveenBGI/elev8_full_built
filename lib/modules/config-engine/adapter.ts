@@ -17,10 +17,12 @@ import {
   TaxSettingsSchema,
   FreeTradeAgreementSchema,
   ChipListSchema,
+  HsCodePackSchema,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
   type ChipListInput,
+  type HsCodePackInput,
   type CountryIdentityInput,
 } from "./schemas";
 
@@ -268,6 +270,51 @@ export async function addCountryFta(
 export async function deleteCountryFta(ftaId: string): Promise<void> {
   const db = await getDb();
   const { error } = await db.from("country_ftas").delete().eq("id", ftaId);
+  if (error) throw error;
+}
+
+/**
+ * Country Master Data -- HS Code Packs.
+ */
+export type HsCodePackRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  codes: string[];
+};
+
+export async function listCountryHsCodePacks(
+  countryId: string,
+): Promise<HsCodePackRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("country_hs_code_packs")
+    .select("id, name, description, codes")
+    .eq("country_id", countryId)
+    .order("name");
+
+  if (error) throw error;
+  return (data ?? []) as HsCodePackRow[];
+}
+
+export async function addCountryHsCodePack(
+  countryId: string,
+  input: HsCodePackInput,
+): Promise<void> {
+  const parsed = HsCodePackSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("country_hs_code_packs").insert({
+    country_id: countryId,
+    name: parsed.name,
+    description: parsed.description,
+    codes: parsed.codes,
+  });
+  if (error) throw error;
+}
+
+export async function deleteCountryHsCodePack(packId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("country_hs_code_packs").delete().eq("id", packId);
   if (error) throw error;
 }
 

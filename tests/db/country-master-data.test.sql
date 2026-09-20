@@ -93,6 +93,33 @@ begin
   end;
 end $$;
 
+-- ── country_hs_code_packs (20260920000002) ──────────────────────────────
+
+do $$
+begin
+  insert into country_hs_code_packs (country_id, name, description, codes)
+  values (
+    'eeeeeeee-0000-0000-0000-000000000001',
+    'Electronics Bundle', 'Common electronics codes for quick apply',
+    array['8501.10']
+  );
+  raise notice 'PASS: HS code pack created successfully';
+end $$;
+
+set request.jwt.claim.sub = '88888888-1111-1111-1111-111111111111';
+
+do $$
+begin
+  begin
+    insert into country_hs_code_packs (country_id, name, codes)
+    values ('eeeeeeee-0000-0000-0000-000000000001', 'Should not be allowed', '{}');
+    raise exception 'FAIL: a different country''s admin created a pack in another country';
+  exception
+    when insufficient_privilege then
+      raise notice 'PASS: cross-country HS code pack write correctly rejected';
+  end;
+end $$;
+
 reset role;
 
 \echo 'ALL COUNTRY MASTER DATA TESTS PASSED'
