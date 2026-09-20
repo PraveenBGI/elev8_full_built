@@ -30,7 +30,9 @@ import {
   addHsCodeAction,
   deleteFtaAction,
   deleteHsCodeAction,
+  saveRegistrationTypesAction,
   saveTaxSettingsAction,
+  saveUnitsOfMeasurementAction,
 } from "./actions";
 
 const inputClass =
@@ -76,8 +78,6 @@ const UPCOMING_SECTIONS = [
   "HS Code Packs",
   "Economic & Industrial Zones",
   "Ports, Airports & Customs Points",
-  "Business Registration Types",
-  "Units of Measurement",
 ];
 
 function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
@@ -429,6 +429,99 @@ function FtaTable({ initialFtas }: { initialFtas: FreeTradeAgreementRow[] }) {
   );
 }
 
+function ChipListEditor({
+  initialItems,
+  action,
+  placeholder,
+}: {
+  initialItems: string[];
+  action: (items: string[]) => Promise<{ ok: boolean; error?: string }>;
+  placeholder: string;
+}) {
+  const [items, setItems] = useState(initialItems);
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function commit(next: string[]) {
+    setError(null);
+    startTransition(async () => {
+      const result = await action(next);
+      if (result.ok) {
+        setItems(next);
+      } else {
+        setError(result.error ?? "Save failed.");
+      }
+    });
+  }
+
+  function handleAdd() {
+    const value = draft.trim();
+    if (!value) return;
+    setDraft("");
+    commit([...items, value]);
+  }
+
+  function handleRemove(index: number) {
+    commit(items.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div>
+      {items.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {items.map((item, i) => (
+            <span
+              key={`${item}-${i}`}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]"
+              style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}
+            >
+              {item}
+              <button
+                type="button"
+                onClick={() => handleRemove(i)}
+                disabled={isPending}
+                className="opacity-70 hover:opacity-100"
+                aria-label={`Remove ${item}`}
+              >
+                x
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          className={inputClass}
+          placeholder={placeholder}
+          value={draft}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={isPending}
+          className="shrink-0 rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          Add
+        </button>
+      </div>
+      {error && (
+        <p className="mt-2 text-sm" style={{ color: "var(--elev8-red)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function TaxSettingsSection({ initial }: { initial: TaxSettingsInput }) {
   const [form, setForm] = useState(initial);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -544,10 +637,14 @@ export function MasterDataForm({
   hsCodes,
   taxSettings,
   ftas,
+  registrationTypes,
+  unitsOfMeasurement,
 }: {
   hsCodes: HsCodeRow[];
   taxSettings: TaxSettingsInput;
   ftas: FreeTradeAgreementRow[];
+  registrationTypes: string[];
+  unitsOfMeasurement: string[];
 }) {
   const hsSummary =
     hsCodes.length === 0
@@ -562,6 +659,12 @@ export function MasterDataForm({
     ftas.length === 0
       ? "No agreements added"
       : `${ftas.length} agreement${ftas.length === 1 ? "" : "s"}`;
+
+  const registrationTypesSummary =
+    registrationTypes.length === 0 ? "None added" : registrationTypes.join(", ");
+
+  const unitsOfMeasurementSummary =
+    unitsOfMeasurement.length === 0 ? "None added" : unitsOfMeasurement.join(", ");
 
   return (
     <div className="max-w-[720px]">
@@ -600,6 +703,30 @@ export function MasterDataForm({
           isComplete={ftas.length > 0}
         >
           <FtaTable initialFtas={ftas} />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Business registration types"
+          summary={registrationTypesSummary}
+          isComplete={registrationTypes.length > 0}
+        >
+          <ChipListEditor
+            initialItems={registrationTypes}
+            action={saveRegistrationTypesAction}
+            placeholder="e.g. LLC, Sole Proprietorship"
+          />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Units of measurement"
+          summary={unitsOfMeasurementSummary}
+          isComplete={unitsOfMeasurement.length > 0}
+        >
+          <ChipListEditor
+            initialItems={unitsOfMeasurement}
+            action={saveUnitsOfMeasurementAction}
+            placeholder="e.g. Kilogram (kg), Metric Ton (MT)"
+          />
         </SettingsGroup>
       </div>
 

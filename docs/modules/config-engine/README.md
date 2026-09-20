@@ -271,6 +271,23 @@ assertions (a real multi-field agreement inserts correctly, an invalid
 status is rejected by the check constraint) — 23 total database
 assertions now pass across all three test files.
 
+## Business Registration Types and Units of Measurement (this session)
+
+Both are plain string lists in the mockup, no other fields, just add/remove
+by chip. Stored as `text[]` keys (`registrationTypes`, `unitsOfMeasurement`)
+in `countries.master_data`, same reasoning as Tax settings.
+
+Two narrow, explicit adapter/action pairs rather than one generic
+"set any master_data key" function. A generic version would let a caller
+overwrite an unrelated section (tax, future zones) just by passing a
+different key string, so each Server Action can only ever touch the one
+key it's meant to.
+
+**Master Data is now 5 of 8 sections built**: HS Code Coverage, Tax &
+VAT/GST System, Free Trade Agreements, Business Registration Types, Units
+of Measurement. Remaining: HS Code Packs, Economic & Industrial Zones,
+Ports/Airports & Customs Points.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.

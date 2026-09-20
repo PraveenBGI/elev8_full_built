@@ -17,14 +17,18 @@ import {
   deleteCountryFta,
   getMyAdminScope,
   updateCountryTaxSettings,
+  updateCountryRegistrationTypes,
+  updateCountryUnitsOfMeasurement,
 } from "@/lib/modules/config-engine/adapter";
 import {
   HsCodeSchema,
   TaxSettingsSchema,
   FreeTradeAgreementSchema,
+  ChipListSchema,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
+  type ChipListInput,
 } from "@/lib/modules/config-engine/schemas";
 
 export type ActionResult =
@@ -153,6 +157,52 @@ export async function deleteFtaAction(ftaId: string): Promise<ActionResult> {
     await deleteCountryFta(ftaId);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Delete failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function saveRegistrationTypesAction(items: ChipListInput): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = ChipListSchema.safeParse(items);
+  if (!parsed.success) {
+    return { ok: false, error: "Invalid list." };
+  }
+
+  try {
+    await updateCountryRegistrationTypes(scope.countryId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function saveUnitsOfMeasurementAction(items: ChipListInput): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = ChipListSchema.safeParse(items);
+  if (!parsed.success) {
+    return { ok: false, error: "Invalid list." };
+  }
+
+  try {
+    await updateCountryUnitsOfMeasurement(scope.countryId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
   }
 
   revalidatePath("/admin/config-engine/masterdata");

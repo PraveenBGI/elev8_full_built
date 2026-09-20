@@ -157,3 +157,14 @@ export const FreeTradeAgreementSchema = z.object({
 });
 
 export type FreeTradeAgreementInput = z.infer<typeof FreeTradeAgreementSchema>;
+
+/**
+ * Country Master Data -- Business Registration Types and Units of
+ * Measurement. Both are plain string lists in the mockup (its own
+ * chipBlock() helper: add a string, remove by index, no other fields) --
+ * stored as text[] in countries.master_data, same reasoning as Tax & VAT
+ * settings: no relational query need, just a handful of country-specific
+ * values.
+ */
+export const ChipListSchema = z.array(z.string().trim().min(1)).max(100);
+export type ChipListInput = z.infer<typeof ChipListSchema>;

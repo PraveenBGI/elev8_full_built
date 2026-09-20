@@ -16,9 +16,11 @@ import {
   HsCodeSchema,
   TaxSettingsSchema,
   FreeTradeAgreementSchema,
+  ChipListSchema,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
+  type ChipListInput,
   type CountryIdentityInput,
 } from "./schemas";
 
@@ -268,6 +270,72 @@ export async function deleteCountryFta(ftaId: string): Promise<void> {
   const { error } = await db.from("country_ftas").delete().eq("id", ftaId);
   if (error) throw error;
 }
+
+/**
+ * Country Master Data -- Business Registration Types / Units of
+ * Measurement. Both read/write a named key in countries.master_data,
+ * merging like updateCountryTaxSettings does. Kept as two explicit,
+ * narrow functions (not one generic "set any master_data key" function)
+ * so a Server Action can only ever touch the one key it's meant to --
+ * a generic version would let any caller overwrite an unrelated section
+ * (tax, future zones/ports) just by passing a different key.
+ */
+const REGISTRATION_TYPES_KEY = "registrationTypes";
+const UNITS_OF_MEASUREMENT_KEY = "unitsOfMeasurement";
+
+async function getMasterDataChipList(
+  countryId: string,
+  key: string,
+): Promise<string[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("countries")
+    .select("master_data")
+    .eq("id", countryId)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const value = (data?.master_data as Record<string, unknown> | null)?.[key];
+  return Array.isArray(value) ? (value as string[]) : [];
+}
+
+async function updateMasterDataChipList(
+  countryId: string,
+  key: string,
+  items: ChipListInput,
+): Promise<void> {
+  const parsed = ChipListSchema.parse(items);
+  const db = await getDb();
+
+  const { data: current, error: readError } = await db
+    .from("countries")
+    .select("master_data")
+    .eq("id", countryId)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  const merged = {
+    ...((current?.master_data as Record<string, unknown>) ?? {}),
+    [key]: parsed,
+  };
+
+  const { error } = await db
+    .from("countries")
+    .update({ master_data: merged })
+    .eq("id", countryId);
+  if (error) throw error;
+}
+
+export const getCountryRegistrationTypes = (countryId: string) =>
+  getMasterDataChipList(countryId, REGISTRATION_TYPES_KEY);
+export const updateCountryRegistrationTypes = (countryId: string, items: ChipListInput) =>
+  updateMasterDataChipList(countryId, REGISTRATION_TYPES_KEY, items);
+
+export const getCountryUnitsOfMeasurement = (countryId: string) =>
+  getMasterDataChipList(countryId, UNITS_OF_MEASUREMENT_KEY);
+export const updateCountryUnitsOfMeasurement = (countryId: string, items: ChipListInput) =>
+  updateMasterDataChipList(countryId, UNITS_OF_MEASUREMENT_KEY, items);
 
 /**
  * Country Master Data -- Tax & VAT/GST System. Reads/writes

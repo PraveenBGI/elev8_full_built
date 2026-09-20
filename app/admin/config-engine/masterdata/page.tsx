@@ -7,7 +7,9 @@
 
 import { requireAuth } from "@/lib/auth/adapter";
 import {
+  getCountryRegistrationTypes,
   getCountryTaxSettings,
+  getCountryUnitsOfMeasurement,
   getMyAdminScope,
   listCountryFtas,
   listCountryHsCodes,
@@ -36,11 +38,22 @@ export default async function MasterDataPage() {
     );
   }
 
-  const [hsCodes, taxSettings, ftas] = await Promise.all([
-    listCountryHsCodes(scope.countryId),
-    getCountryTaxSettings(scope.countryId),
-    listCountryFtas(scope.countryId),
-  ]);
+  const [hsCodes, taxSettings, ftas, registrationTypes, unitsOfMeasurement] =
+    await Promise.all([
+      listCountryHsCodes(scope.countryId),
+      getCountryTaxSettings(scope.countryId),
+      listCountryFtas(scope.countryId),
+      getCountryRegistrationTypes(scope.countryId),
+      getCountryUnitsOfMeasurement(scope.countryId),
+    ]);
 
-  return <MasterDataForm hsCodes={hsCodes} taxSettings={taxSettings} ftas={ftas} />;
+  return (
+    <MasterDataForm
+      hsCodes={hsCodes}
+      taxSettings={taxSettings}
+      ftas={ftas}
+      registrationTypes={registrationTypes}
+      unitsOfMeasurement={unitsOfMeasurement}
+    />
+  );
 }
