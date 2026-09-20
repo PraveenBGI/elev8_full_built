@@ -17,12 +17,21 @@
 import { useState, useTransition } from "react";
 import {
   HS_CATEGORIES,
+  FTA_TYPES,
+  FTA_STATUSES,
   type HsCodeInput,
   type TaxSettingsInput,
+  type FreeTradeAgreementInput,
 } from "@/lib/modules/config-engine/schemas";
-import type { HsCodeRow } from "@/lib/modules/config-engine/adapter";
+import type { FreeTradeAgreementRow, HsCodeRow } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "../SettingsGroup";
-import { addHsCodeAction, deleteHsCodeAction, saveTaxSettingsAction } from "./actions";
+import {
+  addFtaAction,
+  addHsCodeAction,
+  deleteFtaAction,
+  deleteHsCodeAction,
+  saveTaxSettingsAction,
+} from "./actions";
 
 const inputClass =
   "w-full rounded-md border border-[var(--elev8-g200)] bg-white px-3 py-2 text-[13px] text-[var(--elev8-ink)] outline-none transition-colors focus:border-[var(--elev8-blue)] focus:ring-2 focus:ring-[var(--elev8-blue)]/15";
@@ -67,7 +76,6 @@ const UPCOMING_SECTIONS = [
   "HS Code Packs",
   "Economic & Industrial Zones",
   "Ports, Airports & Customs Points",
-  "Free Trade Agreements",
   "Business Registration Types",
   "Units of Measurement",
 ];
@@ -205,6 +213,222 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
   );
 }
 
+function FtaTable({ initialFtas }: { initialFtas: FreeTradeAgreementRow[] }) {
+  const [ftas, setFtas] = useState(initialFtas);
+  const [draft, setDraft] = useState<FreeTradeAgreementInput>({
+    agreementName: "",
+    type: null,
+    status: "Under Negotiation",
+    partnerCountries: [],
+    preferentialTariffRate: null,
+    rulesOfOrigin: null,
+    effectiveDate: null,
+  });
+  const [partnersText, setPartnersText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [isPending, startTransition] = useTransition();
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+
+    const partnerCountries = partnersText
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const toSave = { ...draft, partnerCountries };
+
+    startTransition(async () => {
+      const result = await addFtaAction(toSave);
+      if (!result.ok) {
+        setError(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
+        return;
+      }
+      setFtas((rows) => [
+        ...rows,
+        {
+          id: `pending-${toSave.agreementName}`,
+          agreement_name: toSave.agreementName,
+          type: toSave.type,
+          status: toSave.status,
+          partner_countries: toSave.partnerCountries,
+          preferential_tariff_rate: toSave.preferentialTariffRate,
+          rules_of_origin: toSave.rulesOfOrigin,
+          effective_date: toSave.effectiveDate,
+        },
+      ]);
+      setDraft({
+        agreementName: "",
+        type: null,
+        status: "Under Negotiation",
+        partnerCountries: [],
+        preferentialTariffRate: null,
+        rulesOfOrigin: null,
+        effectiveDate: null,
+      });
+      setPartnersText("");
+    });
+  }
+
+  function handleDelete(id: string) {
+    startTransition(async () => {
+      const result = await deleteFtaAction(id);
+      if (result.ok) {
+        setFtas((rows) => rows.filter((r) => r.id !== id));
+      }
+    });
+  }
+
+  return (
+    <div>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Full agreement records: partner countries, status, preferential
+        rate, and rules of origin. Export&apos;s trade corridors check
+        their destination against the agreements marked In Force here.
+      </p>
+
+      {ftas.length > 0 && (
+        <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+          <table className="w-full text-left text-[13px]">
+            <thead>
+              <tr style={{ background: "var(--elev8-g50)" }}>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Agreement</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Status</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Partners</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Pref. rate</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {ftas.map((f) => (
+                <tr key={f.id} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-3 py-2">{f.agreement_name}</td>
+                  <td className="px-3 py-2">{f.status}</td>
+                  <td className="px-3 py-2">{f.partner_countries.join(", ")}</td>
+                  <td className="px-3 py-2">
+                    {f.preferential_tariff_rate != null ? `${f.preferential_tariff_rate}%` : "Not set"}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(f.id)}
+                      disabled={isPending}
+                      className="text-[12px] font-medium"
+                      style={{ color: "var(--elev8-red)" }}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Agreement name" error={fieldErrors.agreementName}>
+          <input
+            className={inputClass}
+            value={draft.agreementName}
+            onChange={(e) => setDraft((d) => ({ ...d, agreementName: e.target.value }))}
+          />
+        </Field>
+        <Field label="Partner countries" error={fieldErrors.partnerCountries}>
+          <input
+            className={inputClass}
+            placeholder="Comma-separated, e.g. India, UAE"
+            value={partnersText}
+            onChange={(e) => setPartnersText(e.target.value)}
+          />
+        </Field>
+        <Field label="Type">
+          <select
+            className={inputClass}
+            value={draft.type ?? ""}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                type: e.target.value ? (e.target.value as FreeTradeAgreementInput["type"]) : null,
+              }))
+            }
+          >
+            <option value="">Not set</option>
+            {FTA_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Status">
+          <select
+            className={inputClass}
+            value={draft.status}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, status: e.target.value as FreeTradeAgreementInput["status"] }))
+            }
+          >
+            {FTA_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Preferential tariff rate" suffix="%">
+          <input
+            className={inputClass}
+            type="number"
+            value={draft.preferentialTariffRate ?? ""}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                preferentialTariffRate: e.target.value === "" ? null : Number(e.target.value),
+              }))
+            }
+          />
+        </Field>
+        <Field label="Effective date">
+          <input
+            className={inputClass}
+            type="date"
+            value={draft.effectiveDate ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, effectiveDate: e.target.value || null }))}
+          />
+        </Field>
+        <div className="sm:col-span-2">
+          <Field label="Rules of origin">
+            <input
+              className={inputClass}
+              value={draft.rulesOfOrigin ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, rulesOfOrigin: e.target.value || null }))}
+            />
+          </Field>
+        </div>
+        <div className="sm:col-span-2">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: "var(--elev8-blue)" }}
+          >
+            Add agreement
+          </button>
+        </div>
+      </form>
+      {error && (
+        <p className="mt-2 text-sm" style={{ color: "var(--elev8-red)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function TaxSettingsSection({ initial }: { initial: TaxSettingsInput }) {
   const [form, setForm] = useState(initial);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -319,9 +543,11 @@ function TaxSettingsSection({ initial }: { initial: TaxSettingsInput }) {
 export function MasterDataForm({
   hsCodes,
   taxSettings,
+  ftas,
 }: {
   hsCodes: HsCodeRow[];
   taxSettings: TaxSettingsInput;
+  ftas: FreeTradeAgreementRow[];
 }) {
   const hsSummary =
     hsCodes.length === 0
@@ -331,6 +557,11 @@ export function MasterDataForm({
   const taxSummary =
     [taxSettings.vatGstName, taxSettings.taxAuthority].filter(Boolean).join(", ") ||
     "Not set";
+
+  const ftaSummary =
+    ftas.length === 0
+      ? "No agreements added"
+      : `${ftas.length} agreement${ftas.length === 1 ? "" : "s"}`;
 
   return (
     <div className="max-w-[720px]">
@@ -361,6 +592,14 @@ export function MasterDataForm({
           isComplete={Boolean(taxSettings.vatGstName)}
         >
           <TaxSettingsSection initial={taxSettings} />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Free Trade Agreements"
+          summary={ftaSummary}
+          isComplete={ftas.length > 0}
+        >
+          <FtaTable initialFtas={ftas} />
         </SettingsGroup>
       </div>
 

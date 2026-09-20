@@ -12,15 +12,19 @@ import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth/adapter";
 import {
   addCountryHsCode,
+  addCountryFta,
   deleteCountryHsCode,
+  deleteCountryFta,
   getMyAdminScope,
   updateCountryTaxSettings,
 } from "@/lib/modules/config-engine/adapter";
 import {
   HsCodeSchema,
   TaxSettingsSchema,
+  FreeTradeAgreementSchema,
   type HsCodeInput,
   type TaxSettingsInput,
+  type FreeTradeAgreementInput,
 } from "@/lib/modules/config-engine/schemas";
 
 export type ActionResult =
@@ -103,6 +107,52 @@ export async function saveTaxSettingsAction(
     await updateCountryTaxSettings(scope.countryId, parsed.data);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function addFtaAction(
+  input: FreeTradeAgreementInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = FreeTradeAgreementSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await addCountryFta(scope.countryId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function deleteFtaAction(ftaId: string): Promise<ActionResult> {
+  try {
+    await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await deleteCountryFta(ftaId);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Delete failed." };
   }
 
   revalidatePath("/admin/config-engine/masterdata");

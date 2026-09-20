@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -204,5 +204,50 @@ describe("TaxSettingsSchema", () => {
       taxAuthority: null,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("FreeTradeAgreementSchema", () => {
+  const valid = {
+    agreementName: "GCC-India CEPA",
+    type: "Comprehensive Economic Partnership Agreement" as const,
+    status: "In Force" as const,
+    partnerCountries: ["India"],
+    preferentialTariffRate: 7.5,
+    rulesOfOrigin: "Wholly obtained or substantially transformed",
+    effectiveDate: "2026-01-01",
+  };
+
+  it("accepts a complete, valid agreement", () => {
+    expect(FreeTradeAgreementSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects an agreement with no partner countries", () => {
+    const result = FreeTradeAgreementSchema.safeParse({
+      ...valid,
+      partnerCountries: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid status value", () => {
+    const result = FreeTradeAgreementSchema.safeParse({
+      ...valid,
+      status: "Not A Real Status",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts the em-dash-free status value used in place of the mockup's original", () => {
+    const result = FreeTradeAgreementSchema.safeParse({
+      ...valid,
+      status: "Signed, Not Yet Ratified",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("allows type to be null (not yet classified)", () => {
+    const result = FreeTradeAgreementSchema.safeParse({ ...valid, type: null });
+    expect(result.success).toBe(true);
   });
 });

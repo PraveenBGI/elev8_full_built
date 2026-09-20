@@ -15,8 +15,10 @@ import {
   toCountryRow,
   HsCodeSchema,
   TaxSettingsSchema,
+  FreeTradeAgreementSchema,
   type HsCodeInput,
   type TaxSettingsInput,
+  type FreeTradeAgreementInput,
   type CountryIdentityInput,
 } from "./schemas";
 
@@ -210,6 +212,61 @@ export async function countryHasAnyHsCodes(countryId: string): Promise<boolean> 
 
   if (error) throw error;
   return (count ?? 0) > 0;
+}
+
+/**
+ * Country Master Data -- Free Trade Agreements.
+ */
+export type FreeTradeAgreementRow = {
+  id: string;
+  agreement_name: string;
+  type: string | null;
+  status: string;
+  partner_countries: string[];
+  preferential_tariff_rate: number | null;
+  rules_of_origin: string | null;
+  effective_date: string | null;
+};
+
+export async function listCountryFtas(
+  countryId: string,
+): Promise<FreeTradeAgreementRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("country_ftas")
+    .select(
+      "id, agreement_name, type, status, partner_countries, preferential_tariff_rate, rules_of_origin, effective_date",
+    )
+    .eq("country_id", countryId)
+    .order("agreement_name");
+
+  if (error) throw error;
+  return (data ?? []) as FreeTradeAgreementRow[];
+}
+
+export async function addCountryFta(
+  countryId: string,
+  input: FreeTradeAgreementInput,
+): Promise<void> {
+  const parsed = FreeTradeAgreementSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("country_ftas").insert({
+    country_id: countryId,
+    agreement_name: parsed.agreementName,
+    type: parsed.type,
+    status: parsed.status,
+    partner_countries: parsed.partnerCountries,
+    preferential_tariff_rate: parsed.preferentialTariffRate,
+    rules_of_origin: parsed.rulesOfOrigin,
+    effective_date: parsed.effectiveDate || null,
+  });
+  if (error) throw error;
+}
+
+export async function deleteCountryFta(ftaId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("country_ftas").delete().eq("id", ftaId);
+  if (error) throw error;
 }
 
 /**

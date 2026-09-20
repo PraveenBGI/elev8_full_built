@@ -242,6 +242,35 @@ real Postgres before any application code was written on top of it — 21
 total database assertions now pass across all three test files, run
 sequentially exactly as CI does it.
 
+## Free Trade Agreements UI, and a real schema mismatch fixed (this session)
+
+`country_ftas` has existed since the very first Phase 0.5 migration, but
+was designed before this session read the mockup's actual FTA section
+field-by-field, and the shapes didn't match: the original table had a
+single `partner_country` and a vague `tariff_schedule` jsonb, while the
+real mockup tracks a full agreement record (name, type, status, an
+**array** of partner countries since one agreement can cover several,
+preferential tariff rate, rules of origin, effective date).
+
+Fixed forward with `20260920000001_fix_country_ftas_shape.sql` (never
+edit an already-merged migration): converts `partner_country` to
+`partner_countries text[]`, adds `type`/`status`/
+`preferential_tariff_rate`/`rules_of_origin`, and adds check constraints
+matching the mockup's own `FTA_TYPES_ALL`/`FTA_STATUSES_ALL` option
+lists. Safe as a straight ALTER, confirmed before writing it that no UI
+had ever written a real row to this table.
+
+One status value's own em dash (`"Signed — Not Yet Ratified"` in the
+mockup) was changed to `"Signed, Not Yet Ratified"` per this project's
+UI style rule, applied to the stored value itself (the database check
+constraint), not just a display label, so the value round-trips exactly.
+
+Full add/remove table UI now exists for this section, same
+`SettingsGroup` + table pattern as HS Code Coverage. Verified with 2 new
+assertions (a real multi-field agreement inserts correctly, an invalid
+status is rejected by the check constraint) — 23 total database
+assertions now pass across all three test files.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.

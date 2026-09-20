@@ -9,6 +9,7 @@ import { requireAuth } from "@/lib/auth/adapter";
 import {
   getCountryTaxSettings,
   getMyAdminScope,
+  listCountryFtas,
   listCountryHsCodes,
 } from "@/lib/modules/config-engine/adapter";
 import { MasterDataForm } from "./MasterDataForm";
@@ -35,10 +36,11 @@ export default async function MasterDataPage() {
     );
   }
 
-  const [hsCodes, taxSettings] = await Promise.all([
+  const [hsCodes, taxSettings, ftas] = await Promise.all([
     listCountryHsCodes(scope.countryId),
     getCountryTaxSettings(scope.countryId),
+    listCountryFtas(scope.countryId),
   ]);
 
-  return <MasterDataForm hsCodes={hsCodes} taxSettings={taxSettings} />;
+  return <MasterDataForm hsCodes={hsCodes} taxSettings={taxSettings} ftas={ftas} />;
 }

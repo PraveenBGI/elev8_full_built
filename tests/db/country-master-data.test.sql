@@ -60,4 +60,39 @@ end $$;
 
 reset role;
 
+-- ── country_ftas' fixed shape (20260920000001) ──────────────────────────
+-- Confirms the ALTER actually produced the right constraints, not just
+-- that the migration ran without SQL errors.
+
+set role authenticated;
+set request.jwt.claim.sub = '99999999-9999-9999-9999-999999999999';
+
+do $$
+begin
+  insert into country_ftas (
+    country_id, agreement_name, type, status,
+    partner_countries, preferential_tariff_rate, rules_of_origin, effective_date
+  )
+  values (
+    'eeeeeeee-0000-0000-0000-000000000001',
+    'GCC-India CEPA', 'Comprehensive Economic Partnership Agreement', 'In Force',
+    array['India'], 7.5, 'Wholly obtained or substantially transformed', '2026-01-01'
+  );
+  raise notice 'PASS: FTA with multiple real fields (type, status, partner_countries array) inserted successfully';
+end $$;
+
+do $$
+begin
+  begin
+    insert into country_ftas (country_id, agreement_name, status)
+    values ('eeeeeeee-0000-0000-0000-000000000001', 'Bad Status Test', 'Not A Real Status');
+    raise exception 'FAIL: an invalid status value was accepted';
+  exception
+    when check_violation then
+      raise notice 'PASS: invalid FTA status correctly rejected by the check constraint';
+  end;
+end $$;
+
+reset role;
+
 \echo 'ALL COUNTRY MASTER DATA TESTS PASSED'

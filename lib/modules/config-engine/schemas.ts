@@ -119,3 +119,41 @@ export const TaxSettingsSchema = z.object({
 });
 
 export type TaxSettingsInput = z.infer<typeof TaxSettingsSchema>;
+
+/**
+ * Country Master Data -- Free Trade Agreements. Options ported from the
+ * mockup's own FTA_TYPES_ALL / FTA_STATUSES_ALL, with one change: "Signed
+ * — Not Yet Ratified" becomes "Signed, Not Yet Ratified" (no em dash),
+ * per this project's UI style rule, applied to the stored value itself so
+ * it matches the database check constraint exactly (see the
+ * 20260920000001 migration).
+ */
+export const FTA_TYPES = [
+  "Customs Union",
+  "Free Trade Agreement",
+  "Preferential Trade Agreement",
+  "Economic Partnership Agreement",
+  "Comprehensive Economic Partnership Agreement",
+] as const;
+
+export const FTA_STATUSES = [
+  "In Force",
+  "Signed, Not Yet Ratified",
+  "Under Negotiation",
+  "Suspended",
+  "Expired",
+] as const;
+
+export const FreeTradeAgreementSchema = z.object({
+  agreementName: z.string().trim().min(1, "Agreement name is required"),
+  type: z.enum(FTA_TYPES).nullable(),
+  status: z.enum(FTA_STATUSES),
+  partnerCountries: z
+    .array(z.string().trim().min(1))
+    .min(1, "At least one partner country is required"),
+  preferentialTariffRate: z.coerce.number().min(0).max(100).nullable(),
+  rulesOfOrigin: z.string().trim().max(500).nullable(),
+  effectiveDate: z.string().trim().nullable(),
+});
+
+export type FreeTradeAgreementInput = z.infer<typeof FreeTradeAgreementSchema>;
