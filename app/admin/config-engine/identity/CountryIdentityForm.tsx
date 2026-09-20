@@ -3,25 +3,24 @@
 /**
  * app/admin/config-engine/identity/CountryIdentityForm.tsx
  *
- * The "Country Metrics" section card here matches
- * elev8-country-admin-config_3.html's renderIdentity() exactly: the
- * gradient blue header (.bsec-hd), the white body (.bsec-bd), 3-column
- * field rows (.fr3), and the field label/input pattern (.fl/.fi), with a
- * red required-star for mandatory fields.
+ * Second revision after direct feedback. First version showed all 14
+ * fields at once (overwhelming); the "Show more fields" toggle fixed
+ * density but not the actual problem -- one long form is still one long
+ * form once expanded, and it didn't look considered.
  *
- * The mockup's Identity stage actually has 7 sections: Country Metrics,
- * Sector Metrics, Business Governance, Corporate Classification & MSME
- * Bands, Strategic Control Metrics, National Partner, and Support
- * Partners. Only Country Metrics has a real schema/adapter/tests behind
- * it so far (see lib/modules/config-engine/schemas.ts) -- the other six
- * are shown as honest "not built yet" section cards in the same visual
- * style, not silently omitted and not faked with non-functional inputs.
+ * This version groups fields into three named sections (SettingsGroup),
+ * each collapsed by default with a one-line summary of its current
+ * values, a green check when its content is meaningfully filled in. The
+ * page reads as a short list you scan, not a form you fill. This pattern
+ * is the template for every future pillar's own sub-sections, not a
+ * one-off for Identity.
  */
 
 import { useState, useTransition } from "react";
 import type { CountryIdentityRow } from "@/lib/modules/config-engine/adapter";
 import type { CountryIdentityInput } from "@/lib/modules/config-engine/schemas";
 import { saveCountryIdentityAction } from "./actions";
+import { SettingsGroup } from "./SettingsGroup";
 
 function rowToFormInput(row: CountryIdentityRow): CountryIdentityInput {
   return {
@@ -43,75 +42,44 @@ function rowToFormInput(row: CountryIdentityRow): CountryIdentityInput {
   };
 }
 
-function SectionCard({
-  icon,
-  title,
-  children,
-}: {
-  icon: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="mb-[18px] overflow-hidden rounded-xl border"
-      style={{ borderColor: "var(--elev8-g100)", boxShadow: "var(--elev8-shadow-sm)" }}
-    >
-      <div
-        className="flex items-center gap-2.5 px-5 py-[13px] text-[13.5px] font-bold text-white"
-        style={{
-          background: "linear-gradient(135deg, var(--elev8-blue), var(--elev8-blue-dk))",
-        }}
-      >
-        <span aria-hidden>{icon}</span>
-        {title}
-      </div>
-      <div className="bg-white p-5">{children}</div>
-    </div>
-  );
-}
-
-function NotBuiltSection({ icon, title }: { icon: string; title: string }) {
-  return (
-    <SectionCard icon={icon} title={title}>
-      <p className="text-sm" style={{ color: "var(--elev8-g500)" }}>
-        Not built yet.
-      </p>
-    </SectionCard>
-  );
-}
+const inputClass =
+  "w-full rounded-md border border-[var(--elev8-g200)] bg-white px-3 py-2 text-[13px] text-[var(--elev8-navy)] outline-none transition-colors focus:border-[var(--elev8-blue)] focus:ring-2 focus:ring-[var(--elev8-blue)]/15";
 
 function Field({
   label,
   required,
+  error,
   children,
 }: {
   label: string;
   required?: boolean;
+  error?: string[];
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-3.5 flex flex-col gap-1.5">
-      <label
-        className="text-[11.5px] font-bold tracking-wide"
-        style={{ color: "var(--elev8-g600)" }}
-      >
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[12.5px] font-medium text-[var(--elev8-g600)]">
         {label}
-        {required && <span style={{ color: "var(--elev8-red)" }}> *</span>}
+        {required && <span className="text-[var(--elev8-red)]"> *</span>}
       </label>
       {children}
+      {error?.map((m) => (
+        <p key={m} className="text-xs text-[var(--elev8-red)]">
+          {m}
+        </p>
+      ))}
     </div>
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  border: "1.5px solid var(--elev8-g200)",
-  borderRadius: "var(--elev8-radius-md)",
-  padding: "9px 12px",
-  fontSize: "13px",
-  color: "var(--elev8-navy)",
-  width: "100%",
-};
+const UPCOMING_SECTIONS = [
+  "Sector Metrics",
+  "Business Governance",
+  "Corporate Classification & MSME Bands",
+  "Strategic Control Metrics",
+  "National Partner",
+  "Support Partners",
+];
 
 export function CountryIdentityForm({ country }: { country: CountryIdentityRow }) {
   const [form, setForm] = useState<CountryIdentityInput>(() =>
@@ -135,7 +103,7 @@ export function CountryIdentityForm({ country }: { country: CountryIdentityRow }
       const result = await saveCountryIdentityAction(form);
       if (result.ok) {
         setStatus("saved");
-        setStatusMessage("Saved.");
+        setStatusMessage("Saved");
       } else {
         setStatus("error");
         setStatusMessage(result.error);
@@ -144,181 +112,219 @@ export function CountryIdentityForm({ country }: { country: CountryIdentityRow }
     });
   }
 
+  const basicsSummary = [form.name, form.masterCurrency].filter(Boolean).join(" · ") || "Not set";
+  const basicsComplete = Boolean(form.name && form.masterCurrency);
+
+  const currencyRegionSummary =
+    [form.ancillaryCurrency, form.timeZone, form.dialCode, form.geozone]
+      .filter(Boolean)
+      .join(" · ") || "Not set";
+  const currencyRegionComplete = Boolean(
+    form.ancillaryCurrency || form.timeZone || form.dialCode || form.geozone,
+  );
+
+  const classificationSummary =
+    [form.incomeGroup, form.systemOfTrade, form.wtoMember ? "WTO member" : null]
+      .filter(Boolean)
+      .join(" · ") || "Not set";
+  const classificationComplete = Boolean(
+    form.incomeGroup || form.systemOfTrade || form.financialYearModel,
+  );
+
   return (
-    <div>
-      <h1 className="mb-1 text-xl font-semibold" style={{ color: "var(--elev8-navy)" }}>
-        Country Identity — Master Data
+    <div className="max-w-[640px]">
+      <h1 className="text-[22px] font-semibold text-[var(--elev8-navy)]">
+        Country Identity
       </h1>
-      <p className="mb-5 max-w-[640px] text-sm" style={{ color: "var(--elev8-g500)" }}>
-        The foundation every other pillar reads from. Get this right first —
-        Procurement, Import, Export, Investment and ICV all inherit these
-        definitions.
+      <p className="mt-1.5 mb-7 text-sm leading-relaxed text-[var(--elev8-g500)]">
+        The foundation every other pillar reads from — currency, tax year, and
+        classification. Everything else in this platform inherits from what
+        you set here.
       </p>
 
       {country.approval_status !== "draft" && (
-        <p
-          className="mb-4 rounded-md px-3 py-2 text-sm"
-          style={{ background: "#FFF6E5", color: "var(--elev8-orange)" }}
-        >
+        <p className="mb-5 rounded-md bg-[#FFF6E5] px-3 py-2 text-sm text-[var(--elev8-orange)]">
           This country&apos;s configuration is currently{" "}
           <strong>{country.approval_status}</strong>.
         </p>
       )}
 
       <form onSubmit={handleSubmit}>
-        <SectionCard icon="🌐" title="Country Metrics">
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-            <Field label="Country Name" required>
-              <input
-                style={inputStyle}
-                value={form.name}
-                onChange={(e) => set("name", e.target.value)}
-              />
-              {fieldErrors.name?.map((m) => (
-                <p key={m} className="text-xs" style={{ color: "var(--elev8-red)" }}>
-                  {m}
-                </p>
-              ))}
-            </Field>
-            <Field label="Country Code / WB Code">
-              <input
-                style={inputStyle}
-                value={form.countryCode ?? ""}
-                onChange={(e) => set("countryCode", e.target.value)}
-              />
-            </Field>
-            <Field label="Official Language">
-              <input
-                style={inputStyle}
-                value={form.officialLanguage ?? ""}
-                onChange={(e) => set("officialLanguage", e.target.value)}
-              />
-            </Field>
+        <div className="rounded-xl border border-[var(--elev8-g100)] bg-white px-5 shadow-[var(--elev8-shadow-sm)]">
+          <SettingsGroup
+            title="Basics"
+            summary={basicsSummary}
+            isComplete={basicsComplete}
+            defaultOpen
+          >
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Field label="Country name" required error={fieldErrors.name}>
+                <input
+                  className={inputClass}
+                  value={form.name}
+                  onChange={(e) => set("name", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="Master currency"
+                required
+                error={fieldErrors.masterCurrency}
+              >
+                <input
+                  className={inputClass}
+                  placeholder="e.g. OMR"
+                  value={form.masterCurrency}
+                  onChange={(e) => set("masterCurrency", e.target.value)}
+                />
+              </Field>
+              <Field label="Country code">
+                <input
+                  className={inputClass}
+                  value={form.countryCode ?? ""}
+                  onChange={(e) => set("countryCode", e.target.value)}
+                />
+              </Field>
+              <Field label="World Bank code">
+                <input
+                  className={inputClass}
+                  value={form.wbCode ?? ""}
+                  onChange={(e) => set("wbCode", e.target.value)}
+                />
+              </Field>
+              <Field label="Official language">
+                <input
+                  className={inputClass}
+                  value={form.officialLanguage ?? ""}
+                  onChange={(e) => set("officialLanguage", e.target.value)}
+                />
+              </Field>
+            </div>
+          </SettingsGroup>
 
-            <Field label="Master Currency" required>
-              <input
-                style={inputStyle}
-                value={form.masterCurrency}
-                onChange={(e) => set("masterCurrency", e.target.value)}
-              />
-              {fieldErrors.masterCurrency?.map((m) => (
-                <p key={m} className="text-xs" style={{ color: "var(--elev8-red)" }}>
-                  {m}
-                </p>
-              ))}
-            </Field>
-            <Field label="Ancillary Currency">
-              <input
-                style={inputStyle}
-                value={form.ancillaryCurrency ?? ""}
-                onChange={(e) => set("ancillaryCurrency", e.target.value)}
-              />
-            </Field>
-            <Field label="Time Zone">
-              <input
-                style={inputStyle}
-                value={form.timeZone ?? ""}
-                onChange={(e) => set("timeZone", e.target.value)}
-              />
-            </Field>
+          <SettingsGroup
+            title="Currency & region"
+            summary={currencyRegionSummary}
+            isComplete={currencyRegionComplete}
+          >
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Field label="Ancillary currency">
+                <input
+                  className={inputClass}
+                  value={form.ancillaryCurrency ?? ""}
+                  onChange={(e) => set("ancillaryCurrency", e.target.value)}
+                />
+              </Field>
+              <Field label="Time zone">
+                <input
+                  className={inputClass}
+                  value={form.timeZone ?? ""}
+                  onChange={(e) => set("timeZone", e.target.value)}
+                />
+              </Field>
+              <Field label="Dial code" error={fieldErrors.dialCode}>
+                <input
+                  className={inputClass}
+                  placeholder="e.g. +968"
+                  value={form.dialCode ?? ""}
+                  onChange={(e) => set("dialCode", e.target.value)}
+                />
+              </Field>
+              <Field label="Geozone">
+                <input
+                  className={inputClass}
+                  value={form.geozone ?? ""}
+                  onChange={(e) => set("geozone", e.target.value)}
+                />
+              </Field>
+            </div>
+          </SettingsGroup>
 
-            <Field label="Dial-in Code">
-              <input
-                style={inputStyle}
-                value={form.dialCode ?? ""}
-                onChange={(e) => set("dialCode", e.target.value)}
-              />
-              {fieldErrors.dialCode?.map((m) => (
-                <p key={m} className="text-xs" style={{ color: "var(--elev8-red)" }}>
-                  {m}
-                </p>
-              ))}
-            </Field>
-            <Field label="Geozone / Region">
-              <input
-                style={inputStyle}
-                value={form.geozone ?? ""}
-                onChange={(e) => set("geozone", e.target.value)}
-              />
-            </Field>
-            <Field label="Income Group">
-              <input
-                style={inputStyle}
-                value={form.incomeGroup ?? ""}
-                onChange={(e) => set("incomeGroup", e.target.value)}
-              />
-            </Field>
-
-            <Field label="System of Trade">
-              <input
-                style={inputStyle}
-                value={form.systemOfTrade ?? ""}
-                onChange={(e) => set("systemOfTrade", e.target.value)}
-              />
-            </Field>
-            <Field label="Financial Year Model">
-              <input
-                style={inputStyle}
-                value={form.financialYearModel ?? ""}
-                onChange={(e) => set("financialYearModel", e.target.value)}
-              />
-            </Field>
-            <Field label="Current Financial Year">
-              <input
-                style={inputStyle}
-                value={form.currentFinancialYear ?? ""}
-                onChange={(e) => set("currentFinancialYear", e.target.value)}
-              />
-            </Field>
-
-            <Field label="Working Week">
-              <input
-                style={inputStyle}
-                value={form.workingWeek ?? ""}
-                onChange={(e) => set("workingWeek", e.target.value)}
-              />
-            </Field>
-            <div className="flex items-center gap-2 pt-6">
-              <input
-                id="wtoMember"
-                type="checkbox"
-                checked={form.wtoMember}
-                onChange={(e) => setForm((f) => ({ ...f, wtoMember: e.target.checked }))}
-                className="h-4 w-4"
-              />
-              <label htmlFor="wtoMember" className="text-[13px] font-medium">
+          <SettingsGroup
+            title="Classification"
+            summary={classificationSummary}
+            isComplete={classificationComplete}
+          >
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Field label="Income group">
+                <input
+                  className={inputClass}
+                  value={form.incomeGroup ?? ""}
+                  onChange={(e) => set("incomeGroup", e.target.value)}
+                />
+              </Field>
+              <Field label="System of trade">
+                <input
+                  className={inputClass}
+                  value={form.systemOfTrade ?? ""}
+                  onChange={(e) => set("systemOfTrade", e.target.value)}
+                />
+              </Field>
+              <Field label="Financial year model">
+                <input
+                  className={inputClass}
+                  value={form.financialYearModel ?? ""}
+                  onChange={(e) => set("financialYearModel", e.target.value)}
+                />
+              </Field>
+              <Field label="Current financial year">
+                <input
+                  className={inputClass}
+                  value={form.currentFinancialYear ?? ""}
+                  onChange={(e) => set("currentFinancialYear", e.target.value)}
+                />
+              </Field>
+              <Field label="Working week">
+                <input
+                  className={inputClass}
+                  value={form.workingWeek ?? ""}
+                  onChange={(e) => set("workingWeek", e.target.value)}
+                />
+              </Field>
+              <label className="flex items-center gap-2 pt-6 text-[13px] text-[var(--elev8-navy)]">
+                <input
+                  type="checkbox"
+                  checked={form.wtoMember}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, wtoMember: e.target.checked }))
+                  }
+                  className="h-4 w-4 accent-[var(--elev8-blue)]"
+                />
                 WTO member
               </label>
             </div>
-          </div>
+          </SettingsGroup>
+        </div>
 
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={isPending}
-              className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-              style={{ background: "var(--elev8-blue)" }}
+        <div className="mt-5 flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-md bg-[var(--elev8-blue)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {isPending ? "Saving…" : "Save"}
+          </button>
+          {statusMessage && (
+            <p
+              className={`text-sm ${status === "saved" ? "text-[var(--elev8-green-dk)]" : "text-[var(--elev8-red)]"}`}
             >
-              {isPending ? "Saving…" : "Save"}
-            </button>
-            {statusMessage && (
-              <p
-                className="text-sm"
-                style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}
-              >
-                {statusMessage}
-              </p>
-            )}
-          </div>
-        </SectionCard>
-
-        <NotBuiltSection icon="🏭" title="Sector Metrics" />
-        <NotBuiltSection icon="🏛️" title="Business Governance" />
-        <NotBuiltSection icon="🎖️" title="Corporate Classification & MSME Bands" />
-        <NotBuiltSection icon="🛡️" title="Strategic Control Metrics" />
-        <NotBuiltSection icon="🤝" title="National Partner" />
-        <NotBuiltSection icon="🧩" title="Support Partners" />
+              {statusMessage}
+            </p>
+          )}
+        </div>
       </form>
+
+      <div className="mt-10">
+        <h2 className="text-[13px] font-semibold text-[var(--elev8-g600)]">
+          Coming next in Country Identity
+        </h2>
+        <ul className="mt-2 space-y-1.5">
+          {UPCOMING_SECTIONS.map((s) => (
+            <li key={s} className="text-[13px] text-[var(--elev8-g500)]">
+              · {s}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
