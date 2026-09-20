@@ -173,6 +173,40 @@ export const HsCodePackSchema = z.object({
 export type HsCodePackInput = z.infer<typeof HsCodePackSchema>;
 
 /**
+ * Country Master Data -- Economic & Industrial Zones.
+ */
+export const ZONE_TYPES = [
+  "Special Economic Zone",
+  "Free Zone",
+  "Industrial Zone",
+  "Free Trade Zone",
+] as const;
+
+export const ZoneSchema = z.object({
+  name: z.string().trim().min(1, "Zone name is required"),
+  type: z.enum(ZONE_TYPES),
+  location: z.string().trim().max(200).nullable(),
+  sector: z.string().trim().max(200).nullable(),
+  incentives: z.string().trim().max(500).nullable(),
+});
+
+export type ZoneInput = z.infer<typeof ZoneSchema>;
+
+/**
+ * Country Master Data -- Ports, Airports & Customs Points.
+ */
+export const PORT_TYPES = ["Sea Port", "Airport", "Land Border", "Dry Port"] as const;
+
+export const PortAirportSchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  type: z.enum(PORT_TYPES),
+  location: z.string().trim().max(200).nullable(),
+  isCustomsPoint: z.boolean(),
+});
+
+export type PortAirportInput = z.infer<typeof PortAirportSchema>;
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --

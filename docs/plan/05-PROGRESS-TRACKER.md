@@ -1,7 +1,7 @@
 # Progress Tracker
 **Update this file at the end of every session. Read it first, every session, right after `00-MASTER-PLAN.md`.**
 
-Last updated: 2026-09-20 (Master Data now 6 of 8 sections built: added HS Code Packs)
+Last updated: 2026-09-20 (Country Master Data complete: all 8 sections built)
 
 ## Status legend
 Not started · In progress · Blocked · Done
@@ -11,7 +11,7 @@ Not started · In progress · Blocked · Done
 | Phase | Module | Status | Notes / decisions locked | Open questions |
 |---|---|---|---|---|
 | 0 | Foundation (repo, CI, adapters skeleton) | **Done** | Live at `elev8-full-built.vercel.app`. `/api/health` confirms `"status": "connected"` against a real Supabase project (ref `trnzlhmhknrltqwmtuvs`). Migration applied, RLS proven end to end, CI green, adapter layer in place. 3 real bugs found and fixed during first deploy: `@types/node` peer conflict with vitest, wrong Claude model string (`claude-sonnet-4-5` → `claude-sonnet-5`), `.gitignore` accidentally excluding `.env.example`, and a Supabase-error-serialization bug in `/api/health` (`[object Object]` → readable errors). All fixed, committed, and verified. | None. |
-| 0.5 | Country/State Config Engine | In progress | Schema/RBAC/resolver/approval-workflow, real brand shell, Identity, and now 6 of 8 Master Data sections built and live (HS Code Coverage, HS Code Packs, Tax & VAT/GST, Free Trade Agreements, Business Registration Types, Units of Measurement). 25 total DB assertions passing across 3 test files. **Remaining: Economic & Industrial Zones, Ports/Airports & Customs Points, State Cluster management, and all 8 pillar forms.** | Who reviews/approves a country's own submission (service-role-only for now). `country_hs_codes` reconciliation with Phase 1's future global HS master. |
+| 0.5 | Country/State Config Engine | In progress | Schema/RBAC/resolver/approval-workflow, real brand shell, Identity, and **Country Master Data are all done and live** -- all 8 sections built (HS Code Coverage, HS Code Packs, Tax & VAT/GST, Free Trade Agreements, Business Registration Types, Units of Measurement, Economic & Industrial Zones, Ports/Airports & Customs Points). 29 total DB assertions passing across 3 test files, full app gate clean on every commit. **Remaining: State Cluster management and all 8 pillar forms (Governance, Procurement, B2B, Import, Export, Investment, Sustainability, ICV).** | Who reviews/approves a country's own submission (service-role-only for now). `country_hs_codes` reconciliation with Phase 1's future global HS master. |
 | 1 | Master Data | Not started | — | — |
 | 2 | Identity, Auth & Registration | Blocked | — | Decisions #1–#4 in `00-MASTER-PLAN.md` §4 unresolved |
 | 3 | Company Profile, Supplier/Investor Subscription | Not started | — | — |
@@ -67,6 +67,7 @@ Both the schema (this session) and CI itself (previously silently broken, now fi
 - 2026-09-20 (same day, later) -- Built Free Trade Agreements UI, and in the process found country_ftas' original shape (from the very first Phase 0.5 migration) didn't match the mockup's actual fields at all -- it had a single partner_country and a vague tariff_schedule jsonb, the real mockup tracks type, status, MULTIPLE partner countries per agreement, a preferential rate, and rules of origin. Fixed forward with a new migration (never edit a merged one), safe as a straight ALTER since no UI had ever written a row to this table. One status value's own em dash was removed and applied to the stored database value itself, not just a label, so it matches the check constraint exactly. 23 total DB assertions now pass across 3 test files.
 - 2026-09-20 (same day, later still) -- Added Business Registration Types and Units of Measurement, both simple string chip-lists per the mockup's own chipBlock() pattern. Stored as text[] keys in countries.master_data via two narrow, explicitly-named adapter/action pairs rather than one generic key-based function, so a Server Action can only ever touch the one section it's meant to. Master Data is now 5 of 8 sections built.
 - 2026-09-20 (same day, one more round) -- Added HS Code Packs: named, reusable bundles of the codes from HS Code Coverage, so Import/Export can apply a whole set at once. New country_hs_code_packs table, codes stored as text[] referencing code strings (matching the mockup's own approach, not a foreign key to ids). 25 total DB assertions now pass across 3 test files. Master Data is now 6 of 8 sections built -- only Economic & Industrial Zones and Ports/Airports & Customs Points remain.
+- 2026-09-20 (final round) -- Completed Country Master Data: added Economic & Industrial Zones and Ports/Airports & Customs Points, the last 2 of 8 sections. Two new tables, same RLS pattern as every other list in this module, type fields backed by database check constraints matching the mockup's own option lists. 29 total DB assertions now pass across 3 test files, all verified against real Postgres before any UI was written. Country Master Data is done -- next up is State Cluster management or the first pillar form.
 
 ## How to resume in a new chat
 

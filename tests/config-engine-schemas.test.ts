@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -249,5 +249,51 @@ describe("FreeTradeAgreementSchema", () => {
   it("allows type to be null (not yet classified)", () => {
     const result = FreeTradeAgreementSchema.safeParse({ ...valid, type: null });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("ZoneSchema", () => {
+  it("accepts a valid zone", () => {
+    const result = ZoneSchema.safeParse({
+      name: "Salalah Free Zone",
+      type: "Free Zone",
+      location: "Salalah",
+      sector: "Logistics",
+      incentives: "100% foreign ownership",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid zone type", () => {
+    const result = ZoneSchema.safeParse({
+      name: "Test Zone",
+      type: "Not A Real Type",
+      location: null,
+      sector: null,
+      incentives: null,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("PortAirportSchema", () => {
+  it("accepts a valid port entry", () => {
+    const result = PortAirportSchema.safeParse({
+      name: "Port Sultan Qaboos",
+      type: "Sea Port",
+      location: "Muscat",
+      isCustomsPoint: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid port type", () => {
+    const result = PortAirportSchema.safeParse({
+      name: "Test Port",
+      type: "Not A Real Type",
+      location: null,
+      isCustomsPoint: false,
+    });
+    expect(result.success).toBe(false);
   });
 });

@@ -14,6 +14,8 @@ import {
   listCountryFtas,
   listCountryHsCodePacks,
   listCountryHsCodes,
+  listCountryPortsAirports,
+  listCountryZones,
 } from "@/lib/modules/config-engine/adapter";
 import { MasterDataForm } from "./MasterDataForm";
 
@@ -39,15 +41,25 @@ export default async function MasterDataPage() {
     );
   }
 
-  const [hsCodes, taxSettings, ftas, registrationTypes, unitsOfMeasurement, hsCodePacks] =
-    await Promise.all([
-      listCountryHsCodes(scope.countryId),
-      getCountryTaxSettings(scope.countryId),
-      listCountryFtas(scope.countryId),
-      getCountryRegistrationTypes(scope.countryId),
-      getCountryUnitsOfMeasurement(scope.countryId),
-      listCountryHsCodePacks(scope.countryId),
-    ]);
+  const [
+    hsCodes,
+    taxSettings,
+    ftas,
+    registrationTypes,
+    unitsOfMeasurement,
+    hsCodePacks,
+    zones,
+    portsAirports,
+  ] = await Promise.all([
+    listCountryHsCodes(scope.countryId),
+    getCountryTaxSettings(scope.countryId),
+    listCountryFtas(scope.countryId),
+    getCountryRegistrationTypes(scope.countryId),
+    getCountryUnitsOfMeasurement(scope.countryId),
+    listCountryHsCodePacks(scope.countryId),
+    listCountryZones(scope.countryId),
+    listCountryPortsAirports(scope.countryId),
+  ]);
 
   return (
     <MasterDataForm
@@ -57,6 +69,8 @@ export default async function MasterDataPage() {
       registrationTypes={registrationTypes}
       unitsOfMeasurement={unitsOfMeasurement}
       hsCodePacks={hsCodePacks}
+      zones={zones}
+      portsAirports={portsAirports}
     />
   );
 }

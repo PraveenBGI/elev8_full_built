@@ -14,9 +14,13 @@ import {
   addCountryHsCode,
   addCountryFta,
   addCountryHsCodePack,
+  addCountryZone,
+  addCountryPortAirport,
   deleteCountryHsCode,
   deleteCountryFta,
   deleteCountryHsCodePack,
+  deleteCountryZone,
+  deleteCountryPortAirport,
   getMyAdminScope,
   updateCountryTaxSettings,
   updateCountryRegistrationTypes,
@@ -28,11 +32,15 @@ import {
   FreeTradeAgreementSchema,
   ChipListSchema,
   HsCodePackSchema,
+  ZoneSchema,
+  PortAirportSchema,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
   type ChipListInput,
   type HsCodePackInput,
+  type ZoneInput,
+  type PortAirportInput,
 } from "@/lib/modules/config-engine/schemas";
 
 export type ActionResult =
@@ -249,6 +257,94 @@ export async function deleteHsCodePackAction(packId: string): Promise<ActionResu
 
   try {
     await deleteCountryHsCodePack(packId);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Delete failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function addZoneAction(input: ZoneInput): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = ZoneSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await addCountryZone(scope.countryId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function deleteZoneAction(zoneId: string): Promise<ActionResult> {
+  try {
+    await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await deleteCountryZone(zoneId);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Delete failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function addPortAirportAction(input: PortAirportInput): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = PortAirportSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await addCountryPortAirport(scope.countryId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function deletePortAirportAction(portId: string): Promise<ActionResult> {
+  try {
+    await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await deleteCountryPortAirport(portId);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Delete failed." };
   }

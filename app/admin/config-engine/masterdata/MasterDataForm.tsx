@@ -19,24 +19,34 @@ import {
   HS_CATEGORIES,
   FTA_TYPES,
   FTA_STATUSES,
+  ZONE_TYPES,
+  PORT_TYPES,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
   type HsCodePackInput,
+  type ZoneInput,
+  type PortAirportInput,
 } from "@/lib/modules/config-engine/schemas";
 import type {
   FreeTradeAgreementRow,
   HsCodePackRow,
   HsCodeRow,
+  PortAirportRow,
+  ZoneRow,
 } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "../SettingsGroup";
 import {
   addFtaAction,
   addHsCodeAction,
   addHsCodePackAction,
+  addPortAirportAction,
+  addZoneAction,
   deleteFtaAction,
   deleteHsCodeAction,
   deleteHsCodePackAction,
+  deletePortAirportAction,
+  deleteZoneAction,
   saveRegistrationTypesAction,
   saveTaxSettingsAction,
   saveUnitsOfMeasurementAction,
@@ -80,11 +90,6 @@ function Field({
     </div>
   );
 }
-
-const UPCOMING_SECTIONS = [
-  "Economic & Industrial Zones",
-  "Ports, Airports & Customs Points",
-];
 
 function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
   const [hsCodes, setHsCodes] = useState(initialHsCodes);
@@ -598,6 +603,295 @@ function FtaTable({ initialFtas }: { initialFtas: FreeTradeAgreementRow[] }) {
   );
 }
 
+function ZoneTable({ initialZones }: { initialZones: ZoneRow[] }) {
+  const [zones, setZones] = useState(initialZones);
+  const [draft, setDraft] = useState<ZoneInput>({
+    name: "",
+    type: ZONE_TYPES[0],
+    location: null,
+    sector: null,
+    incentives: null,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [isPending, startTransition] = useTransition();
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+
+    startTransition(async () => {
+      const result = await addZoneAction(draft);
+      if (!result.ok) {
+        setError(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
+        return;
+      }
+      setZones((rows) => [...rows, { id: `pending-${draft.name}`, ...draft }]);
+      setDraft({ name: "", type: ZONE_TYPES[0], location: null, sector: null, incentives: null });
+    });
+  }
+
+  function handleDelete(id: string) {
+    startTransition(async () => {
+      const result = await deleteZoneAction(id);
+      if (result.ok) {
+        setZones((rows) => rows.filter((r) => r.id !== id));
+      }
+    });
+  }
+
+  return (
+    <div>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Referenced by Investment&apos;s Special Economic Zones / Free Zones
+        picker.
+      </p>
+
+      {zones.length > 0 && (
+        <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+          <table className="w-full text-left text-[13px]">
+            <thead>
+              <tr style={{ background: "var(--elev8-g50)" }}>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Zone name</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Type</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Location</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Sector</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {zones.map((z) => (
+                <tr key={z.id} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-3 py-2">{z.name}</td>
+                  <td className="px-3 py-2">{z.type}</td>
+                  <td className="px-3 py-2">{z.location}</td>
+                  <td className="px-3 py-2">{z.sector}</td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(z.id)}
+                      disabled={isPending}
+                      className="text-[12px] font-medium"
+                      style={{ color: "var(--elev8-red)" }}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Zone name" error={fieldErrors.name}>
+          <input
+            className={inputClass}
+            value={draft.name}
+            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+          />
+        </Field>
+        <Field label="Type">
+          <select
+            className={inputClass}
+            value={draft.type}
+            onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value as ZoneInput["type"] }))}
+          >
+            {ZONE_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Location">
+          <input
+            className={inputClass}
+            value={draft.location ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Sector">
+          <input
+            className={inputClass}
+            value={draft.sector ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, sector: e.target.value || null }))}
+          />
+        </Field>
+        <div className="sm:col-span-2">
+          <Field label="Incentives">
+            <input
+              className={inputClass}
+              value={draft.incentives ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, incentives: e.target.value || null }))}
+            />
+          </Field>
+        </div>
+        <div className="sm:col-span-2">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: "var(--elev8-blue)" }}
+          >
+            Add zone
+          </button>
+        </div>
+      </form>
+      {error && (
+        <p className="mt-2 text-sm" style={{ color: "var(--elev8-red)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PortAirportTable({ initialPorts }: { initialPorts: PortAirportRow[] }) {
+  const [ports, setPorts] = useState(initialPorts);
+  const [draft, setDraft] = useState<PortAirportInput>({
+    name: "",
+    type: PORT_TYPES[0],
+    location: null,
+    isCustomsPoint: false,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [isPending, startTransition] = useTransition();
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+
+    startTransition(async () => {
+      const result = await addPortAirportAction(draft);
+      if (!result.ok) {
+        setError(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
+        return;
+      }
+      setPorts((rows) => [
+        ...rows,
+        { id: `pending-${draft.name}`, name: draft.name, type: draft.type, location: draft.location, is_customs_point: draft.isCustomsPoint },
+      ]);
+      setDraft({ name: "", type: PORT_TYPES[0], location: null, isCustomsPoint: false });
+    });
+  }
+
+  function handleDelete(id: string) {
+    startTransition(async () => {
+      const result = await deletePortAirportAction(id);
+      if (result.ok) {
+        setPorts((rows) => rows.filter((r) => r.id !== id));
+      }
+    });
+  }
+
+  return (
+    <div>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Referenced by Import&apos;s Customs Entry Points picker and
+        Export&apos;s per-corridor logistics gateway.
+      </p>
+
+      {ports.length > 0 && (
+        <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+          <table className="w-full text-left text-[13px]">
+            <thead>
+              <tr style={{ background: "var(--elev8-g50)" }}>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Name</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Type</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Location</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Customs point</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {ports.map((p) => (
+                <tr key={p.id} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-3 py-2">{p.name}</td>
+                  <td className="px-3 py-2">{p.type}</td>
+                  <td className="px-3 py-2">{p.location}</td>
+                  <td className="px-3 py-2">{p.is_customs_point ? "Yes" : "No"}</td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(p.id)}
+                      disabled={isPending}
+                      className="text-[12px] font-medium"
+                      style={{ color: "var(--elev8-red)" }}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Name" error={fieldErrors.name}>
+          <input
+            className={inputClass}
+            value={draft.name}
+            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+          />
+        </Field>
+        <Field label="Type">
+          <select
+            className={inputClass}
+            value={draft.type}
+            onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value as PortAirportInput["type"] }))}
+          >
+            {PORT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Location">
+          <input
+            className={inputClass}
+            value={draft.location ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value || null }))}
+          />
+        </Field>
+        <label className="flex items-center gap-2 pt-6 text-[13px]" style={{ color: "var(--elev8-ink)" }}>
+          <input
+            type="checkbox"
+            checked={draft.isCustomsPoint}
+            onChange={(e) => setDraft((d) => ({ ...d, isCustomsPoint: e.target.checked }))}
+            className="h-4 w-4 accent-[var(--elev8-blue)]"
+          />
+          Customs point
+        </label>
+        <div className="sm:col-span-2">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: "var(--elev8-blue)" }}
+          >
+            Add
+          </button>
+        </div>
+      </form>
+      {error && (
+        <p className="mt-2 text-sm" style={{ color: "var(--elev8-red)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ChipListEditor({
   initialItems,
   action,
@@ -809,6 +1103,8 @@ export function MasterDataForm({
   registrationTypes,
   unitsOfMeasurement,
   hsCodePacks,
+  zones,
+  portsAirports,
 }: {
   hsCodes: HsCodeRow[];
   taxSettings: TaxSettingsInput;
@@ -816,6 +1112,8 @@ export function MasterDataForm({
   registrationTypes: string[];
   unitsOfMeasurement: string[];
   hsCodePacks: HsCodePackRow[];
+  zones: ZoneRow[];
+  portsAirports: PortAirportRow[];
 }) {
   const hsSummary =
     hsCodes.length === 0
@@ -826,6 +1124,14 @@ export function MasterDataForm({
     hsCodePacks.length === 0
       ? "No packs added"
       : `${hsCodePacks.length} pack${hsCodePacks.length === 1 ? "" : "s"}`;
+
+  const zonesSummary =
+    zones.length === 0 ? "No zones added" : `${zones.length} zone${zones.length === 1 ? "" : "s"}`;
+
+  const portsSummary =
+    portsAirports.length === 0
+      ? "None added"
+      : `${portsAirports.length} entr${portsAirports.length === 1 ? "y" : "ies"}`;
 
   const taxSummary =
     [taxSettings.vatGstName, taxSettings.taxAuthority].filter(Boolean).join(", ") ||
@@ -912,19 +1218,22 @@ export function MasterDataForm({
             placeholder="e.g. Kilogram (kg), Metric Ton (MT)"
           />
         </SettingsGroup>
-      </div>
 
-      <div className="mt-10">
-        <h2 className="text-[13px] font-semibold" style={{ color: "var(--elev8-g600)" }}>
-          Coming next in Country Master Data
-        </h2>
-        <ul className="mt-2 space-y-1.5">
-          {UPCOMING_SECTIONS.map((s) => (
-            <li key={s} className="text-[13px]" style={{ color: "var(--elev8-g500)" }}>
-              {s}
-            </li>
-          ))}
-        </ul>
+        <SettingsGroup
+          title="Economic & Industrial Zones"
+          summary={zonesSummary}
+          isComplete={zones.length > 0}
+        >
+          <ZoneTable initialZones={zones} />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Ports, Airports & Customs Points"
+          summary={portsSummary}
+          isComplete={portsAirports.length > 0}
+        >
+          <PortAirportTable initialPorts={portsAirports} />
+        </SettingsGroup>
       </div>
     </div>
   );

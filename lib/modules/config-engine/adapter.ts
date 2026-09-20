@@ -18,11 +18,15 @@ import {
   FreeTradeAgreementSchema,
   ChipListSchema,
   HsCodePackSchema,
+  ZoneSchema,
+  PortAirportSchema,
   type HsCodeInput,
   type TaxSettingsInput,
   type FreeTradeAgreementInput,
   type ChipListInput,
   type HsCodePackInput,
+  type ZoneInput,
+  type PortAirportInput,
   type CountryIdentityInput,
 } from "./schemas";
 
@@ -315,6 +319,97 @@ export async function addCountryHsCodePack(
 export async function deleteCountryHsCodePack(packId: string): Promise<void> {
   const db = await getDb();
   const { error } = await db.from("country_hs_code_packs").delete().eq("id", packId);
+  if (error) throw error;
+}
+
+/**
+ * Country Master Data -- Economic & Industrial Zones.
+ */
+export type ZoneRow = {
+  id: string;
+  name: string;
+  type: string;
+  location: string | null;
+  sector: string | null;
+  incentives: string | null;
+};
+
+export async function listCountryZones(countryId: string): Promise<ZoneRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("country_zones")
+    .select("id, name, type, location, sector, incentives")
+    .eq("country_id", countryId)
+    .order("name");
+
+  if (error) throw error;
+  return (data ?? []) as ZoneRow[];
+}
+
+export async function addCountryZone(countryId: string, input: ZoneInput): Promise<void> {
+  const parsed = ZoneSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("country_zones").insert({
+    country_id: countryId,
+    name: parsed.name,
+    type: parsed.type,
+    location: parsed.location,
+    sector: parsed.sector,
+    incentives: parsed.incentives,
+  });
+  if (error) throw error;
+}
+
+export async function deleteCountryZone(zoneId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("country_zones").delete().eq("id", zoneId);
+  if (error) throw error;
+}
+
+/**
+ * Country Master Data -- Ports, Airports & Customs Points.
+ */
+export type PortAirportRow = {
+  id: string;
+  name: string;
+  type: string;
+  location: string | null;
+  is_customs_point: boolean;
+};
+
+export async function listCountryPortsAirports(
+  countryId: string,
+): Promise<PortAirportRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("country_ports_airports")
+    .select("id, name, type, location, is_customs_point")
+    .eq("country_id", countryId)
+    .order("name");
+
+  if (error) throw error;
+  return (data ?? []) as PortAirportRow[];
+}
+
+export async function addCountryPortAirport(
+  countryId: string,
+  input: PortAirportInput,
+): Promise<void> {
+  const parsed = PortAirportSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("country_ports_airports").insert({
+    country_id: countryId,
+    name: parsed.name,
+    type: parsed.type,
+    location: parsed.location,
+    is_customs_point: parsed.isCustomsPoint,
+  });
+  if (error) throw error;
+}
+
+export async function deleteCountryPortAirport(portId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("country_ports_airports").delete().eq("id", portId);
   if (error) throw error;
 }
 

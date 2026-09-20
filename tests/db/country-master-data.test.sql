@@ -122,4 +122,54 @@ end $$;
 
 reset role;
 
+-- ── country_zones / country_ports_airports (20260920000003) ────────────
+
+set role authenticated;
+set request.jwt.claim.sub = '99999999-9999-9999-9999-999999999999';
+
+do $$
+begin
+  insert into country_zones (country_id, name, type, location, sector, incentives)
+  values (
+    'eeeeeeee-0000-0000-0000-000000000001',
+    'Salalah Free Zone', 'Free Zone', 'Salalah', 'Logistics', '100% foreign ownership, tax holiday'
+  );
+  raise notice 'PASS: zone created successfully';
+end $$;
+
+do $$
+begin
+  begin
+    insert into country_zones (country_id, name, type)
+    values ('eeeeeeee-0000-0000-0000-000000000001', 'Bad Type Zone', 'Not A Real Type');
+    raise exception 'FAIL: an invalid zone type was accepted';
+  exception
+    when check_violation then
+      raise notice 'PASS: invalid zone type correctly rejected by the check constraint';
+  end;
+end $$;
+
+do $$
+begin
+  insert into country_ports_airports (country_id, name, type, location, is_customs_point)
+  values ('eeeeeeee-0000-0000-0000-000000000001', 'Port Sultan Qaboos', 'Sea Port', 'Muscat', true);
+  raise notice 'PASS: port/airport created successfully';
+end $$;
+
+set request.jwt.claim.sub = '88888888-1111-1111-1111-111111111111';
+
+do $$
+begin
+  begin
+    insert into country_zones (country_id, name, type)
+    values ('eeeeeeee-0000-0000-0000-000000000001', 'Cross-country zone', 'Free Zone');
+    raise exception 'FAIL: a different country''s admin created a zone in another country';
+  exception
+    when insufficient_privilege then
+      raise notice 'PASS: cross-country zone write correctly rejected';
+  end;
+end $$;
+
+reset role;
+
 \echo 'ALL COUNTRY MASTER DATA TESTS PASSED'

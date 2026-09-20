@@ -302,6 +302,22 @@ it, it just silently stops matching, the same behavior the mockup has.
 **Master Data is now 6 of 8 sections built.** Remaining: Economic &
 Industrial Zones, Ports/Airports & Customs Points.
 
+## Economic & Industrial Zones, Ports/Airports & Customs Points (this session)
+
+Completes Country Master Data: all 8 mockup sections are now built.
+
+Two more real tables (`country_zones`, `country_ports_airports`), same
+RLS pattern as everything else in this module. Zones are "Referenced by
+Investment's Special Economic Zones / Free Zones picker" (the mockup's
+own note); Ports/Airports are "Referenced by Import's Customs Entry
+Points picker and Export's per-corridor logistics gateway."
+
+**Country Master Data is done, 8 of 8 sections.** HS Code Coverage, HS
+Code Packs, Tax & VAT/GST System, Free Trade Agreements, Business
+Registration Types, Units of Measurement, Economic & Industrial Zones,
+Ports/Airports & Customs Points. 29 total database assertions passing
+across 3 test files.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.
