@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -137,5 +137,72 @@ describe("toCountryRow", () => {
       current_financial_year: "2026",
       working_week: "Sun-Thu",
     });
+  });
+});
+
+describe("HsCodeSchema", () => {
+  it("accepts a valid HS code entry", () => {
+    const result = HsCodeSchema.safeParse({
+      code: "8501.10",
+      description: "Electric motors",
+      category: "Electronics & ICT",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty code", () => {
+    const result = HsCodeSchema.safeParse({
+      code: "",
+      description: "Electric motors",
+      category: "Electronics & ICT",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a category outside the fixed list", () => {
+    const result = HsCodeSchema.safeParse({
+      code: "8501.10",
+      description: "Electric motors",
+      category: "Not A Real Category",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("TaxSettingsSchema", () => {
+  it("accepts all-null (not configured yet) as valid", () => {
+    const result = TaxSettingsSchema.safeParse({
+      corporateTaxRate: null,
+      vatGstName: null,
+      vatGstRate: null,
+      withholdingTaxRate: null,
+      customsDutyGeneral: null,
+      taxAuthority: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("coerces a string rate into a number", () => {
+    const result = TaxSettingsSchema.parse({
+      corporateTaxRate: "15",
+      vatGstName: "VAT",
+      vatGstRate: 5,
+      withholdingTaxRate: null,
+      customsDutyGeneral: null,
+      taxAuthority: null,
+    });
+    expect(result.corporateTaxRate).toBe(15);
+  });
+
+  it("rejects a rate above 100", () => {
+    const result = TaxSettingsSchema.safeParse({
+      corporateTaxRate: 150,
+      vatGstName: null,
+      vatGstRate: null,
+      withholdingTaxRate: null,
+      customsDutyGeneral: null,
+      taxAuthority: null,
+    });
+    expect(result.success).toBe(false);
   });
 });

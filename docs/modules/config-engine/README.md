@@ -208,6 +208,40 @@ National Partner, Support Partners). Only Country Metrics has a real
 schema/adapter/tests behind it. The other six render as honestly-labeled
 "Not built yet" cards in the same visual style as the working one.
 
+## Country Master Data (this session)
+
+Two of the mockup's 8 Master Data sections built at `/admin/config-engine/masterdata`:
+
+- **HS Code Coverage** — a real `country_hs_codes` table, normalized
+  (not jsonb) for the same reason as `country_ftas`: it's a genuine list
+  Import, Export, and later the Classification AI engine will query, not
+  a handful of settings. RLS matches `country_ftas` exactly: broadly
+  readable, writable only by that country's Country Admin.
+- **Tax & VAT/GST System** — jsonb settings on
+  `countries.master_data.tax`, since it's a handful of single-value
+  fields (corporate tax rate, VAT/GST rate and name, withholding rate,
+  reference customs duty, tax authority), not a list. Writes merge into
+  the existing `master_data` blob rather than overwrite it, so future
+  sibling keys (zones, ports, etc.) aren't silently wiped.
+
+`SettingsGroup.tsx` moved from `identity/` up to `config-engine/` since
+it's now shared between Identity and Master Data, and will be reused by
+every future pillar's own sub-sections — it was written generic from the
+start for exactly this.
+
+**The other 6 sections** (HS Code Packs, Economic & Industrial Zones,
+Ports/Airports & Customs Points, Free Trade Agreements, Business
+Registration Types, Units of Measurement) are listed as "coming next,"
+not built. Free Trade Agreements is worth calling out specifically: its
+schema (`country_ftas`) has existed since the foundation migration —
+this is a UI gap, not a missing data model.
+
+Verified with `tests/db/country-master-data.test.sql` (own-country write
+succeeds, cross-country write rejected, broad read works) run against
+real Postgres before any application code was written on top of it — 21
+total database assertions now pass across all three test files, run
+sequentially exactly as CI does it.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.
@@ -215,7 +249,8 @@ schema/adapter/tests behind it. The other six render as honestly-labeled
 3. **Does a Country Admin need write access to override a delegated
    state's config in an emergency**, or is the boundary meant to be
    absolute? **Resolved this session**: absolute. A Country Admin can see a delegated state's config (rollup/audit) but never write it. Two levers instead: `request_state_clarification()` (kicks it back for the State Admin to fix, with required notes) and `set_state_config_control()` (revoke delegation entirely, falls back to the country's config via the resolver, without touching or deleting anything the State Admin authored).
-4. **Who reviews and approves a *country's* own submission?** New question, surfaced while building the approval workflow. There's no platform-wide admin role in this schema yet, so `approve_country_config()`/`publish_country_config()`/`request_country_clarification()` exist (for schema completeness and audit-trail symmetry with the state-level flow) but are only reachable via the Supabase service role — no app-facing role can call them. `submit_country_config_for_approval()` works normally (a Country Admin can submit their own country). This needs a real decision: introduce a platform admin role, or is a country's own submission auto-approved once submitted, or does this stay an ops-only manual action indefinitely?
+4. **Who reviews and approves a *country's* own submission?** New question, surfaced while building the approval workflow. There's no platform-wide admin role in this schema yet, so `approve_country_config()`/`publish_country_config()`/`request_country_clarification()` exist (for schema completeness and audit-trail symmetry with the state-level flow) but are only reachable via the Supabase service role, no app-facing role can call them. `submit_country_config_for_approval()` works normally (a Country Admin can submit their own country). This needs a real decision: introduce a platform admin role, or is a country's own submission auto-approved once submitted, or does this stay an ops-only manual action indefinitely?
+5. **`country_hs_codes` reconciliation with Phase 1.** This table currently holds each country's own ad hoc HS code entries (code, description, category as plain text), not foreign-keyed to any global master, because Phase 1 (Master Data, the platform-wide reference-data phase) doesn't exist yet. Once it does, decide whether `country_hs_codes` becomes a join table referencing a real global HS code master, or stays independent per country. Flagging now so it isn't forgotten once Phase 1 starts.
 
 ## Two real bugs caught by this module's own verification (not by inspection)
 

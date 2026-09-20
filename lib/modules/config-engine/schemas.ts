@@ -77,3 +77,45 @@ export function toCountryRow(input: CountryIdentityInput) {
     working_week: input.workingWeek ?? null,
   };
 }
+
+/**
+ * Country Master Data -- HS Code Coverage (lib/modules/config-engine/
+ * README.md has the full section breakdown; only this list and Tax &
+ * VAT/GST System are built so far).
+ */
+export const HS_CATEGORIES = [
+  "Energy & Petrochemicals",
+  "Industrial & Manufacturing",
+  "Electronics & ICT",
+  "Healthcare & Pharma",
+  "Agriculture & Food",
+  "Construction Materials",
+  "Logistics & Maritime",
+  "Textiles & Consumer Goods",
+] as const;
+
+export const HsCodeSchema = z.object({
+  code: z.string().trim().min(1, "HS code is required"),
+  description: z.string().trim().min(1, "Description is required"),
+  category: z.enum(HS_CATEGORIES),
+});
+
+export type HsCodeInput = z.infer<typeof HsCodeSchema>;
+
+/**
+ * Country Master Data -- Tax & VAT/GST System. Stored as jsonb
+ * (countries.master_data.tax), not its own table -- a handful of
+ * single-value settings per country, not a list, so it doesn't need the
+ * relational treatment HS codes and FTAs get. See the foundation
+ * migration's own comment on countries.master_data for why.
+ */
+export const TaxSettingsSchema = z.object({
+  corporateTaxRate: z.coerce.number().min(0).max(100).nullable(),
+  vatGstName: z.string().trim().max(50).nullable(),
+  vatGstRate: z.coerce.number().min(0).max(100).nullable(),
+  withholdingTaxRate: z.coerce.number().min(0).max(100).nullable(),
+  customsDutyGeneral: z.coerce.number().min(0).max(100).nullable(),
+  taxAuthority: z.string().trim().max(200).nullable(),
+});
+
+export type TaxSettingsInput = z.infer<typeof TaxSettingsSchema>;

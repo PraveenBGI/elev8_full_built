@@ -20,7 +20,7 @@ import { useState, useTransition } from "react";
 import type { CountryIdentityRow } from "@/lib/modules/config-engine/adapter";
 import type { CountryIdentityInput } from "@/lib/modules/config-engine/schemas";
 import { saveCountryIdentityAction } from "./actions";
-import { SettingsGroup } from "./SettingsGroup";
+import { SettingsGroup } from "../SettingsGroup";
 
 function rowToFormInput(row: CountryIdentityRow): CountryIdentityInput {
   return {

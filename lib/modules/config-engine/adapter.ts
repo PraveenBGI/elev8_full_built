@@ -13,6 +13,10 @@ import { getDb } from "@/lib/db/client";
 import {
   CountryIdentitySchema,
   toCountryRow,
+  HsCodeSchema,
+  TaxSettingsSchema,
+  type HsCodeInput,
+  type TaxSettingsInput,
   type CountryIdentityInput,
 } from "./schemas";
 
@@ -147,4 +151,126 @@ export async function getCountryPillarReadiness(
     result[row.pillar as string] = row.readiness_level as string;
   }
   return result;
+}
+
+/**
+ * Country Master Data -- HS Code Coverage.
+ */
+export type HsCodeRow = {
+  id: string;
+  code: string;
+  description: string;
+  category: string;
+};
+
+export async function listCountryHsCodes(countryId: string): Promise<HsCodeRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("country_hs_codes")
+    .select("id, code, description, category")
+    .eq("country_id", countryId)
+    .order("code");
+
+  if (error) throw error;
+  return (data ?? []) as HsCodeRow[];
+}
+
+export async function addCountryHsCode(
+  countryId: string,
+  input: HsCodeInput,
+): Promise<void> {
+  const parsed = HsCodeSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("country_hs_codes").insert({
+    country_id: countryId,
+    code: parsed.code,
+    description: parsed.description,
+    category: parsed.category,
+  });
+  if (error) throw error;
+}
+
+export async function deleteCountryHsCode(hsCodeId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("country_hs_codes").delete().eq("id", hsCodeId);
+  if (error) throw error;
+}
+
+/**
+ * Lightweight existence check for the stepper (see
+ * app/admin/config-engine/layout.tsx) -- avoids pulling every HS code row
+ * just to know whether the Master Data stage has any content yet.
+ */
+export async function countryHasAnyHsCodes(countryId: string): Promise<boolean> {
+  const db = await getDb();
+  const { count, error } = await db
+    .from("country_hs_codes")
+    .select("id", { count: "exact", head: true })
+    .eq("country_id", countryId);
+
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
+/**
+ * Country Master Data -- Tax & VAT/GST System. Reads/writes
+ * countries.master_data.tax (see TaxSettingsSchema's own comment for why
+ * this is jsonb, not a table).
+ */
+export async function getCountryTaxSettings(
+  countryId: string,
+): Promise<TaxSettingsInput> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("countries")
+    .select("master_data")
+    .eq("id", countryId)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const tax = (data?.master_data as { tax?: unknown } | null)?.tax ?? {};
+  const parsed = TaxSettingsSchema.safeParse(tax);
+  if (parsed.success) return parsed.data;
+
+  // No tax settings saved yet -- return an empty-but-valid shape rather
+  // than throwing, since "not configured yet" is the normal first state.
+  return {
+    corporateTaxRate: null,
+    vatGstName: null,
+    vatGstRate: null,
+    withholdingTaxRate: null,
+    customsDutyGeneral: null,
+    taxAuthority: null,
+  };
+}
+
+export async function updateCountryTaxSettings(
+  countryId: string,
+  input: TaxSettingsInput,
+): Promise<void> {
+  const parsed = TaxSettingsSchema.parse(input);
+  const db = await getDb();
+
+  // Merge into the existing master_data blob rather than overwrite it --
+  // other Master Data sections (zones, ports, etc.) will eventually live
+  // in sibling keys of the same jsonb column, and a plain .update() would
+  // silently wipe them.
+  const { data: current, error: readError } = await db
+    .from("countries")
+    .select("master_data")
+    .eq("id", countryId)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  const merged = {
+    ...((current?.master_data as Record<string, unknown>) ?? {}),
+    tax: parsed,
+  };
+
+  const { error } = await db
+    .from("countries")
+    .update({ master_data: merged })
+    .eq("id", countryId);
+  if (error) throw error;
 }

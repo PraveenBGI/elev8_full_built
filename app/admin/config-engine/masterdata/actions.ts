@@ -1,0 +1,110 @@
+"use server";
+
+/**
+ * app/admin/config-engine/masterdata/actions.ts
+ *
+ * Same pattern as identity/actions.ts: requireAuth() first, re-derive the
+ * caller's admin scope from the database rather than trusting client
+ * input, validate with the Zod schema before writing.
+ */
+
+import { revalidatePath } from "next/cache";
+import { requireAuth } from "@/lib/auth/adapter";
+import {
+  addCountryHsCode,
+  deleteCountryHsCode,
+  getMyAdminScope,
+  updateCountryTaxSettings,
+} from "@/lib/modules/config-engine/adapter";
+import {
+  HsCodeSchema,
+  TaxSettingsSchema,
+  type HsCodeInput,
+  type TaxSettingsInput,
+} from "@/lib/modules/config-engine/schemas";
+
+export type ActionResult =
+  | { ok: true }
+  | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
+
+async function requireCountryAdminScope() {
+  await requireAuth();
+  const scope = await getMyAdminScope();
+  if (!scope || scope.role !== "country_admin") {
+    throw new Error("Only a Country Admin may edit this.");
+  }
+  return scope;
+}
+
+export async function addHsCodeAction(input: HsCodeInput): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = HsCodeSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await addCountryHsCode(scope.countryId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function deleteHsCodeAction(hsCodeId: string): Promise<ActionResult> {
+  try {
+    await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await deleteCountryHsCode(hsCodeId);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Delete failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}
+
+export async function saveTaxSettingsAction(
+  input: TaxSettingsInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCountryAdminScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = TaxSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCountryTaxSettings(scope.countryId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/admin/config-engine/masterdata");
+  return { ok: true };
+}

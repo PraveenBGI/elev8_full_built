@@ -16,6 +16,7 @@
 
 import { getUser } from "@/lib/auth/adapter";
 import {
+  countryHasAnyHsCodes,
   getCountryById,
   getCountryPillarReadiness,
   getMyAdminScope,
@@ -46,6 +47,9 @@ export default async function ConfigEngineLayout({
       ? await getCountryPillarReadiness(scope.countryId)
       : {};
 
+  const hasMasterData =
+    scope.role === "country_admin" ? await countryHasAnyHsCodes(scope.countryId) : false;
+
   const statusByStageId: Record<string, StageStatus> = {};
   for (const stage of STAGES) {
     if (stage.isPillar) {
@@ -56,6 +60,10 @@ export default async function ConfigEngineLayout({
       // stands in for now: the two required fields are present.
       statusByStageId[stage.id] =
         country.name && country.master_currency ? "done" : "pending";
+    } else if (stage.id === "masterdata") {
+      // Same kind of heuristic as Identity -- no dedicated readiness
+      // column for this stage yet, only 2 of its 8 sections are built.
+      statusByStageId[stage.id] = hasMasterData ? "in_progress" : "pending";
     } else {
       statusByStageId[stage.id] = "pending";
     }
