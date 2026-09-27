@@ -1,0 +1,22 @@
+-- Company Configuration -- Phase 2 begins: Pillar Selection. Reads Role
+-- (primary_role/secondary_roles, already captured) and Goals (already
+-- captured) against ROLE_PILLAR_MATRIX/GOAL_PILLAR_MAP -- both plain
+-- application-layer lookup tables, not database tables, since they're
+-- fixed reference data ported directly from the mockup, never edited by
+-- anyone -- to recommend which of the 8 pillars are relevant.
+--
+-- One jsonb column for the whole selection state (pillars chosen,
+-- WHY each was chosen -- 'ai' vs 'manual', for the "AI Suggested" vs
+-- "Your Pick" badge -- and whether the one-time auto-apply has already
+-- run), same reasoning as commercial_terms: these three pieces are
+-- always read/written together as one unit, never queried individually.
+--
+-- auto_applied matters for more than bookkeeping: without it, a page
+-- refresh would silently re-run the auto-apply logic and stomp a
+-- company's manual on/off choices back to the AI's original
+-- recommendation. This column is what makes "auto-apply only once" true
+-- across sessions, not just within one page load.
+--
+-- Rollback: alter table public.companies drop column if exists pillar_selection;
+
+alter table public.companies add column pillar_selection jsonb not null default '{}';

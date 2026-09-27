@@ -21,6 +21,7 @@ import {
   updateCompanyGoals,
   updateCompanyIdentity,
   updateCompanyMarketPriority,
+  updateCompanyPillarSelection,
   updateCompanyRole,
   updateCompanyTradeIntent,
 } from "@/lib/modules/company-config/adapter";
@@ -32,6 +33,7 @@ import {
   CompanyMarketPrioritySchema,
   CompanyGoalsSchema,
   CompanyCommercialTermsSchema,
+  CompanyPillarSelectionSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -39,6 +41,7 @@ import {
   type CompanyMarketPriorityInput,
   type CompanyGoalsInput,
   type CompanyCommercialTermsInput,
+  type CompanyPillarSelectionInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -268,6 +271,35 @@ export async function saveCompanyCommercialTermsAction(
 
   try {
     await updateCompanyCommercialTerms(scope.companyId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanyPillarSelectionAction(
+  input: CompanyPillarSelectionInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = CompanyPillarSelectionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCompanyPillarSelection(scope.companyId, parsed.data);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
   }

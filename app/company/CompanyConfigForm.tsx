@@ -37,6 +37,11 @@ import {
   DEAL_SIZES,
   DEFAULT_COMMERCIAL_TERMS,
   type CompanyCommercialTermsInput,
+  PILLAR_META,
+  type PillarIdLiteral,
+  computePillarSignals,
+  DEFAULT_PILLAR_SELECTION,
+  type CompanyPillarSelectionInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
@@ -47,6 +52,7 @@ import {
   saveCompanyGoalsAction,
   saveCompanyIdentityAction,
   saveCompanyMarketPriorityAction,
+  saveCompanyPillarSelectionAction,
   saveCompanyRoleAction,
   saveCompanyTradeIntentAction,
 } from "./actions";
@@ -1326,7 +1332,145 @@ function CommercialTermsSection({ company }: { company: CompanyRow }) {
   );
 }
 
-const UPCOMING_STEPS = ["Pillar Selection & Pillar Preferences"];
+function PillarSelectionSection({ company }: { company: CompanyRow }) {
+  const allRoles = [company.primary_role, ...company.secondary_roles].filter(
+    (r): r is string => Boolean(r),
+  );
+  const signals = computePillarSignals(allRoles, company.goals);
+
+  const stored = company.pillar_selection as Partial<CompanyPillarSelectionInput>;
+  const [form, setForm] = useState<CompanyPillarSelectionInput>(() => {
+    const initial: CompanyPillarSelectionInput = { ...DEFAULT_PILLAR_SELECTION, ...stored };
+    // Auto-apply the AI recommendation only once, the first time this
+    // section is opened -- matches the mockup's own _pillarsAutoApplied
+    // guard exactly. autoApplied only becomes true in the database once
+    // the user explicitly saves, so opening this before their first
+    // save safely re-applies (nothing manual to lose yet); after a real
+    // save, the stored autoApplied: true skips this branch entirely and
+    // never overwrites their manual on/off choices. Computed as the
+    // initial state itself, not via an effect, since this is derived
+    // initial state rather than a sync with an external system.
+    if (initial.autoApplied) return initial;
+
+    const pillars = [...initial.pillars];
+    const pillarSource = { ...initial.pillarSource };
+    for (const key of Object.keys(signals)) {
+      const pillarId = key as PillarIdLiteral;
+      if (!pillars.includes(pillarId)) {
+        pillars.push(pillarId);
+        pillarSource[pillarId] = "ai";
+      }
+    }
+    return { ...initial, pillars, pillarSource, autoApplied: true };
+  });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function togglePillar(pillarId: PillarIdLiteral) {
+    setForm((f) => {
+      const isOn = f.pillars.includes(pillarId);
+      return {
+        ...f,
+        pillars: isOn ? f.pillars.filter((p) => p !== pillarId) : [...f.pillars, pillarId],
+        pillarSource: isOn
+          ? f.pillarSource
+          : { ...f.pillarSource, [pillarId]: "manual" },
+      };
+    });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+
+    startTransition(async () => {
+      const result = await saveCompanyPillarSelectionAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        gatewAI pre-selected pillars based on your role
+        {allRoles.length > 1 ? "s" : ""} and objectives. Toggle any
+        pillar on or off, your choices always win.
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {PILLAR_META.map((p) => {
+          const isOn = form.pillars.includes(p.id);
+          const source = form.pillarSource[p.id];
+          const sig = signals[p.id] ?? 0;
+          const confidence = sig >= 2 ? "High confidence" : sig === 1 ? "Medium confidence" : null;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => togglePillar(p.id)}
+              className="flex flex-col items-start gap-1.5 rounded-lg border p-4 text-left transition-colors"
+              style={
+                isOn
+                  ? { borderColor: "var(--elev8-blue)", background: "#EEF4FC" }
+                  : { borderColor: "var(--elev8-g200)", background: "white" }
+              }
+            >
+              {source === "ai" && isOn && (
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10.5px] font-medium"
+                  style={{ background: "#E9F8EF", color: "#00874A" }}
+                >
+                  AI Suggested{confidence ? ` - ${confidence}` : ""}
+                </span>
+              )}
+              {source === "manual" && isOn && (
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10.5px] font-medium"
+                  style={{ background: "#EEF4FC", color: "var(--elev8-blue)" }}
+                >
+                  Your Pick
+                </span>
+              )}
+              <span className="text-[13.5px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
+                {p.label}
+              </span>
+              <span className="text-[12px]" style={{ color: "var(--elev8-g500)" }}>
+                {p.desc}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending || form.pillars.length === 0}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p
+            className="text-sm"
+            style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}
+          >
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+const UPCOMING_STEPS = ["Pillar Preferences (per active pillar)"];
 
 export function CompanyConfigForm({
   company,
@@ -1477,6 +1621,20 @@ export function CompanyConfigForm({
           isComplete={Boolean((company.commercial_terms as { currency?: string })?.currency)}
         >
           <CommercialTermsSection company={company} />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Pillar selection"
+          summary={
+            (company.pillar_selection as { pillars?: string[] })?.pillars?.length
+              ? `${(company.pillar_selection as { pillars?: string[] }).pillars!.length} of 8 active`
+              : "Not set"
+          }
+          isComplete={Boolean(
+            (company.pillar_selection as { pillars?: string[] })?.pillars?.length,
+          )}
+        >
+          <PillarSelectionSection company={company} />
         </SettingsGroup>
       </div>
 

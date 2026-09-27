@@ -310,3 +310,102 @@ export const DEFAULT_COMMERCIAL_TERMS: CompanyCommercialTermsInput = {
   incotermsPreferred: [],
   incotermsAccepted: [],
 };
+
+/**
+ * Pillar Selection, Phase 2's first step. Reads Role and Goals (both
+ * already captured in Enterprise Configuration) against two fixed
+ * lookup tables ported verbatim from the mockup -- ROLE_PILLAR_MATRIX
+ * and GOAL_PILLAR_MAP -- to recommend which of the 8 pillars are
+ * relevant. This is deliberately NOT a Claude API call: per
+ * 03-AI-ENGINES-CLAUDE-API.md's own guidance, matching/recommendation
+ * work over structured data belongs in plain logic, and counting how
+ * many independent signals point to each pillar is exactly that.
+ * "AI Suggested" in the UI names the origin of the suggestion, not the
+ * mechanism producing it.
+ */
+export const PILLAR_IDS = [
+  "governance",
+  "procurement",
+  "b2b",
+  "import",
+  "export",
+  "investment",
+  "sustainability",
+  "icv",
+] as const;
+
+export type PillarIdLiteral = (typeof PILLAR_IDS)[number];
+
+export const PILLAR_META: { id: PillarIdLiteral; label: string; desc: string }[] = [
+  { id: "governance", label: "Governance", desc: "Laws, regulations, compliance" },
+  { id: "procurement", label: "Procurement", desc: "RFQs, tenders, suppliers" },
+  { id: "b2b", label: "B2B", desc: "Buyers, suppliers, networking" },
+  { id: "import", label: "Import", desc: "Sourcing, tariffs, customs" },
+  { id: "export", label: "Export", desc: "Markets, buyers, logistics" },
+  { id: "investment", label: "Investment", desc: "Investors, projects, funding" },
+  { id: "sustainability", label: "Sustainability", desc: "ESG, green products, carbon" },
+  { id: "icv", label: "ICV", desc: "Local content, mandatory lists" },
+];
+
+export const ROLE_PILLAR_MATRIX: Record<string, string[]> = {
+  "Seller / Supplier": ["governance", "procurement", "export", "b2b", "sustainability", "icv"],
+  Exporter: ["governance", "procurement", "export", "b2b", "sustainability", "icv"],
+  Buyer: ["governance", "procurement", "import", "b2b", "sustainability", "icv"],
+  Importer: ["governance", "procurement", "import", "b2b", "sustainability", "icv"],
+  Investor: ["governance", "investment", "b2b", "sustainability", "icv"],
+  "Project Owner": ["governance", "procurement", "investment", "b2b", "sustainability", "icv"],
+};
+
+export const GOAL_PILLAR_MAP: Record<string, string[]> = {
+  "Improve Sustainability": ["sustainability"],
+  "Improve ICV": ["icv"],
+  "Find Investment": ["investment"],
+  "Find Projects": ["investment"],
+  "Win Procurement": ["procurement"],
+  "Increase Exports": ["export"],
+  "Reduce Import Cost": ["import"],
+  "Improve Compliance": ["governance"],
+  "Build Partnerships": ["b2b"],
+  "Find Buyers": ["b2b"],
+  "Find Suppliers": ["b2b"],
+  "Find Opportunities": ["b2b"],
+  "Market Intelligence": ["b2b", "governance"],
+};
+
+/**
+ * Counts independent signals (role matrix + goals) pointing to each
+ * pillar -- reproduces the mockup's own computePillarSignals() exactly.
+ * 2+ signals is treated as "High confidence", 1 as "Medium", by the UI,
+ * not by this function.
+ */
+export function computePillarSignals(
+  roles: string[],
+  goals: string[],
+): Record<string, number> {
+  const signals: Record<string, number> = {};
+  for (const role of roles) {
+    for (const pillarId of ROLE_PILLAR_MATRIX[role] ?? []) {
+      signals[pillarId] = (signals[pillarId] ?? 0) + 1;
+    }
+  }
+  for (const goal of goals) {
+    for (const pillarId of GOAL_PILLAR_MAP[goal] ?? []) {
+      signals[pillarId] = (signals[pillarId] ?? 0) + 1;
+    }
+  }
+  return signals;
+}
+
+export const CompanyPillarSelectionSchema = z.object({
+  pillars: z.array(z.enum(PILLAR_IDS)),
+  pillarSource: z.record(z.string(), z.enum(["ai", "manual"])),
+  autoApplied: z.boolean(),
+});
+
+export type CompanyPillarSelectionInput = z.infer<typeof CompanyPillarSelectionSchema>;
+
+export const DEFAULT_PILLAR_SELECTION: CompanyPillarSelectionInput = {
+  pillars: [],
+  pillarSource: {},
+  autoApplied: false,
+};

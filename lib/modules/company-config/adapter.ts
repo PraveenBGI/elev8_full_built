@@ -16,6 +16,7 @@ import {
   CompanyMarketPrioritySchema,
   CompanyGoalsSchema,
   CompanyCommercialTermsSchema,
+  CompanyPillarSelectionSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -23,6 +24,7 @@ import {
   type CompanyMarketPriorityInput,
   type CompanyGoalsInput,
   type CompanyCommercialTermsInput,
+  type CompanyPillarSelectionInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -101,10 +103,11 @@ export type CompanyRow = {
   state_priority: Record<string, Record<string, string>>;
   goals: string[];
   commercial_terms: Record<string, unknown>;
+  pillar_selection: Record<string, unknown>;
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -232,6 +235,19 @@ export async function updateCompanyCommercialTerms(
   const { error } = await db
     .from("companies")
     .update({ commercial_terms: parsed })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyPillarSelection(
+  companyId: string,
+  input: CompanyPillarSelectionInput,
+): Promise<void> {
+  const parsed = CompanyPillarSelectionSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ pillar_selection: parsed })
     .eq("id", companyId);
   if (error) throw error;
 }

@@ -169,6 +169,25 @@ begin
   raise notice 'PASS: owner can save Commercial Terms (the last of 7 Enterprise Configuration steps)';
 end $$;
 
+-- Pillar Selection (20260925000000) -- Phase 2's first step. Stores
+-- which pillars are active, why each was chosen (ai vs manual), and
+-- whether the one-time auto-apply has already run.
+do $$
+declare v_selection jsonb;
+begin
+  update companies
+  set pillar_selection = '{"pillars":["procurement","export","b2b"],"pillarSource":{"procurement":"ai","export":"ai","b2b":"manual"},"autoApplied":true}'::jsonb
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select pillar_selection into v_selection from companies
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  if not (v_selection->'pillars' ? 'procurement') then
+    raise exception 'FAIL: owner could not save pillar selection, got %', v_selection;
+  end if;
+  raise notice 'PASS: owner can save Pillar Selection (Phase 2 begins)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

@@ -23,6 +23,10 @@ import {
   CompanyCommercialTermsSchema,
   type CompanyCommercialTermsInput,
   DEFAULT_COMMERCIAL_TERMS,
+  computePillarSignals,
+  CompanyPillarSelectionSchema,
+  type CompanyPillarSelectionInput,
+  DEFAULT_PILLAR_SELECTION,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -275,6 +279,72 @@ describe("CompanyCommercialTermsSchema", () => {
     const result = CompanyCommercialTermsSchema.safeParse({
       ...valid,
       incotermsPreferred: ["NOT_A_REAL_INCOTERM"],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("computePillarSignals", () => {
+  it("counts a single role's pillars as 1 signal each", () => {
+    const signals = computePillarSignals(["Investor"], []);
+    expect(signals.investment).toBe(1);
+    expect(signals.governance).toBe(1);
+    expect(signals.procurement).toBeUndefined();
+  });
+
+  it("counts a role AND a goal pointing to the same pillar as 2 signals", () => {
+    const signals = computePillarSignals(["Exporter"], ["Increase Exports"]);
+    expect(signals.export).toBe(2);
+  });
+
+  it("accumulates signals across multiple roles and multiple goals", () => {
+    const signals = computePillarSignals(
+      ["Buyer", "Investor"],
+      ["Improve ICV", "Find Investment"],
+    );
+    // Buyer -> icv (1), Investor -> icv (1) = 2; Improve ICV -> icv (1) = 3 total
+    expect(signals.icv).toBe(3);
+    // Investor -> investment (1), Find Investment -> investment (1) = 2
+    expect(signals.investment).toBe(2);
+  });
+
+  it("returns an empty object for no roles and no goals", () => {
+    expect(computePillarSignals([], [])).toEqual({});
+  });
+
+  it("ignores an unrecognized role or goal rather than throwing", () => {
+    const signals = computePillarSignals(["Not A Real Role"], ["Not A Real Goal"]);
+    expect(signals).toEqual({});
+  });
+});
+
+describe("CompanyPillarSelectionSchema", () => {
+  const valid: CompanyPillarSelectionInput = {
+    pillars: ["procurement", "export", "b2b"],
+    pillarSource: { procurement: "ai", export: "ai", b2b: "manual" },
+    autoApplied: true,
+  };
+
+  it("accepts a complete, valid selection", () => {
+    expect(CompanyPillarSelectionSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-empty default (nothing selected yet)", () => {
+    expect(CompanyPillarSelectionSchema.safeParse(DEFAULT_PILLAR_SELECTION).success).toBe(true);
+  });
+
+  it("rejects an invalid pillar id", () => {
+    const result = CompanyPillarSelectionSchema.safeParse({
+      ...valid,
+      pillars: ["not_a_real_pillar"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid pillarSource value (must be 'ai' or 'manual')", () => {
+    const result = CompanyPillarSelectionSchema.safeParse({
+      ...valid,
+      pillarSource: { procurement: "algorithm" },
     });
     expect(result.success).toBe(false);
   });
