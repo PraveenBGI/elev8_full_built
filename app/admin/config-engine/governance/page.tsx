@@ -7,9 +7,11 @@
 
 import { requireAuth } from "@/lib/auth/adapter";
 import {
+  getCountryPillarLockedFields,
   getCountryPillarPayload,
   getMyAdminScope,
   listCountryAuthorities,
+  listCountryPillarConditions,
   listCountryStakeholders,
 } from "@/lib/modules/config-engine/adapter";
 import type { GovernancePayloadInput } from "@/lib/modules/config-engine/schemas";
@@ -44,17 +46,22 @@ export default async function GovernancePage() {
     );
   }
 
-  const [authorities, stakeholders, governancePayload] = await Promise.all([
-    listCountryAuthorities(scope.countryId),
-    listCountryStakeholders(scope.countryId),
-    getCountryPillarPayload<GovernancePayloadInput>(scope.countryId, "governance"),
-  ]);
+  const [authorities, stakeholders, governancePayload, lockedFields, conditions] =
+    await Promise.all([
+      listCountryAuthorities(scope.countryId),
+      listCountryStakeholders(scope.countryId),
+      getCountryPillarPayload<GovernancePayloadInput>(scope.countryId, "governance"),
+      getCountryPillarLockedFields(scope.countryId, "governance"),
+      listCountryPillarConditions(scope.countryId, "governance"),
+    ]);
 
   return (
     <GovernanceForm
       authorities={authorities}
       stakeholders={stakeholders}
       governancePayload={governancePayload ?? DEFAULT_GOVERNANCE_PAYLOAD}
+      lockedFields={lockedFields}
+      conditions={conditions}
     />
   );
 }

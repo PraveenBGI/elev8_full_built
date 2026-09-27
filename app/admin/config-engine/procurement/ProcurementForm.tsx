@@ -20,6 +20,8 @@ import {
   type ProcurementPayloadInput,
 } from "@/lib/modules/config-engine/schemas";
 import { SettingsGroup } from "@/components/SettingsGroup";
+import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
+import type { PillarConditionRow } from "@/lib/modules/config-engine/adapter";
 import { saveProcurementPayloadAction } from "./actions";
 
 const inputClass =
@@ -66,7 +68,15 @@ function Field({
   );
 }
 
-export function ProcurementForm({ initial }: { initial: ProcurementPayloadInput }) {
+export function ProcurementForm({
+  initial,
+  lockedFields,
+  conditions,
+}: {
+  initial: ProcurementPayloadInput;
+  lockedFields: string[];
+  conditions: PillarConditionRow[];
+}) {
   const [form, setForm] = useState(initial);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -469,6 +479,12 @@ export function ProcurementForm({ initial }: { initial: ProcurementPayloadInput 
           )}
         </div>
       </form>
+
+      <PillarGovernancePanel
+        pillar="procurement"
+        lockedFields={lockedFields}
+        conditions={conditions}
+      />
     </div>
   );
 }

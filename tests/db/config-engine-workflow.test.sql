@@ -151,21 +151,50 @@ begin
   raise notice 'PASS: Country Admin revoked delegation without touching the state''s payload';
 end $$;
 
--- THE bug this test suite actually caught during development: a
--- SECURITY DEFINER function with no explicit GRANT is NOT automatically
--- unreachable -- Postgres grants EXECUTE on new functions to PUBLIC by
--- default, and this project's default-privileges setup separately grants
--- EXECUTE to `authenticated` on every new public-schema function too. Both
--- had to be revoked explicitly (see the migration's own comment). This
--- assertion is what would fail again if that regressed.
+-- 20260923000000 replaced the country approval workflow entirely: no
+-- more submit/approve steps, a Country Admin publishes directly. Seed
+-- country-level pillar_configs (all 8, ready_for_review) so the same
+-- completeness gate submit_country_config_for_approval() used to enforce
+-- still applies to publish_country_config().
+insert into pillar_configs (country_id, state_id, pillar, payload, readiness_level)
+select 'cccccccc-0000-0000-0000-000000000001', null, p, '{}', 'ready_for_review'
+from unnest(enum_range(null::pillar_id)) p;
+
+set role authenticated;
+set request.jwt.claim.sub = '77777777-7777-7777-7777-777777777777';
+
+do $$
+begin
+  begin
+    perform publish_country_config('cccccccc-0000-0000-0000-000000000001');
+    raise exception 'FAIL: a State Admin was able to publish a country config';
+  exception
+    when others then
+      raise notice 'PASS: only that country''s Country Admin may publish it -- %', sqlerrm;
+  end;
+end $$;
+
+set request.jwt.claim.sub = '66666666-6666-6666-6666-666666666666';
+
+do $$
+declare v_status public.approval_status;
+begin
+  perform publish_country_config('cccccccc-0000-0000-0000-000000000001', 'no review needed, publishing directly');
+  select approval_status into v_status from countries where id = 'cccccccc-0000-0000-0000-000000000001';
+  if v_status != 'published' then
+    raise exception 'FAIL: expected published, got %', v_status;
+  end if;
+  raise notice 'PASS: Country Admin published directly, no approval step in between';
+end $$;
+
 do $$
 begin
   begin
     perform approve_country_config('cccccccc-0000-0000-0000-000000000001');
-    raise exception 'FAIL: approve_country_config was reachable by an ordinary authenticated session';
+    raise exception 'FAIL: approve_country_config should no longer exist at all';
   exception
-    when insufficient_privilege then
-      raise notice 'PASS: approve_country_config correctly unreachable without service_role';
+    when undefined_function then
+      raise notice 'PASS: approve_country_config() no longer exists -- the workflow it belonged to is gone, not just locked';
   end;
 end $$;
 

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { PublishCountryButton } from "./PublishCountryButton";
 
 /**
  * app/admin/config-engine/Topbar.tsx
@@ -17,10 +18,12 @@ export function Topbar({
   countryName,
   progressPercent,
   userInitial,
+  approvalStatus,
 }: {
   countryName: string;
   progressPercent: number;
   userInitial: string;
+  approvalStatus: string;
 }) {
   return (
     <div
@@ -60,6 +63,8 @@ export function Topbar({
           />
         </span>
       </div>
+
+      <PublishCountryButton approvalStatus={approvalStatus} />
 
       <form action="/api/auth/sign-out" method="post">
         <button

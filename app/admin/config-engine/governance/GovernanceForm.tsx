@@ -17,8 +17,9 @@ import {
   type StakeholderInput,
   type GovernancePayloadInput,
 } from "@/lib/modules/config-engine/schemas";
-import type { AuthorityRow, StakeholderRow } from "@/lib/modules/config-engine/adapter";
+import type { AuthorityRow, PillarConditionRow, StakeholderRow } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
+import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
 import {
   addAuthorityAction,
   addStakeholderAction,
@@ -488,10 +489,14 @@ export function GovernanceForm({
   authorities,
   stakeholders,
   governancePayload,
+  lockedFields,
+  conditions,
 }: {
   authorities: AuthorityRow[];
   stakeholders: StakeholderRow[];
   governancePayload: GovernancePayloadInput;
+  lockedFields: string[];
+  conditions: PillarConditionRow[];
 }) {
   const authoritiesSummary =
     authorities.length === 0 ? "None added" : `${authorities.length} registered`;
@@ -542,6 +547,12 @@ export function GovernanceForm({
           <EscalationAndDataGovernance initial={governancePayload} />
         </SettingsGroup>
       </div>
+
+      <PillarGovernancePanel
+        pillar="governance"
+        lockedFields={lockedFields}
+        conditions={conditions}
+      />
     </div>
   );
 }

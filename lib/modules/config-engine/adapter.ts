@@ -580,6 +580,154 @@ export async function updateCountryPillarPayload(
 }
 
 /**
+ * Field-level locking (see 20260922000000_field_locking_and_conditions.sql).
+ * locked_fields is a plain array of dot-notation paths within that
+ * pillar's payload (e.g. 'evalWeights.icv') that a delegated state may
+ * not override -- resolve_pillar_config() enforces this, this function
+ * just lets a Country Admin manage the list. Country-level only (the row
+ * with state_id is null) -- locking is something a country declares
+ * about its own pillar, not something set per state.
+ */
+export async function getCountryPillarLockedFields(
+  countryId: string,
+  pillar: string,
+): Promise<string[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("pillar_configs")
+    .select("locked_fields")
+    .eq("country_id", countryId)
+    .is("state_id", null)
+    .eq("pillar", pillar)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.locked_fields as string[]) ?? [];
+}
+
+export async function setCountryPillarLockedFields(
+  countryId: string,
+  pillar: string,
+  lockedFields: string[],
+): Promise<void> {
+  const db = await getDb();
+
+  const { data: existing, error: readError } = await db
+    .from("pillar_configs")
+    .select("id")
+    .eq("country_id", countryId)
+    .is("state_id", null)
+    .eq("pillar", pillar)
+    .maybeSingle();
+  if (readError) throw readError;
+
+  if (!existing) {
+    // Locking a pillar that has no country-level row yet doesn't make
+    // sense -- there's nothing to lock a value to. Fail clearly instead
+    // of silently creating an empty row with just locked_fields set.
+    throw new Error(
+      `Cannot set locked fields: no country-level config exists yet for pillar "${pillar}". Save the pillar's own settings first.`,
+    );
+  }
+
+  const { error } = await db
+    .from("pillar_configs")
+    .update({ locked_fields: lockedFields })
+    .eq("id", existing.id);
+  if (error) throw error;
+}
+
+/**
+ * Sector/location-conditional overrides (same migration as locked
+ * fields). Country-wide only for now (state_id null) -- a delegated
+ * state authoring its own conditions is real schema support already in
+ * place (see the migration's own RLS policies), just no UI yet for that
+ * narrower case, matching this module's usual "ship the country-level
+ * slice first" pattern.
+ */
+export type PillarConditionRow = {
+  id: string;
+  condition_type: "sector" | "location";
+  condition_value: string;
+  override_payload: Record<string, unknown>;
+  priority: number;
+};
+
+export async function listCountryPillarConditions(
+  countryId: string,
+  pillar: string,
+): Promise<PillarConditionRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("pillar_config_conditions")
+    .select("id, condition_type, condition_value, override_payload, priority")
+    .eq("country_id", countryId)
+    .is("state_id", null)
+    .eq("pillar", pillar)
+    .order("priority");
+
+  if (error) throw error;
+  return (data ?? []) as PillarConditionRow[];
+}
+
+export async function addCountryPillarCondition(
+  countryId: string,
+  pillar: string,
+  conditionType: "sector" | "location",
+  conditionValue: string,
+  overridePayload: Record<string, unknown>,
+  priority = 0,
+): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.from("pillar_config_conditions").insert({
+    country_id: countryId,
+    pillar,
+    condition_type: conditionType,
+    condition_value: conditionValue,
+    override_payload: overridePayload,
+    priority,
+  });
+  if (error) throw error;
+}
+
+export async function deleteCountryPillarCondition(conditionId: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db
+    .from("pillar_config_conditions")
+    .delete()
+    .eq("id", conditionId);
+  if (error) throw error;
+}
+
+/**
+ * The company-facing resolved read path -- what Import/Export/every
+ * other module actually calls once a company exists, since it varies by
+ * that company's own sector, not just its country/state. Wraps
+ * resolve_pillar_config() with all 5 arguments; country-admin-facing
+ * getCountryPillarPayload() above (the plain 3-implicit-arg edit path)
+ * deliberately does not take sector/location -- an admin edits their own
+ * country-level row directly, they don't "resolve" anything.
+ */
+export async function resolveEffectivePillarConfig<T>(
+  countryId: string,
+  stateId: string | null,
+  pillar: string,
+  sector?: string | null,
+  location?: string | null,
+): Promise<T> {
+  const db = await getDb();
+  const { data, error } = await db.rpc("resolve_pillar_config", {
+    p_country_id: countryId,
+    p_state_id: stateId,
+    p_pillar: pillar,
+    p_sector: sector ?? null,
+    p_location: location ?? null,
+  });
+  if (error) throw error;
+  return data as T;
+}
+
+/**
  * Governance pillar -- Government Authorities.
  */
 export type AuthorityRow = {
@@ -815,5 +963,33 @@ export async function updateCountryTaxSettings(
     .from("countries")
     .update({ master_data: merged })
     .eq("id", countryId);
+  if (error) throw error;
+}
+
+/**
+ * Country-level publish workflow. No approval step anymore -- see
+ * 20260923000000_country_no_approval_state_gated_resolution.sql for why:
+ * there's no authority above a Country Admin in this system to approve
+ * their own country. publishCountryConfig() wraps the single RPC that
+ * does the completeness check and publishes directly.
+ */
+export async function getCountryApprovalStatus(countryId: string): Promise<string | null> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("countries")
+    .select("approval_status")
+    .eq("id", countryId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.approval_status as string) ?? null;
+}
+
+export async function publishCountryConfig(countryId: string, notes?: string): Promise<void> {
+  const db = await getDb();
+  const { error } = await db.rpc("publish_country_config", {
+    p_country_id: countryId,
+    p_notes: notes ?? null,
+  });
   if (error) throw error;
 }

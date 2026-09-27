@@ -162,6 +162,22 @@ export const STAGES: Stage[] = [
 export type StageStatus = "done" | "in_progress" | "pending";
 
 /**
+ * The 8 real pillar ids (matches the Postgres `pillar_id` enum exactly).
+ * Used wherever code needs to be pillar-aware but isn't iterating the
+ * full Stage list -- e.g. lib/modules/config-engine/pillar-governance-
+ * actions.ts, shared across every pillar's field-locking/conditions UI.
+ */
+export type PillarId =
+  | "governance"
+  | "procurement"
+  | "b2b"
+  | "import"
+  | "export"
+  | "investment"
+  | "sustainability"
+  | "icv";
+
+/**
  * readiness_level values that count as "done" for stepper purposes.
  * Matches the enum in supabase/migrations/20260918000000_config_engine_foundation.sql.
  */

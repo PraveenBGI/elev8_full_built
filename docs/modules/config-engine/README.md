@@ -419,6 +419,111 @@ assumes) that the all-zero default payload deliberately fails the
 weights-total-100 rule, forcing a real decision before the first save
 can succeed.
 
+## B2B pillar (this session) -- third of 8 pillar forms
+
+`/admin/config-engine/b2b`. Same self-contained shape as Procurement --
+Business Identities Enabled, Marketplace Categories, Opportunity Types
+Enabled, Counterparty Verification, National Matching Engine Weighting.
+Zero new migration, zero new adapter code, only `B2bPayloadSchema` and a
+UI. Enforces "matching engine weights must total 100%" the same way
+Procurement enforces its own eval weights.
+
+Three pillars down (Governance, Procurement, B2B), five to go (Import,
+Export, Investment, Sustainability, ICV). The pattern is holding:
+only Governance needed new schema, because only Governance had
+genuinely cross-pillar reference data.
+
+## Field-level locking and sector/location conditions (this session)
+
+A real gap in the original delegation model, found by walking through
+the actual intended outcome directly: delegation was all-or-nothing per
+pillar. A state either inherited the whole country config, or replaced
+the whole thing with its own. There was no way for a country to say
+"this one field is mandatory everywhere, the rest is open for states to
+set" — and nothing anywhere varied by a company's own attributes.
+
+**`resolve_pillar_config()` grew from 3 to 5 arguments** (`p_sector`,
+`p_location`, both defaulting to `null`) — confirmed backward compatible
+by re-running all 45 pre-existing DB assertions unchanged after this
+migration landed, zero regressions.
+
+**A correctness note worth remembering**: `CREATE OR REPLACE` does not
+overwrite a function when its parameter list changes — it creates a
+*second overload* alongside the original. The old 3-argument signature
+had to be dropped explicitly first, or it would have sat there silently
+callable and ambiguous next to the new 5-argument version. Caught before
+it ever touched a real database, by checking `pg_proc` directly rather
+than assuming the replace worked.
+
+**`locked_fields text[]`** on country-level `pillar_configs` rows — a
+list of dot-notation paths (e.g. `evalWeights.icv`) a delegated state
+cannot override. The resolver enforces this by taking the state's payload
+as the base, then `jsonb_set`-ing each locked path back to the country's
+value — but only when the country actually has a value there, so locking
+an unset path doesn't inject an explicit `null`.
+
+**`pillar_config_conditions`** — sector/location rule variations, applied
+on top of the resolved base config via a shallow jsonb merge (`||`),
+multiple matches applying in ascending priority order. Same RLS boundary
+as `pillar_configs` itself: no direct `SELECT` for company-scoped
+sessions, resolver-only.
+
+**UI**: one shared `PillarGovernancePanel` component (not duplicated per
+pillar), wired into all 3 existing pillar forms (Governance, Procurement,
+B2B). Override payloads are raw JSON text, not a dynamic form matching
+each pillar's own schema — an honest v1 scope for what's already an
+advanced, admin-only feature; a form generator that adapts to any
+pillar's shape is real, separate work.
+
+7 new DB assertions (`tests/db/field-locking-and-conditions.test.sql`),
+covering the locked-field-forced-back case, the unlocked-field-preserved
+case, a non-delegated state being unaffected, matching and non-matching
+sector conditions, and the structural RLS boundary. 52 total database
+assertions now pass across 7 test files.
+
+## Country needs no approval, state resolution now gates on published (this session)
+
+Two real product decisions, made directly with Praveen after checking
+whether the intended Country -> State -> Company outcome was actually
+built correctly. It wasn't, on this one piece.
+
+**Country: collapsed to a single publish action.** There's no authority
+above a Country Admin in this system to approve their own country, so
+the old submit -> approve -> publish workflow was always going to end
+up either fake or permanently unreachable -- which is what had actually
+happened: `approve_country_config()`/`publish_country_config()` were
+service-role-only with zero real callers, confirmed dead code before
+removing. `submit_country_config_for_approval()`, `request_country_
+clarification()`, and `approve_country_config()` are gone entirely.
+`publish_country_config()` now does the same completeness check and
+publishes directly, callable by the Country Admin themselves -- the
+first real UI for this workflow (`PublishCountryButton` in the Topbar).
+
+**State: the resolver now actually enforces `approval_status`.** Real
+finding while making this change: `resolve_pillar_config()` never
+checked `approval_status` at all before this. A state's in-review draft
+edits were already live for every company in that state the instant
+they were saved -- the review step was pure audit trail, not an actual
+gate. Now a delegated state's own payload is only used once that
+state's `approval_status = 'published'`; otherwise the resolver falls
+back to the country's config, same as a non-delegated state.
+
+**A real, known limitation, not silently ignored**: `pillar_configs` has
+no version history. The moment a state's payload is edited,
+`reset_approval_status_on_pillar_edit()` reverts `approval_status` to
+`'draft'` AND the payload has already been overwritten -- there is no
+"last published snapshot" to fall back to during review. So while a
+state's edits are under review, companies in that state see the
+country's config, not the state's last-known-good customization, until
+the new version is published. Proper fix is a real versioning table --
+flagged as an open question below, not built here.
+
+3 pre-existing DB assertions updated to match (one because the function
+it tested no longer exists, two because a delegated-but-unpublished
+state must now correctly fall back to the country config), plus 3 new
+assertions for the direct-publish path and the new gating behavior.
+55 total database assertions across 7 test files.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.
@@ -426,10 +531,14 @@ can succeed.
 3. **Does a Country Admin need write access to override a delegated
    state's config in an emergency**, or is the boundary meant to be
    absolute? **Resolved this session**: absolute. A Country Admin can see a delegated state's config (rollup/audit) but never write it. Two levers instead: `request_state_clarification()` (kicks it back for the State Admin to fix, with required notes) and `set_state_config_control()` (revoke delegation entirely, falls back to the country's config via the resolver, without touching or deleting anything the State Admin authored).
-4. **Who reviews and approves a *country's* own submission?** New question, surfaced while building the approval workflow. There's no platform-wide admin role in this schema yet, so `approve_country_config()`/`publish_country_config()`/`request_country_clarification()` exist (for schema completeness and audit-trail symmetry with the state-level flow) but are only reachable via the Supabase service role, no app-facing role can call them. `submit_country_config_for_approval()` works normally (a Country Admin can submit their own country). This needs a real decision: introduce a platform admin role, or is a country's own submission auto-approved once submitted, or does this stay an ops-only manual action indefinitely?
+4. **Who reviews and approves a *country's* own submission?** **Resolved this session**: nobody. There's no authority above a Country Admin in this system, so the workflow that used to exist here is gone entirely -- a Country Admin publishes their own country directly, one action, no review step. See this session's own writeup above.
 5. **`country_hs_codes` reconciliation with Phase 1.** This table currently holds each country's own ad hoc HS code entries (code, description, category as plain text), not foreign-keyed to any global master, because Phase 1 (Master Data, the platform-wide reference-data phase) doesn't exist yet. Once it does, decide whether `country_hs_codes` becomes a join table referencing a real global HS code master, or stays independent per country. Flagging now so it isn't forgotten once Phase 1 starts.
 6. **State name source.** Currently free text. Once Phase 1's geo-hierarchy master data exists, decide whether State Cluster's "add a state" dropdown should source from it (matching the mockup's own `OMAN_GOVERNORATES`-per-country pattern) rather than staying free text indefinitely.
 7. **File upload UI pattern.** State Partner and Support Partners (this session's "not built yet") both need logo/file uploads. `lib/storage/adapter.ts` exists from Phase 0 but has never had a UI built against it. Worth designing as a reusable component once, since Company Profile, Investment listings, and other future modules will need the same pattern.
+8. **`resolveEffectivePillarConfig()` has no real caller yet.** Built and tested (the company-facing 5-argument resolver wrapper), but no module actually calls it with a real company's sector/location, since nothing past Phase 0.5/company-config exists yet that would. It's proven correct in isolation, not proven against a real consuming module.
+9. **Sector/location matching is exact-string only.** A condition for `condition_value = 'Muscat'` only matches a company whose location is stored as the identical string `'Muscat'` -- no hierarchy (a governorate matching a city within it), no fuzzy matching, no case normalization. Fine for now since nothing populates a company's real location yet; worth revisiting once Company Configuration's Geography step exists and real location values start flowing in.
+10. **Delegated states authoring their own conditions has schema, no UI, and no test coverage yet.** `pillar_config_conditions` already supports `state_id` scoping (a State Admin managing conditions just for their own delegated pillar) and its RLS policy is written, but neither the policy nor a State Admin's actual ability to use it is covered by any test yet -- only the country-wide path was tested. `PillarGovernancePanel` also only renders the country-wide (`state_id is null`) case. Both the test and the UI for this are real, separate work, not done.
+11. **`pillar_configs` has no version history.** Since the resolver now gates a delegated state's payload on `approval_status = 'published'`, and any edit both overwrites the payload in place AND reverts status to `'draft'` (the existing auto-revert trigger), there is no way to serve "the state's last published version" while a new edit is under review -- companies just see the country's config for that window instead. Fixing this properly means a real versioning/snapshot table (e.g. a `pillar_config_versions` history, or a separate `published_payload` column distinct from the working `payload`), not built here. Worth doing before this gap causes real confusion for a state that publishes often.
 
 ## Two real bugs caught by this module's own verification (not by inspection)
 

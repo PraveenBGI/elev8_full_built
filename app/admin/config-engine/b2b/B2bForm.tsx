@@ -12,6 +12,8 @@ import {
   type B2bPayloadInput,
 } from "@/lib/modules/config-engine/schemas";
 import { SettingsGroup } from "@/components/SettingsGroup";
+import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
+import type { PillarConditionRow } from "@/lib/modules/config-engine/adapter";
 import { saveB2bPayloadAction } from "./actions";
 
 const inputClass =
@@ -109,7 +111,15 @@ function CategoryEditor({
   );
 }
 
-export function B2bForm({ initial }: { initial: B2bPayloadInput }) {
+export function B2bForm({
+  initial,
+  lockedFields,
+  conditions,
+}: {
+  initial: B2bPayloadInput;
+  lockedFields: string[];
+  conditions: PillarConditionRow[];
+}) {
   const [form, setForm] = useState(initial);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -343,6 +353,8 @@ export function B2bForm({ initial }: { initial: B2bPayloadInput }) {
           )}
         </div>
       </form>
+
+      <PillarGovernancePanel pillar="b2b" lockedFields={lockedFields} conditions={conditions} />
     </div>
   );
 }

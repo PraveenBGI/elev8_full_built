@@ -18,6 +18,7 @@ import { getUser } from "@/lib/auth/adapter";
 import {
   countryHasAnyHsCodes,
   countryHasAnyStates,
+  getCountryApprovalStatus,
   getCountryById,
   getCountryPillarReadiness,
   getMyAdminScope,
@@ -39,6 +40,8 @@ export default async function ConfigEngineLayout({
   }
 
   const country = await getCountryById(scope.countryId);
+  const countryApprovalStatus =
+    scope.role === "country_admin" ? await getCountryApprovalStatus(scope.countryId) : null;
   if (!country) {
     return <>{children}</>;
   }
@@ -89,6 +92,7 @@ export default async function ConfigEngineLayout({
         countryName={country.name}
         progressPercent={progressPercent}
         userInitial={userInitial}
+        approvalStatus={countryApprovalStatus ?? "draft"}
       />
       <div className="flex min-h-0 flex-1">
         <Stepper stages={STAGES} statusByStageId={statusByStageId} />

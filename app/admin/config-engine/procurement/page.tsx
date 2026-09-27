@@ -3,7 +3,12 @@
  */
 
 import { requireAuth } from "@/lib/auth/adapter";
-import { getCountryPillarPayload, getMyAdminScope } from "@/lib/modules/config-engine/adapter";
+import {
+  getCountryPillarPayload,
+  getCountryPillarLockedFields,
+  getMyAdminScope,
+  listCountryPillarConditions,
+} from "@/lib/modules/config-engine/adapter";
 import {
   DEFAULT_PROCUREMENT_PAYLOAD,
   type ProcurementPayloadInput,
@@ -31,10 +36,17 @@ export default async function ProcurementPage() {
     );
   }
 
-  const payload = await getCountryPillarPayload<ProcurementPayloadInput>(
-    scope.countryId,
-    "procurement",
-  );
+  const [payload, lockedFields, conditions] = await Promise.all([
+    getCountryPillarPayload<ProcurementPayloadInput>(scope.countryId, "procurement"),
+    getCountryPillarLockedFields(scope.countryId, "procurement"),
+    listCountryPillarConditions(scope.countryId, "procurement"),
+  ]);
 
-  return <ProcurementForm initial={payload ?? DEFAULT_PROCUREMENT_PAYLOAD} />;
+  return (
+    <ProcurementForm
+      initial={payload ?? DEFAULT_PROCUREMENT_PAYLOAD}
+      lockedFields={lockedFields}
+      conditions={conditions}
+    />
+  );
 }
