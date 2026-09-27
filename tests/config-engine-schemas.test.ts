@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -460,5 +460,121 @@ describe("ProcurementPayloadSchema", () => {
     // This test documents that expectation rather than assuming it.
     const result = ProcurementPayloadSchema.safeParse(DEFAULT_PROCUREMENT_PAYLOAD);
     expect(result.success).toBe(false);
+  });
+});
+
+describe("B2bPayloadSchema", () => {
+  const validPayload: B2bPayloadInput = {
+    enabledIdentities: ["Buyer", "Supplier"],
+    categories: ["Products", "Services"],
+    opportunityTypes: ["RFQ", "Tender"],
+    requireVerification: true,
+    minVerificationLevel: "Verified",
+    matchWeights: {
+      industry: 20,
+      product: 20,
+      location: 20,
+      certification: 15,
+      pastPerformance: 15,
+      icv: 10,
+    },
+  };
+
+  it("accepts a complete, valid payload where match weights total exactly 100", () => {
+    expect(B2bPayloadSchema.safeParse(validPayload).success).toBe(true);
+  });
+
+  it("rejects match weights that don't total 100", () => {
+    const result = B2bPayloadSchema.safeParse({
+      ...validPayload,
+      matchWeights: { ...validPayload.matchWeights, icv: 5 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid business identity", () => {
+    const result = B2bPayloadSchema.safeParse({
+      ...validPayload,
+      enabledIdentities: ["Not A Real Identity"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid opportunity type", () => {
+    const result = B2bPayloadSchema.safeParse({
+      ...validPayload,
+      opportunityTypes: ["Not A Real Type"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid verification level", () => {
+    const result = B2bPayloadSchema.safeParse({
+      ...validPayload,
+      minVerificationLevel: "Not A Real Level",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("DEFAULT_B2B_PAYLOAD deliberately fails validation (all-zero weights)", () => {
+    const result = B2bPayloadSchema.safeParse(DEFAULT_B2B_PAYLOAD);
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ImportPayloadSchema", () => {
+  const validPayload: ImportPayloadInput = {
+    categories: ["Electronics", "Machinery"],
+    restricted: ["Used tires"],
+    dutyBands: { general: 5, foodstuffs: 0, industrialInputs: 2, luxury: 100 },
+    licensingRequired: true,
+    customsPoints: ["Port Sultan Qaboos"],
+    hsCodes: ["8501.10"],
+    incoterms: ["FOB", "CIF"],
+    landedCostComponents: ["Product Cost", "Freight", "Customs Duty"],
+    substitutionWatch: [
+      { product: "Steel pipes", importValue: 100, localSupply: 10, potential: 40 },
+    ],
+  };
+
+  it("accepts a complete, valid payload", () => {
+    expect(ImportPayloadSchema.safeParse(validPayload).success).toBe(true);
+  });
+
+  it("accepts the all-empty default payload", () => {
+    expect(ImportPayloadSchema.safeParse(DEFAULT_IMPORT_PAYLOAD).success).toBe(true);
+  });
+
+  it("rejects an invalid incoterm", () => {
+    const result = ImportPayloadSchema.safeParse({
+      ...validPayload,
+      incoterms: ["NOT_A_REAL_INCOTERM"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid landed cost component", () => {
+    const result = ImportPayloadSchema.safeParse({
+      ...validPayload,
+      landedCostComponents: ["Not A Real Component"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a substitution watch item with localSupply over 100", () => {
+    const result = ImportPayloadSchema.safeParse({
+      ...validPayload,
+      substitutionWatch: [{ product: "X", importValue: 10, localSupply: 150, potential: 40 }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("customsPoints and hsCodes accept arbitrary strings (matched by name/code, not enum)", () => {
+    const result = ImportPayloadSchema.safeParse({
+      ...validPayload,
+      customsPoints: ["Any Port Name At All"],
+      hsCodes: ["9999.99"],
+    });
+    expect(result.success).toBe(true);
   });
 });

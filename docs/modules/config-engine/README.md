@@ -524,6 +524,30 @@ state must now correctly fall back to the country config), plus 3 new
 assertions for the direct-publish path and the new gating behavior.
 55 total database assertions across 7 test files.
 
+## Import pillar (this session) -- fourth of 8, first real Master Data consumer
+
+`/admin/config-engine/import`. All 7 sections fit in one pillar_configs
+blob, same self-contained pattern as Procurement/B2B -- zero new
+migration, zero new adapter functions for the pillar's own data.
+
+**The genuinely new thing**: two sections read live from Master Data
+instead of duplicating anything. Customs Entry Points is a picker over
+`country_ports_airports` (matched by name, same as the mockup's own
+approach, not a foreign key). HS Code Coverage is a picker over
+`country_hs_codes`, with one-click "Apply Pack" buttons pulling from
+`country_hs_code_packs`. Both tables were built during the Master Data
+sessions with no consumer at the time -- this is the first proof they
+actually get used by a pillar, not just sitting there.
+
+Enum values (Incoterms 2020, landed cost components) ported verbatim
+from the mockup's own constants. Import Substitution / Localization
+Watch reproduces the mockup's own estimate calculation client-side
+(`importValue * (potential - localSupply) / 100`).
+
+6 new schema unit tests, including one confirming `customsPoints`/
+`hsCodes` are plain strings matched against whatever Master Data
+actually contains, not a closed enum. 61 total app-level tests.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.

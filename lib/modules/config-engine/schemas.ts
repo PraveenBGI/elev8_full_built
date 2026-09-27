@@ -481,6 +481,79 @@ export const DEFAULT_B2B_PAYLOAD: B2bPayloadInput = {
 };
 
 /**
+ * Import pillar. Same self-contained shape as Procurement/B2B -- one
+ * pillar_configs blob, no new tables. Two sections genuinely integrate
+ * with Master Data (already built, not duplicated here): Customs Entry
+ * Points references country_ports_airports by name, HS Code Coverage
+ * references country_hs_codes by code string -- matching the mockup's
+ * own approach of string-equality membership, not foreign keys (same
+ * reasoning as country_hs_code_packs' own codes column).
+ */
+export const IMPORT_INCOTERMS = [
+  "EXW",
+  "FCA",
+  "FOB",
+  "CFR",
+  "CIF",
+  "CPT",
+  "CIP",
+  "DAP",
+  "DPU",
+  "DDP",
+] as const;
+
+export const LANDED_COST_COMPONENTS = [
+  "Product Cost",
+  "Freight",
+  "Insurance",
+  "Customs Duty",
+  "Taxes",
+  "Port Charges",
+  "Handling",
+  "Documentation",
+  "Banking Charges",
+  "Inland Transportation",
+] as const;
+
+export const SubstitutionWatchItemSchema = z.object({
+  product: z.string().trim().min(1),
+  importValue: z.coerce.number().min(0),
+  localSupply: z.coerce.number().min(0).max(100),
+  potential: z.coerce.number().min(0).max(100),
+});
+
+export const ImportPayloadSchema = z.object({
+  categories: z.array(z.string().trim().min(1)),
+  restricted: z.array(z.string().trim().min(1)),
+  dutyBands: z.object({
+    general: z.coerce.number().min(0),
+    foodstuffs: z.coerce.number().min(0),
+    industrialInputs: z.coerce.number().min(0),
+    luxury: z.coerce.number().min(0),
+  }),
+  licensingRequired: z.boolean(),
+  customsPoints: z.array(z.string()),
+  hsCodes: z.array(z.string()),
+  incoterms: z.array(z.enum(IMPORT_INCOTERMS)),
+  landedCostComponents: z.array(z.enum(LANDED_COST_COMPONENTS)),
+  substitutionWatch: z.array(SubstitutionWatchItemSchema),
+});
+
+export type ImportPayloadInput = z.infer<typeof ImportPayloadSchema>;
+
+export const DEFAULT_IMPORT_PAYLOAD: ImportPayloadInput = {
+  categories: [],
+  restricted: [],
+  dutyBands: { general: 0, foodstuffs: 0, industrialInputs: 0, luxury: 0 },
+  licensingRequired: false,
+  customsPoints: [],
+  hsCodes: [],
+  incoterms: [],
+  landedCostComponents: [],
+  substitutionWatch: [],
+};
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --
