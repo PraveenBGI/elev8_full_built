@@ -131,6 +131,25 @@ begin
   raise notice 'PASS: owner can save Target Market Priority (country and state-level rankings)';
 end $$;
 
+-- Business Objectives / Goals (20260924000002) -- a plain text[], no
+-- upper bound enforced (the mockup's own "top 3" is guidance text, not
+-- a hard limit).
+do $$
+declare v_goals text[];
+begin
+  update companies
+  set goals = array['Find Buyers', 'Increase Exports', 'Improve ICV']
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select goals into v_goals from companies
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  if array_length(v_goals, 1) != 3 then
+    raise exception 'FAIL: owner could not save goals, got %', v_goals;
+  end if;
+  raise notice 'PASS: owner can save Business Objectives (goals)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

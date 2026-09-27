@@ -28,12 +28,15 @@ import {
   MARKET_TIERS,
   MARKET_TIER_LABELS,
   type CompanyMarketPriorityInput,
+  GOALS,
+  type CompanyGoalsInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import {
   getRealStateNamesForCountryAction,
   saveCompanyGeographyAction,
+  saveCompanyGoalsAction,
   saveCompanyIdentityAction,
   saveCompanyMarketPriorityAction,
   saveCompanyRoleAction,
@@ -1021,11 +1024,79 @@ function MarketPrioritySection({
   );
 }
 
-const UPCOMING_STEPS = [
-  "Business Objectives (Goals)",
-  "Commercial Terms",
-  "Pillar Selection & Pillar Preferences",
-];
+function GoalsSection({ company }: { company: CompanyRow }) {
+  const [form, setForm] = useState<CompanyGoalsInput>({
+    goals: company.goals as CompanyGoalsInput["goals"],
+  });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+
+    startTransition(async () => {
+      const result = await saveCompanyGoalsAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Choose your top 3 priorities. gatewAI weighs matching, alerts,
+        and recommendations toward these objectives above everything
+        else.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {GOALS.map((g) => (
+          <Chip
+            key={g}
+            label={g}
+            on={form.goals.includes(g)}
+            onClick={() =>
+              setForm((f) => ({
+                ...f,
+                goals: f.goals.includes(g) ? f.goals.filter((x) => x !== g) : [...f.goals, g],
+              }))
+            }
+          />
+        ))}
+      </div>
+      <p className="mt-3 text-[12px]" style={{ color: "var(--elev8-g400)" }}>
+        {form.goals.length} of 3 selected
+      </p>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending || form.goals.length === 0}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p
+            className="text-sm"
+            style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}
+          >
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+const UPCOMING_STEPS = ["Commercial Terms", "Pillar Selection & Pillar Preferences"];
 
 export function CompanyConfigForm({
   company,
@@ -1106,6 +1177,14 @@ export function CompanyConfigForm({
           isComplete={Object.keys(company.market_priority).length > 0}
         >
           <MarketPrioritySection company={company} countries={countries} />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Business objectives"
+          summary={company.goals.length === 0 ? "Not set" : company.goals.join(", ")}
+          isComplete={company.goals.length > 0}
+        >
+          <GoalsSection company={company} />
         </SettingsGroup>
       </div>
 

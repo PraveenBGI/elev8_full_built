@@ -197,3 +197,37 @@ export const CompanyMarketPrioritySchema = z.object({
 });
 
 export type CompanyMarketPriorityInput = z.infer<typeof CompanyMarketPrioritySchema>;
+
+/**
+ * Business Objectives (Goals), the 6th of 7 Enterprise Configuration
+ * steps. The mockup's own "top 3 priorities" is guidance text in its UI
+ * copy, not a hard technical limit -- its save gate only requires at
+ * least one goal selected, no upper bound anywhere. This schema
+ * deliberately doesn't invent a stricter max-3 constraint the mockup
+ * itself doesn't have.
+ *
+ * This is the field GOAL_PILLAR_MAP will read directly once Pillar
+ * Selection is built, alongside ROLE_PILLAR_MATRIX (already keyed off
+ * primaryRole/secondaryRoles, built for Role).
+ */
+export const GOALS = [
+  "Find Opportunities",
+  "Find Buyers",
+  "Find Suppliers",
+  "Increase Exports",
+  "Reduce Import Cost",
+  "Win Procurement",
+  "Find Investment",
+  "Find Projects",
+  "Improve Compliance",
+  "Improve Sustainability",
+  "Improve ICV",
+  "Build Partnerships",
+  "Market Intelligence",
+] as const;
+
+export const CompanyGoalsSchema = z.object({
+  goals: z.array(z.enum(GOALS)),
+});
+
+export type CompanyGoalsInput = z.infer<typeof CompanyGoalsSchema>;

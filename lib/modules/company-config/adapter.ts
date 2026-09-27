@@ -14,11 +14,13 @@ import {
   CompanyTradeIntentSchema,
   CompanyGeographySchema,
   CompanyMarketPrioritySchema,
+  CompanyGoalsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
   type CompanyGeographyInput,
   type CompanyMarketPriorityInput,
+  type CompanyGoalsInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -95,10 +97,11 @@ export type CompanyRow = {
   corridor_states: Record<string, string[]>;
   market_priority: Record<string, string>;
   state_priority: Record<string, Record<string, string>>;
+  goals: string[];
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -204,6 +207,16 @@ export async function updateCompanyMarketPriority(
       state_priority: parsed.statePriority,
     })
     .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyGoals(
+  companyId: string,
+  input: CompanyGoalsInput,
+): Promise<void> {
+  const parsed = CompanyGoalsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("companies").update({ goals: parsed.goals }).eq("id", companyId);
   if (error) throw error;
 }
 

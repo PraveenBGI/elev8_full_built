@@ -19,6 +19,7 @@ import {
   type CompanyGeographyInput,
   CompanyMarketPrioritySchema,
   type CompanyMarketPriorityInput,
+  CompanyGoalsSchema,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -207,6 +208,31 @@ describe("CompanyMarketPrioritySchema", () => {
       ...valid,
       statePriority: { "22222222-2222-4222-8222-222222222222": { Maharashtra: "urgent" } },
     });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyGoalsSchema", () => {
+  it("accepts a valid set of goals", () => {
+    const result = CompanyGoalsSchema.safeParse({
+      goals: ["Find Buyers", "Increase Exports", "Improve ICV"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an empty goals list (nothing chosen yet, in progress)", () => {
+    expect(CompanyGoalsSchema.safeParse({ goals: [] }).success).toBe(true);
+  });
+
+  it("does not enforce a maximum of 3 -- the mockup's own 'top 3' is guidance text, not a limit", () => {
+    const result = CompanyGoalsSchema.safeParse({
+      goals: ["Find Buyers", "Increase Exports", "Improve ICV", "Build Partnerships", "Win Procurement"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid goal value", () => {
+    const result = CompanyGoalsSchema.safeParse({ goals: ["Not A Real Goal"] });
     expect(result.success).toBe(false);
   });
 });

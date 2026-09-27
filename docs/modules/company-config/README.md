@@ -161,6 +161,30 @@ noted only because it's a nice coincidence, not a target).
 Identity, Role, Trade Intent, Geography & Corridors, Target Market
 Priority. Remaining: Business Objectives (Goals), Commercial Terms.
 
+## Business Objectives / Goals (this session) -- 6th of 7 Enterprise Configuration steps
+
+Genuinely simple: a single `text[]` column, one Zod schema, one chip
+picker. Worth stating plainly since it's the kind of detail easy to get
+wrong by over-engineering: the mockup's own "top 3 priorities" is
+guidance copy in its UI text, not a hard technical limit. Its save gate
+only requires at least one goal selected, no upper bound enforced
+anywhere in the original. This schema deliberately doesn't invent a
+stricter max-3 constraint the mockup itself doesn't have -- verified
+with a real test confirming 5 goals are accepted, not silently capped.
+
+**This is the field that matters most once Pillar Selection is built**:
+`GOAL_PILLAR_MAP` will read a company's goals directly, alongside
+`ROLE_PILLAR_MATRIX` (already keyed off `primaryRole`/`secondaryRoles`,
+captured by Role), to recommend which of the 8 pillars are relevant to
+a given company.
+
+Verified against real Postgres before any UI was written: 1 new
+assertion, 58 total DB assertions across 7 test files. 4 new schema
+unit tests, 104 total app-level tests.
+
+**Enterprise Configuration is now 6 of 7 steps built.** Only Commercial
+Terms remains before the whole Pillars Configuration phase can start.
+
 ## Open questions
 
 1. **How does a user end up in `company_users` for a company they didn't
