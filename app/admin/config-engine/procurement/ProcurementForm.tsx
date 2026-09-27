@@ -19,7 +19,7 @@ import {
   OBLIGATION_CATEGORIES,
   type ProcurementPayloadInput,
 } from "@/lib/modules/config-engine/schemas";
-import { SettingsGroup } from "../SettingsGroup";
+import { SettingsGroup } from "@/components/SettingsGroup";
 import { saveProcurementPayloadAction } from "./actions";
 
 const inputClass =

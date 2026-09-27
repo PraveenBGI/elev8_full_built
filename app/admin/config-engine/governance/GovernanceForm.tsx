@@ -18,7 +18,7 @@ import {
   type GovernancePayloadInput,
 } from "@/lib/modules/config-engine/schemas";
 import type { AuthorityRow, StakeholderRow } from "@/lib/modules/config-engine/adapter";
-import { SettingsGroup } from "../SettingsGroup";
+import { SettingsGroup } from "@/components/SettingsGroup";
 import {
   addAuthorityAction,
   addStakeholderAction,

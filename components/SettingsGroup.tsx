@@ -1,15 +1,15 @@
 "use client";
 
 /**
- * app/admin/config-engine/identity/SettingsGroup.tsx
+ * components/SettingsGroup.tsx
  *
- * A collapsible field group with a one-line summary when closed --
- * the actual fix for "overwhelming form, doesn't feel premium": the page
- * reads as a short list of settings, not a wall of inputs. Reused by
- * CountryIdentityForm now; generic enough to reuse for every future
- * pillar's sections too (they all have the same "many fields grouped
- * into named sections" shape -- see the mockup's own 7 Identity
- * sections, or any pillar's sub-areas).
+ * A collapsible field group with a one-line summary when closed -- the
+ * actual fix for "overwhelming form, doesn't feel premium": the page
+ * reads as a short list of settings, not a wall of inputs. Shared across
+ * genuinely different modules (config-engine's Identity/Master Data/
+ * Governance/Procurement/B2B, and company-config), not just within one
+ * route group -- moved here from app/admin/config-engine/ once it
+ * outgrew being config-engine-specific.
  */
 
 import { useState } from "react";

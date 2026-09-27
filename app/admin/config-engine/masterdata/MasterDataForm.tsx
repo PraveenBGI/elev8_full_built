@@ -35,7 +35,7 @@ import type {
   PortAirportRow,
   ZoneRow,
 } from "@/lib/modules/config-engine/adapter";
-import { SettingsGroup } from "../SettingsGroup";
+import { SettingsGroup } from "@/components/SettingsGroup";
 import {
   addFtaAction,
   addHsCodeAction,
