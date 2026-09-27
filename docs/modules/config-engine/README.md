@@ -596,6 +596,40 @@ rendered as a fixed constant in the UI, not part of the schema at all.
 to equal `high` (the mockup's own `<=` on the last band specifically,
 not a typo worth silently "fixing"). 74 total app-level tests.
 
+## Sustainability pillar (this session) -- seventh of 8, real cross-pillar read
+
+`/admin/config-engine/sustainability`. The biggest pillar in the
+mockup, 9 sections. Same self-contained pattern as every other pillar --
+one pillar_configs blob, zero new migration.
+
+**The genuinely new thing**: Sustainable/Green Procurement displays
+Procurement's own *current* ESG evaluation weight inline, fetched live
+from that pillar's own payload in `page.tsx`, never duplicated or
+stored here. Matches the mockup's own framing exactly: "this is the same
+ESG score that feeds X% of the Procurement Bid Evaluation weighting...
+this is the connection point." First real proof two already-built
+pillars can reference each other's live data, not just Master Data
+feeding into pillars one-directionally.
+
+`computeKpiAchievement()` reproduces the mockup's own `kpiAchievement()`
+formula exactly (both the increasing-metric and decreasing-metric
+branches, the `target === baseline` edge case, and the clamp-at-zero
+behavior), exported so it's independently unit tested, not just embedded
+in a component.
+
+Investment Committee Governance's pattern repeats here: Verification
+Workflow is a pure reference display, not bound to any field, so it's a
+UI constant, not part of the schema.
+
+**A lint catch worth remembering**: the first draft had literal `"`
+characters inside JSX text content ("green procurement spend"), which
+`react/no-unescaped-entities` correctly flagged during the fresh-clone
+lint pass. Fixed with `&quot;` entities, confirmed clean before
+recommitting.
+
+13 new tests (5 for `computeKpiAchievement`'s formula branches, 8 for
+the payload schema). 85 total app-level tests.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.

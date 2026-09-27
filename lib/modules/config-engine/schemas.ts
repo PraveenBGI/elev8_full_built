@@ -755,6 +755,140 @@ export const IC_WORKFLOW_STAGES = [
 ] as const;
 
 /**
+ * Sustainability pillar. Same self-contained shape as every other
+ * pillar built so far -- one pillar_configs blob, no new tables. The
+ * mockup's own framing: "Sustainability is the pillar that protects
+ * everything the other seven build" -- and it shows up as real
+ * cross-pillar reads, not just prose: Sustainable/Green Procurement
+ * displays Procurement's own current ESG evaluation weight inline
+ * (read-only context, fetched from that pillar's own payload, not
+ * duplicated or stored here). Verification Workflow (VERIFICATION_
+ * STAGES) is purely a reference display, same pattern as Investment
+ * Committee Governance's Approval Workflow -- not part of this schema.
+ */
+export const GHG_SCOPES = ["Scope 1", "Scope 2", "Scope 3"] as const;
+export const ESG_FRAMEWORKS = ["GRI", "TCFD", "ISO 14064", "CDP", "SASB"] as const;
+export const SUSTAINABILITY_VERIFICATION_STAGES = [
+  "Draft",
+  "Submitted",
+  "Under Review",
+  "Clarification Required",
+  "Verified",
+  "Approved",
+  "Rejected",
+] as const;
+
+export const SustainabilityKpiSchema = z.object({
+  name: z.string().trim().min(1),
+  unit: z.string().trim(),
+  baseline: z.coerce.number(),
+  baselineYear: z.string().trim(),
+  target: z.coerce.number(),
+  targetYear: z.string().trim(),
+  actual: z.coerce.number(),
+});
+
+/** Reproduces the mockup's own kpiAchievement() exactly. */
+export function computeKpiAchievement(k: {
+  baseline: number;
+  target: number;
+  actual: number;
+}): number {
+  if (k.target === k.baseline) return k.actual === k.target ? 100 : 0;
+  const pct =
+    k.target > k.baseline
+      ? ((k.actual - k.baseline) / (k.target - k.baseline)) * 100
+      : ((k.baseline - k.actual) / (k.baseline - k.target)) * 100;
+  return Math.max(0, Math.round(pct));
+}
+
+export const SustainabilityPayloadSchema = z.object({
+  enabled: z.boolean(),
+  authority: z.string().trim().nullable(),
+  reportingPeriod: z.enum(["Annual", "Quarterly"]),
+  baselineYear: z.string().trim(),
+  netZeroTarget: z.string().trim(),
+  interimTarget: z.string().trim().nullable(),
+  renewableTarget: z.string().trim().nullable(),
+
+  scopesRequired: z.array(z.enum(GHG_SCOPES)),
+  scope3Optional: z.boolean(),
+  emissionUnit: z.string().trim().nullable(),
+  emissionFactorSource: z.string().trim().nullable(),
+
+  kpis: z.array(SustainabilityKpiSchema),
+
+  frameworks: z.array(z.enum(ESG_FRAMEWORKS)),
+
+  greenProcurement: z.object({
+    esgThreshold: z.coerce.number().min(0).max(100),
+    minSupplierEsgScore: z.coerce.number().min(0).max(100),
+    requireGhgDisclosure: z.boolean(),
+    requireGreenCertification: z.boolean(),
+    sustainableMaterials: z.array(z.string().trim().min(1)),
+  }),
+
+  circularEconomy: z.object({
+    enabled: z.boolean(),
+    wasteDiversionTarget: z.coerce.number().min(0).max(100),
+    categories: z.array(z.string().trim().min(1)),
+  }),
+
+  carbonMarket: z.object({
+    offsetsAllowed: z.boolean(),
+    creditsAllowed: z.boolean(),
+    maxOffsetPctOfTarget: z.coerce.number().min(0).max(100),
+    registries: z.array(z.string().trim().min(1)),
+  }),
+
+  verification: z.object({
+    required: z.boolean(),
+    assuranceLevel: z.enum(["Limited Assurance", "Reasonable Assurance"]),
+    thresholdSpend: z.coerce.number().min(0),
+    evidenceRequired: z.array(z.string().trim().min(1)),
+  }),
+
+  greenInvestment: z.object({
+    enabled: z.boolean(),
+    minEsgImpactForIncentive: z.coerce.number().min(0).max(100),
+  }),
+});
+
+export type SustainabilityPayloadInput = z.infer<typeof SustainabilityPayloadSchema>;
+
+export const DEFAULT_SUSTAINABILITY_PAYLOAD: SustainabilityPayloadInput = {
+  enabled: false,
+  authority: null,
+  reportingPeriod: "Annual",
+  baselineYear: "",
+  netZeroTarget: "",
+  interimTarget: null,
+  renewableTarget: null,
+  scopesRequired: [],
+  scope3Optional: false,
+  emissionUnit: null,
+  emissionFactorSource: null,
+  kpis: [],
+  frameworks: [],
+  greenProcurement: {
+    esgThreshold: 0,
+    minSupplierEsgScore: 0,
+    requireGhgDisclosure: false,
+    requireGreenCertification: false,
+    sustainableMaterials: [],
+  },
+  circularEconomy: { enabled: false, wasteDiversionTarget: 0, categories: [] },
+  carbonMarket: { offsetsAllowed: false, creditsAllowed: false, maxOffsetPctOfTarget: 0, registries: [] },
+  verification: {
+    required: false,
+    assuranceLevel: "Limited Assurance",
+    thresholdSpend: 0,
+    evidenceRequired: [],
+  },
+  greenInvestment: { enabled: false, minEsgImpactForIncentive: 0 },
+};
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --

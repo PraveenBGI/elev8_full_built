@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput, ExportPayloadSchema, DEFAULT_EXPORT_PAYLOAD, type ExportPayloadInput, InvestmentPayloadSchema, DEFAULT_INVESTMENT_PAYLOAD, type InvestmentPayloadInput } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput, ExportPayloadSchema, DEFAULT_EXPORT_PAYLOAD, type ExportPayloadInput, InvestmentPayloadSchema, DEFAULT_INVESTMENT_PAYLOAD, type InvestmentPayloadInput, SustainabilityPayloadSchema, DEFAULT_SUSTAINABILITY_PAYLOAD, type SustainabilityPayloadInput, computeKpiAchievement } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -706,5 +706,109 @@ describe("InvestmentPayloadSchema", () => {
   it("DEFAULT_INVESTMENT_PAYLOAD deliberately fails validation (all-zero risk bands)", () => {
     const result = InvestmentPayloadSchema.safeParse(DEFAULT_INVESTMENT_PAYLOAD);
     expect(result.success).toBe(false);
+  });
+});
+
+describe("computeKpiAchievement", () => {
+  it("computes achievement correctly when target is above baseline (increasing metric)", () => {
+    // baseline 20, target 100, actual 60 -> (60-20)/(100-20)*100 = 50
+    expect(computeKpiAchievement({ baseline: 20, target: 100, actual: 60 })).toBe(50);
+  });
+
+  it("computes achievement correctly when target is below baseline (decreasing metric)", () => {
+    // baseline 100, target 20, actual 60 -> (100-60)/(100-20)*100 = 50
+    expect(computeKpiAchievement({ baseline: 100, target: 20, actual: 60 })).toBe(50);
+  });
+
+  it("clamps negative achievement to 0", () => {
+    expect(computeKpiAchievement({ baseline: 20, target: 100, actual: -50 })).toBe(0);
+  });
+
+  it("returns 100 when target equals baseline and actual matches", () => {
+    expect(computeKpiAchievement({ baseline: 50, target: 50, actual: 50 })).toBe(100);
+  });
+
+  it("returns 0 when target equals baseline and actual doesn't match", () => {
+    expect(computeKpiAchievement({ baseline: 50, target: 50, actual: 40 })).toBe(0);
+  });
+});
+
+describe("SustainabilityPayloadSchema", () => {
+  const validPayload: SustainabilityPayloadInput = {
+    enabled: true,
+    authority: "National Sustainability Authority",
+    reportingPeriod: "Annual",
+    baselineYear: "2020",
+    netZeroTarget: "2050",
+    interimTarget: "2035",
+    renewableTarget: "30% by 2030",
+    scopesRequired: ["Scope 1", "Scope 2"],
+    scope3Optional: true,
+    emissionUnit: "tCO2e",
+    emissionFactorSource: "IPCC",
+    kpis: [
+      { name: "Renewable share", unit: "%", baseline: 10, baselineYear: "2020", target: 30, targetYear: "2030", actual: 18 },
+    ],
+    frameworks: ["GRI", "TCFD"],
+    greenProcurement: {
+      esgThreshold: 60,
+      minSupplierEsgScore: 50,
+      requireGhgDisclosure: true,
+      requireGreenCertification: false,
+      sustainableMaterials: ["Recycled steel"],
+    },
+    circularEconomy: { enabled: true, wasteDiversionTarget: 40, categories: ["Construction waste"] },
+    carbonMarket: { offsetsAllowed: true, creditsAllowed: false, maxOffsetPctOfTarget: 20, registries: ["Verra"] },
+    verification: {
+      required: true,
+      assuranceLevel: "Limited Assurance",
+      thresholdSpend: 5,
+      evidenceRequired: ["Emissions report"],
+    },
+    greenInvestment: { enabled: true, minEsgImpactForIncentive: 50 },
+  };
+
+  it("accepts a complete, valid payload", () => {
+    expect(SustainabilityPayloadSchema.safeParse(validPayload).success).toBe(true);
+  });
+
+  it("accepts the all-empty default payload (no weight-sum rule to fail here)", () => {
+    expect(SustainabilityPayloadSchema.safeParse(DEFAULT_SUSTAINABILITY_PAYLOAD).success).toBe(true);
+  });
+
+  it("rejects an invalid GHG scope", () => {
+    const result = SustainabilityPayloadSchema.safeParse({
+      ...validPayload,
+      scopesRequired: ["Scope 4"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid reporting framework", () => {
+    const result = SustainabilityPayloadSchema.safeParse({
+      ...validPayload,
+      frameworks: ["Not A Real Framework"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid assurance level", () => {
+    const result = SustainabilityPayloadSchema.safeParse({
+      ...validPayload,
+      verification: { ...validPayload.verification, assuranceLevel: "Full Assurance" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("allows nullable free-text fields to be null", () => {
+    const result = SustainabilityPayloadSchema.safeParse({
+      ...validPayload,
+      authority: null,
+      interimTarget: null,
+      renewableTarget: null,
+      emissionUnit: null,
+      emissionFactorSource: null,
+    });
+    expect(result.success).toBe(true);
   });
 });
