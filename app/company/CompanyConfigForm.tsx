@@ -24,11 +24,18 @@ import {
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
+  type CompanyGeographyInput,
+  MARKET_TIERS,
+  MARKET_TIER_LABELS,
+  type CompanyMarketPriorityInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import {
+  getRealStateNamesForCountryAction,
+  saveCompanyGeographyAction,
   saveCompanyIdentityAction,
+  saveCompanyMarketPriorityAction,
   saveCompanyRoleAction,
   saveCompanyTradeIntentAction,
 } from "./actions";
@@ -559,9 +566,462 @@ function TradeIntentSection({ company }: { company: CompanyRow }) {
   );
 }
 
+function GeographySection({
+  company,
+  countries,
+  initialHomeCountryStates,
+}: {
+  company: CompanyRow;
+  countries: { id: string; name: string }[];
+  initialHomeCountryStates: string[];
+}) {
+  const [form, setForm] = useState<CompanyGeographyInput>({
+    homeCountryId: company.home_country_id ?? "",
+    homeState: company.home_state,
+    homeCity: company.home_city,
+    corridorCountryIds: company.corridor_country_ids,
+    corridorStates: company.corridor_states,
+  });
+  const [homeCountryStates, setHomeCountryStates] = useState(initialHomeCountryStates);
+  const [corridorStatesByCountry, setCorridorStatesByCountry] = useState<Record<string, string[]>>({});
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  async function handleHomeCountryChange(countryId: string) {
+    setForm((f) => ({ ...f, homeCountryId: countryId, homeState: null }));
+    const states = await getRealStateNamesForCountryAction(countryId);
+    setHomeCountryStates(states);
+  }
+
+  async function toggleCorridorCountry(countryId: string) {
+    const isSelected = form.corridorCountryIds.includes(countryId);
+    if (isSelected) {
+      setForm((f) => ({
+        ...f,
+        corridorCountryIds: f.corridorCountryIds.filter((c) => c !== countryId),
+      }));
+      return;
+    }
+    setForm((f) => ({ ...f, corridorCountryIds: [...f.corridorCountryIds, countryId] }));
+    if (!(countryId in corridorStatesByCountry)) {
+      const states = await getRealStateNamesForCountryAction(countryId);
+      setCorridorStatesByCountry((prev) => ({ ...prev, [countryId]: states }));
+    }
+  }
+
+  function toggleCorridorState(countryId: string, stateName: string) {
+    setForm((f) => {
+      const current = f.corridorStates[countryId] ?? [];
+      const next = current.includes(stateName)
+        ? current.filter((s) => s !== stateName)
+        : [...current, stateName];
+      return { ...f, corridorStates: { ...f.corridorStates, [countryId]: next } };
+    });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+
+    startTransition(async () => {
+      const result = await saveCompanyGeographyAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  const corridorCountries = countries.filter((c) => c.id !== form.homeCountryId);
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Home country, then state cluster, then every international
+        corridor you follow, each with its own state clusters. You can
+        follow more than one corridor at once.
+      </p>
+
+      <Field label="Home country">
+        <select
+          className={inputClass}
+          value={form.homeCountryId}
+          onChange={(e) => handleHomeCountryChange(e.target.value)}
+        >
+          <option value="">Choose...</option>
+          {countries.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      {form.homeCountryId && (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="State / governorate">
+            {homeCountryStates.length > 0 ? (
+              <select
+                className={inputClass}
+                value={form.homeState ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, homeState: e.target.value || null }))}
+              >
+                <option value="">Choose a state...</option>
+                {homeCountryStates.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className={inputClass}
+                placeholder="e.g. Region name"
+                value={form.homeState ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, homeState: e.target.value || null }))}
+              />
+            )}
+          </Field>
+          <Field label="City">
+            <input
+              className={inputClass}
+              value={form.homeCity ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, homeCity: e.target.value || null }))}
+            />
+          </Field>
+        </div>
+      )}
+
+      <div className="mt-6">
+        <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          International corridors you follow
+        </label>
+        <p className="mb-3 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+          Selecting a country unlocks its own state cluster picker below.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {corridorCountries.map((c) => (
+            <Chip
+              key={c.id}
+              label={c.name}
+              on={form.corridorCountryIds.includes(c.id)}
+              onClick={() => toggleCorridorCountry(c.id)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {form.corridorCountryIds.map((countryId) => {
+        const country = countries.find((c) => c.id === countryId);
+        const availableStates = corridorStatesByCountry[countryId] ?? [];
+        const selected = form.corridorStates[countryId] ?? [];
+        return (
+          <div
+            key={countryId}
+            className="mt-4 rounded-md border p-3"
+            style={{ borderColor: "var(--elev8-g200)", background: "var(--elev8-g50)" }}
+          >
+            <div className="mb-2 text-[13px] font-medium" style={{ color: "var(--elev8-ink)" }}>
+              {country?.name ?? countryId} - state clusters
+            </div>
+            {availableStates.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {availableStates.map((s) => (
+                  <Chip
+                    key={s}
+                    label={s}
+                    on={selected.includes(s)}
+                    onClick={() => toggleCorridorState(countryId, s)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <CorridorFreeTextStates
+                selected={selected}
+                onChange={(next) =>
+                  setForm((f) => ({ ...f, corridorStates: { ...f.corridorStates, [countryId]: next } }))
+                }
+              />
+            )}
+          </div>
+        );
+      })}
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p
+            className="text-sm"
+            style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}
+          >
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function CorridorFreeTextStates({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (items: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function handleAdd() {
+    const value = draft.trim();
+    if (!value) return;
+    onChange([...selected, value]);
+    setDraft("");
+  }
+
+  return (
+    <div>
+      <p className="mb-2 text-[12px]" style={{ color: "var(--elev8-g400)" }}>
+        No governorate data for this country, add states manually.
+      </p>
+      {selected.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {selected.map((s, i) => (
+            <span
+              key={`${s}-${i}`}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]"
+              style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}
+            >
+              {s}
+              <button
+                type="button"
+                onClick={() => onChange(selected.filter((_, idx) => idx !== i))}
+                className="opacity-70 hover:opacity-100"
+              >
+                x
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          className={inputClass}
+          placeholder="e.g. Region name"
+          value={draft}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="shrink-0 rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MarketPrioritySection({
+  company,
+  countries,
+}: {
+  company: CompanyRow;
+  countries: { id: string; name: string }[];
+}) {
+  const countryList = [company.home_country_id, ...company.corridor_country_ids].filter(
+    (id): id is string => Boolean(id),
+  );
+
+  const [form, setForm] = useState<CompanyMarketPriorityInput>({
+    marketPriority: company.market_priority as CompanyMarketPriorityInput["marketPriority"],
+    statePriority: company.state_priority as CompanyMarketPriorityInput["statePriority"],
+  });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+
+    startTransition(async () => {
+      const result = await saveCompanyMarketPriorityAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  if (countryList.length === 0) {
+    return (
+      <p className="text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        No corridor countries yet. Go back to Geography &amp; Corridors
+        and follow at least one country first.
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        A combined view across your home market and every corridor you
+        follow, this drives the country-match weighting in gatewAI&apos;s
+        scoring. States you selected on Geography &amp; Corridors get
+        their own priority ranking below.
+      </p>
+
+      <div className="mb-5 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+        <table className="w-full text-left text-[12.5px]">
+          <thead>
+            <tr style={{ background: "var(--elev8-g50)" }}>
+              <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Country</th>
+              <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Role</th>
+              <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            {countryList.map((countryId) => {
+              const country = countries.find((c) => c.id === countryId);
+              const role = countryId === company.home_country_id ? "Home Market" : "Corridor";
+              const current = form.marketPriority[countryId] ?? "medium";
+              return (
+                <tr key={countryId} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-3 py-2 font-medium">{country?.name ?? countryId}</td>
+                  <td className="px-3 py-2">{role}</td>
+                  <td className="px-3 py-2">
+                    <select
+                      className={inputClass}
+                      value={current}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          marketPriority: {
+                            ...f.marketPriority,
+                            [countryId]: e.target.value as CompanyMarketPriorityInput["marketPriority"][string],
+                          },
+                        }))
+                      }
+                    >
+                      {MARKET_TIERS.map((tier) => (
+                        <option key={tier} value={tier}>
+                          {MARKET_TIER_LABELS[tier]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {countryList
+        .filter((countryId) => (company.corridor_states[countryId] ?? []).length > 0)
+        .map((countryId) => {
+          const country = countries.find((c) => c.id === countryId);
+          const states = company.corridor_states[countryId] ?? [];
+          return (
+            <div
+              key={countryId}
+              className="mb-4 overflow-hidden rounded-md border"
+              style={{ borderColor: "var(--elev8-g200)" }}
+            >
+              <div className="px-3 py-2 text-[13px] font-medium" style={{ color: "var(--elev8-ink)" }}>
+                {country?.name ?? countryId}, state priority
+              </div>
+              <table className="w-full text-left text-[12.5px]">
+                <thead>
+                  <tr style={{ background: "var(--elev8-g50)" }}>
+                    <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>State / Governorate</th>
+                    <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Priority</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {states.map((stateName) => {
+                    const current = form.statePriority[countryId]?.[stateName] ?? "medium";
+                    return (
+                      <tr key={stateName} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                        <td className="px-3 py-2">{stateName}</td>
+                        <td className="px-3 py-2">
+                          <select
+                            className={inputClass}
+                            value={current}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                statePriority: {
+                                  ...f.statePriority,
+                                  [countryId]: {
+                                    ...f.statePriority[countryId],
+                                    [stateName]: e.target.value as CompanyMarketPriorityInput["marketPriority"][string],
+                                  },
+                                },
+                              }))
+                            }
+                          >
+                            {MARKET_TIERS.map((tier) => (
+                              <option key={tier} value={tier}>
+                                {MARKET_TIER_LABELS[tier]}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })}
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p
+            className="text-sm"
+            style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}
+          >
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
 const UPCOMING_STEPS = [
-  "Geography & Corridors",
-  "Target Market Priority",
   "Business Objectives (Goals)",
   "Commercial Terms",
   "Pillar Selection & Pillar Preferences",
@@ -570,9 +1030,11 @@ const UPCOMING_STEPS = [
 export function CompanyConfigForm({
   company,
   countries,
+  homeCountryStates,
 }: {
   company: CompanyRow;
   countries: { id: string; name: string }[];
+  homeCountryStates: string[];
 }) {
   return (
     <div className="max-w-[820px]">
@@ -616,6 +1078,34 @@ export function CompanyConfigForm({
           isComplete={company.sell_intents.length > 0 || company.buy_intents.length > 0}
         >
           <TradeIntentSection company={company} />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Geography and corridors"
+          summary={
+            company.home_country_id
+              ? `${countries.find((c) => c.id === company.home_country_id)?.name ?? "Set"}, ${company.corridor_country_ids.length} corridors`
+              : "Not set"
+          }
+          isComplete={Boolean(company.home_country_id)}
+        >
+          <GeographySection
+            company={company}
+            countries={countries}
+            initialHomeCountryStates={homeCountryStates}
+          />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Target market priority"
+          summary={
+            Object.keys(company.market_priority).length === 0
+              ? "Not set"
+              : `${Object.keys(company.market_priority).length} markets ranked`
+          }
+          isComplete={Object.keys(company.market_priority).length > 0}
+        >
+          <MarketPrioritySection company={company} countries={countries} />
         </SettingsGroup>
       </div>
 

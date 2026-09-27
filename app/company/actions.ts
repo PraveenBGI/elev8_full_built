@@ -15,7 +15,10 @@ import { requireAuth } from "@/lib/auth/adapter";
 import {
   createCompany,
   getMyCompanyScope,
+  getRealStateNamesForCountry,
+  updateCompanyGeography,
   updateCompanyIdentity,
+  updateCompanyMarketPriority,
   updateCompanyRole,
   updateCompanyTradeIntent,
 } from "@/lib/modules/company-config/adapter";
@@ -23,9 +26,13 @@ import {
   CompanyIdentitySchema,
   CompanyRoleSchema,
   CompanyTradeIntentSchema,
+  CompanyGeographySchema,
+  CompanyMarketPrioritySchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
+  type CompanyGeographyInput,
+  type CompanyMarketPriorityInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -147,4 +154,78 @@ export async function saveCompanyTradeIntentAction(
 
   revalidatePath("/company");
   return { ok: true };
+}
+
+export async function saveCompanyGeographyAction(
+  input: CompanyGeographyInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = CompanyGeographySchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCompanyGeography(scope.companyId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanyMarketPriorityAction(
+  input: CompanyMarketPriorityInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = CompanyMarketPrioritySchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCompanyMarketPriority(scope.companyId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+/**
+ * Client-callable lookup: does this country have real platform states
+ * (built via config-engine's State Cluster), and if so, what are their
+ * names? Lets the Geography & Corridors UI offer a real picker for a
+ * newly-selected corridor country without needing every possible
+ * country's states preloaded on initial page load.
+ */
+export async function getRealStateNamesForCountryAction(countryId: string): Promise<string[]> {
+  await requireAuth();
+  try {
+    return await getRealStateNamesForCountry(countryId);
+  } catch {
+    return [];
+  }
 }

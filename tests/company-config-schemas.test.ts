@@ -15,6 +15,10 @@ import {
   CompanyIdentitySchema,
   CompanyRoleSchema,
   CompanyTradeIntentSchema,
+  CompanyGeographySchema,
+  type CompanyGeographyInput,
+  CompanyMarketPrioritySchema,
+  type CompanyMarketPriorityInput,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -125,5 +129,84 @@ describe("CompanyTradeIntentSchema", () => {
       competitors: null,
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("CompanyGeographySchema", () => {
+  const valid: CompanyGeographyInput = {
+    homeCountryId: "11111111-1111-4111-8111-111111111111",
+    homeState: "Muscat Governorate",
+    homeCity: "Muscat",
+    corridorCountryIds: ["22222222-2222-4222-8222-222222222222"],
+    corridorStates: { "22222222-2222-4222-8222-222222222222": ["Maharashtra", "Gujarat"] },
+  };
+
+  it("accepts a complete, valid geography payload", () => {
+    expect(CompanyGeographySchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects a missing/invalid home country id", () => {
+    expect(CompanyGeographySchema.safeParse({ ...valid, homeCountryId: "not-a-uuid" }).success).toBe(false);
+  });
+
+  it("allows homeState and homeCity to be null (not yet chosen)", () => {
+    const result = CompanyGeographySchema.safeParse({ ...valid, homeState: null, homeCity: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("allows an empty corridor list", () => {
+    const result = CompanyGeographySchema.safeParse({
+      ...valid,
+      corridorCountryIds: [],
+      corridorStates: {},
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("corridorStates accepts an arbitrary dictionary of country id to state name arrays", () => {
+    const result = CompanyGeographySchema.safeParse({
+      ...valid,
+      corridorStates: {
+        "22222222-2222-4222-8222-222222222222": ["Any Region Name At All"],
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("CompanyMarketPrioritySchema", () => {
+  const valid: CompanyMarketPriorityInput = {
+    marketPriority: {
+      "11111111-1111-4111-8111-111111111111": "high",
+      "22222222-2222-4222-8222-222222222222": "medium",
+    },
+    statePriority: {
+      "22222222-2222-4222-8222-222222222222": { Maharashtra: "high", Gujarat: "explore" },
+    },
+  };
+
+  it("accepts a complete, valid market priority payload", () => {
+    expect(CompanyMarketPrioritySchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects an invalid market tier value", () => {
+    const result = CompanyMarketPrioritySchema.safeParse({
+      ...valid,
+      marketPriority: { "11111111-1111-4111-8111-111111111111": "urgent" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("allows an empty market priority and state priority (nothing ranked yet)", () => {
+    const result = CompanyMarketPrioritySchema.safeParse({ marketPriority: {}, statePriority: {} });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid state-level tier value", () => {
+    const result = CompanyMarketPrioritySchema.safeParse({
+      ...valid,
+      statePriority: { "22222222-2222-4222-8222-222222222222": { Maharashtra: "urgent" } },
+    });
+    expect(result.success).toBe(false);
   });
 });

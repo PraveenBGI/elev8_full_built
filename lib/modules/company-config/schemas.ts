@@ -146,3 +146,54 @@ export const CompanyTradeIntentSchema = z.object({
 });
 
 export type CompanyTradeIntentInput = z.infer<typeof CompanyTradeIntentSchema>;
+
+/**
+ * Geography & Corridors, the 4th of 7 Enterprise Configuration steps.
+ * homeCountryId is deliberately separate from the company's own
+ * countryId (Business Identity's registration country) -- see the
+ * migration's own comment on why these are two distinct fields, not one
+ * value duplicated.
+ *
+ * homeState and each corridor's state list are plain strings (state/
+ * governorate NAMES), not foreign keys -- same reasoning as every other
+ * Master Data picker in this project. The UI decides at render time
+ * whether to offer a real picker (when the selected country has actual
+ * platform states via config-engine's listCountryStates()) or a free-text
+ * add/remove list (when it doesn't) -- the schema doesn't need to know
+ * which case applies, it just stores whatever name ends up chosen.
+ */
+export const CompanyGeographySchema = z.object({
+  homeCountryId: z.string().uuid("Home country is required"),
+  homeState: z.string().trim().nullable(),
+  homeCity: z.string().trim().nullable(),
+  corridorCountryIds: z.array(z.string().uuid()),
+  corridorStates: z.record(z.string(), z.array(z.string())),
+});
+
+export type CompanyGeographyInput = z.infer<typeof CompanyGeographySchema>;
+
+/**
+ * Target Market Priority, the 5th of 7 Enterprise Configuration steps.
+ * Genuinely simple by design: this step has no data of its own beyond a
+ * priority ranking, it reuses Geography & Corridors' own home/corridor
+ * countries (which countries to rank) and corridor states (which
+ * countries get a state-level sub-ranking too), matching the mockup's
+ * own comment: "Reuses that selection rather than asking again."
+ *
+ * Keyed by country UUID (as a jsonb object key, i.e. a string) --
+ * consistent with Geography's own corridorStates, not the mockup's
+ * 2-letter country codes.
+ */
+export const MARKET_TIERS = ["high", "medium", "explore"] as const;
+export const MARKET_TIER_LABELS: Record<(typeof MARKET_TIERS)[number], string> = {
+  high: "Priority Market",
+  medium: "Secondary Market",
+  explore: "Emerging / Explore",
+};
+
+export const CompanyMarketPrioritySchema = z.object({
+  marketPriority: z.record(z.string(), z.enum(MARKET_TIERS)),
+  statePriority: z.record(z.string(), z.record(z.string(), z.enum(MARKET_TIERS))),
+});
+
+export type CompanyMarketPriorityInput = z.infer<typeof CompanyMarketPrioritySchema>;

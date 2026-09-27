@@ -12,9 +12,13 @@ import {
   CompanyIdentitySchema,
   CompanyRoleSchema,
   CompanyTradeIntentSchema,
+  CompanyGeographySchema,
+  CompanyMarketPrioritySchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
+  type CompanyGeographyInput,
+  type CompanyMarketPriorityInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -84,10 +88,17 @@ export type CompanyRow = {
   strategic_intent: string | null;
   existing_partners: string | null;
   competitors: string | null;
+  home_country_id: string | null;
+  home_state: string | null;
+  home_city: string | null;
+  corridor_country_ids: string[];
+  corridor_states: Record<string, string[]>;
+  market_priority: Record<string, string>;
+  state_priority: Record<string, Record<string, string>>;
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -159,6 +170,56 @@ export async function updateCompanyTradeIntent(
     })
     .eq("id", companyId);
   if (error) throw error;
+}
+
+export async function updateCompanyGeography(
+  companyId: string,
+  input: CompanyGeographyInput,
+): Promise<void> {
+  const parsed = CompanyGeographySchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({
+      home_country_id: parsed.homeCountryId,
+      home_state: parsed.homeState,
+      home_city: parsed.homeCity,
+      corridor_country_ids: parsed.corridorCountryIds,
+      corridor_states: parsed.corridorStates,
+    })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyMarketPriority(
+  companyId: string,
+  input: CompanyMarketPriorityInput,
+): Promise<void> {
+  const parsed = CompanyMarketPrioritySchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({
+      market_priority: parsed.marketPriority,
+      state_priority: parsed.statePriority,
+    })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+/**
+ * Cross-module reuse: whether a given country has real platform states
+ * (built via config-engine's State Cluster), and if so, their names --
+ * lets Geography & Corridors offer a real governorate/state picker for
+ * home country and each corridor country instead of always falling back
+ * to free text. Wraps config-engine's own listCountryStates() rather
+ * than duplicating the query -- one source of truth for "does this
+ * country have real states," used by two different modules.
+ */
+export async function getRealStateNamesForCountry(countryId: string): Promise<string[]> {
+  const { listCountryStates } = await import("@/lib/modules/config-engine/adapter");
+  const states = await listCountryStates(countryId);
+  return states.filter((s) => s.is_active).map((s) => s.name);
 }
 
 /**

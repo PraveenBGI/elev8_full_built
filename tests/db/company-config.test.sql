@@ -87,6 +87,50 @@ begin
   raise notice 'PASS: owner can read and update their own company (Business Identity + Role + Trade Intent)';
 end $$;
 
+-- Geography & Corridors (20260924000000) -- home_country_id is a real
+-- FK to countries, corridor_country_ids/corridor_states hold the
+-- follower's chosen international corridors and per-corridor state
+-- names.
+do $$
+declare v_home_country_id uuid;
+begin
+  update companies
+  set home_country_id = 'eeee0000-0000-0000-0000-000000000001',
+      home_state = 'Muscat Governorate',
+      home_city = 'Muscat',
+      corridor_country_ids = array['eeee0000-0000-0000-0000-000000000001']::uuid[],
+      corridor_states = '{"eeee0000-0000-0000-0000-000000000001": ["Dhofar", "Al Buraimi"]}'::jsonb
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select home_country_id into v_home_country_id from companies
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  if v_home_country_id is null then
+    raise exception 'FAIL: owner could not save Geography & Corridors fields';
+  end if;
+  raise notice 'PASS: owner can save Geography & Corridors (home country, state, city, corridors)';
+end $$;
+
+-- Target Market Priority (20260924000001) -- reuses Geography's own
+-- home/corridor countries and corridor states, just adds a priority
+-- ranking keyed the same way (by country UUID as a jsonb key).
+do $$
+declare v_priority jsonb;
+begin
+  update companies
+  set market_priority = '{"eeee0000-0000-0000-0000-000000000001": "high"}'::jsonb,
+      state_priority = '{"eeee0000-0000-0000-0000-000000000001": {"Dhofar": "medium"}}'::jsonb
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select market_priority into v_priority from companies
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  if v_priority->>'eeee0000-0000-0000-0000-000000000001' != 'high' then
+    raise exception 'FAIL: owner could not save market priority';
+  end if;
+  raise notice 'PASS: owner can save Target Market Priority (country and state-level rankings)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

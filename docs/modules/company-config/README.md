@@ -102,6 +102,65 @@ lazy. Fixed the fixture, not the schema, after confirming which one was
 actually wrong by testing directly rather than assuming either was
 correct.
 
+## Geography & Corridors (this session) -- 4th of 7 Enterprise Configuration steps
+
+`/company` now has a fourth section. **Real integration with State
+Cluster**, built early in this whole project: a company's home country,
+and each corridor country they follow, gets a real governorate/state
+picker if that country has actual platform states configured (via
+`config-engine`'s `listCountryStates()`, reused directly, not
+duplicated). Falls back to a free-text add/remove list when the country
+has no platform states, matching the mockup's own exact fallback text
+("No governorate data for this country, add states manually").
+
+**`home_country_id` is deliberately separate from `companies.country_id`**
+(Business Identity's registration country) -- the mockup's own state
+object keeps these as two distinct fields, not one value duplicated.
+Collapsing them would have been a real, unstated modeling decision, not
+a harmless simplification.
+
+`corridor_country_ids` (a `uuid[]`) and `corridor_states` (`jsonb`,
+keyed by corridor country id) hold the follower's chosen international
+corridors and per-corridor state names -- state names are plain
+strings, not foreign keys, same reasoning as every other Master Data
+picker in this project.
+
+Verified against real Postgres before any UI was written: 1 new
+assertion, 56 total DB assertions across 7 test files, all 55
+pre-existing ones re-confirmed unchanged after the migration. 5 new
+schema unit tests, 96 total app-level tests.
+
+**Enterprise Configuration is now 4 of 7 steps done**: Business
+Identity, Role, Trade Intent, Geography & Corridors. Remaining: Target
+Market Priority, Business Objectives (Goals), Commercial Terms.
+
+## Target Market Priority (this session) -- 5th of 7 Enterprise Configuration steps
+
+Genuinely simple by design: this step has no data of its own beyond a
+priority ranking. It reuses Geography & Corridors' own home/corridor
+countries (which countries to rank) and corridor states (which
+countries get a state-level sub-ranking too), matching the mockup's own
+comment: "Reuses that selection rather than asking again." No new
+lookups, no new master data.
+
+`market_priority` and `state_priority` are both `jsonb`, keyed by
+country UUID as a jsonb key (a string) -- consistent with Geography's
+own `corridor_states`, not the mockup's 2-letter country codes.
+
+**A second lint catch this session**, same category as Sustainability's:
+an unescaped apostrophe in JSX text ("gatewAI's scoring"), caught by
+`react/no-unescaped-entities` on the fresh-clone lint pass, fixed with
+`&apos;`.
+
+Verified against real Postgres before any UI was written: 1 new
+assertion, 57 total DB assertions across 7 test files. 4 new schema
+unit tests, **100 total app-level tests** (a clean round number,
+noted only because it's a nice coincidence, not a target).
+
+**Enterprise Configuration is now 5 of 7 steps built**: Business
+Identity, Role, Trade Intent, Geography & Corridors, Target Market
+Priority. Remaining: Business Objectives (Goals), Commercial Terms.
+
 ## Open questions
 
 1. **How does a user end up in `company_users` for a company they didn't
