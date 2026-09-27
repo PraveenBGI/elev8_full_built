@@ -404,6 +404,83 @@ export const DEFAULT_PROCUREMENT_PAYLOAD: ProcurementPayloadInput = {
 };
 
 /**
+ * B2B pillar. Same self-contained shape as Procurement -- no cross-pillar
+ * reference tables needed, one pillar_configs blob. Enum values ported
+ * verbatim from the mockup's own OPPORTUNITY_TYPES_ALL/VERIFICATION_LEVELS
+ * constants and the b2b.identities fixed list.
+ */
+export const BUSINESS_IDENTITIES = [
+  "Buyer",
+  "Supplier",
+  "Manufacturer",
+  "Exporter",
+  "Importer",
+  "Trader",
+  "Distributor",
+  "Contractor",
+  "Investor",
+] as const;
+
+export const OPPORTUNITY_TYPES = [
+  "RFI",
+  "RFQ",
+  "RFP",
+  "Tender",
+  "Buyer Requirement",
+  "Supplier Requirement",
+  "Partnership",
+  "Distributorship",
+] as const;
+
+export const VERIFICATION_LEVELS = [
+  "Unverified",
+  "Verification Pending",
+  "Verified",
+  "Restricted",
+  "Expired",
+] as const;
+
+export const B2bPayloadSchema = z.object({
+  enabledIdentities: z.array(z.enum(BUSINESS_IDENTITIES)),
+  categories: z.array(z.string().trim().min(1)),
+  opportunityTypes: z.array(z.enum(OPPORTUNITY_TYPES)),
+  requireVerification: z.boolean(),
+  minVerificationLevel: z.enum(VERIFICATION_LEVELS),
+  matchWeights: z
+    .object({
+      industry: z.coerce.number().min(0).max(100),
+      product: z.coerce.number().min(0).max(100),
+      location: z.coerce.number().min(0).max(100),
+      certification: z.coerce.number().min(0).max(100),
+      pastPerformance: z.coerce.number().min(0).max(100),
+      icv: z.coerce.number().min(0).max(100),
+    })
+    .refine(
+      (w) =>
+        w.industry + w.product + w.location + w.certification + w.pastPerformance + w.icv === 100,
+      { message: "Matching engine weights must total 100%.", path: ["industry"] },
+    ),
+});
+
+export type B2bPayloadInput = z.infer<typeof B2bPayloadSchema>;
+
+export const DEFAULT_B2B_PAYLOAD: B2bPayloadInput = {
+  enabledIdentities: [],
+  categories: [],
+  opportunityTypes: [],
+  requireVerification: false,
+  minVerificationLevel: VERIFICATION_LEVELS[0],
+  matchWeights: {
+    industry: 0,
+    product: 0,
+    location: 0,
+    certification: 0,
+    pastPerformance: 0,
+    icv: 0,
+  },
+};
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --
