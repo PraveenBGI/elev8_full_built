@@ -19,6 +19,9 @@ import {
   CompanyPillarSelectionSchema,
   CompanyComplianceSchema,
   CompanyDocChecklistSchema,
+  CompanyRfqPrefsSchema,
+  CompanyTenderPrefsSchema,
+  CompanyContractPrefsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -29,6 +32,9 @@ import {
   type CompanyPillarSelectionInput,
   type CompanyComplianceInput,
   type CompanyDocChecklistInput,
+  type CompanyRfqPrefsInput,
+  type CompanyTenderPrefsInput,
+  type CompanyContractPrefsInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -111,10 +117,13 @@ export type CompanyRow = {
   compliance: Record<string, unknown>;
   risk_reviewed: boolean;
   doc_checklist: string[];
+  procurement_rfq_prefs: Record<string, unknown>;
+  procurement_tender_prefs: Record<string, unknown>;
+  procurement_contract_prefs: Record<string, unknown>;
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -290,6 +299,45 @@ export async function updateCompanyDocChecklist(
   const { error } = await db
     .from("companies")
     .update({ doc_checklist: parsed.docChecklist })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyRfqPrefs(
+  companyId: string,
+  input: CompanyRfqPrefsInput,
+): Promise<void> {
+  const parsed = CompanyRfqPrefsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ procurement_rfq_prefs: parsed })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyTenderPrefs(
+  companyId: string,
+  input: CompanyTenderPrefsInput,
+): Promise<void> {
+  const parsed = CompanyTenderPrefsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ procurement_tender_prefs: parsed })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyContractPrefs(
+  companyId: string,
+  input: CompanyContractPrefsInput,
+): Promise<void> {
+  const parsed = CompanyContractPrefsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ procurement_contract_prefs: parsed })
     .eq("id", companyId);
   if (error) throw error;
 }

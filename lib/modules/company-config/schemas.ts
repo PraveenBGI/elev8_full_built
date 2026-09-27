@@ -496,6 +496,109 @@ export const CompanyDocChecklistSchema = z.object({
 export type CompanyDocChecklistInput = z.infer<typeof CompanyDocChecklistSchema>;
 
 /**
+ * Procurement Pillar, second of 8 per-pillar preference sub-groups.
+ * Three jsonb sub-groups, same pattern as every pillar so far.
+ * "Live RFQ Matches" in the mockup's own RFQ page is hardcoded
+ * illustrative sample data with no backing field -- not reproduced,
+ * same reasoning as Governance's "Documents Held on File".
+ */
+export const TIMELINE_HORIZONS = [
+  "Immediate (0-3 months)",
+  "Short-term (3-6 months)",
+  "Medium-term (6-12 months)",
+  "Long-term (12-24 months)",
+  "Strategic (24+ months)",
+] as const;
+
+export const RFQ_OPPORTUNITY_TYPES = ["Product Supply", "Service Delivery", "Both"] as const;
+
+export const CompanyRfqPrefsSchema = z.object({
+  categories: z.string().trim().nullable(),
+  countries: z.string().trim().nullable(),
+  size: z.string().trim().nullable(),
+  oppType: z.enum(RFQ_OPPORTUNITY_TYPES).nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export type CompanyRfqPrefsInput = z.infer<typeof CompanyRfqPrefsSchema>;
+
+export const DEFAULT_RFQ_PREFS: CompanyRfqPrefsInput = {
+  categories: null,
+  countries: null,
+  size: null,
+  oppType: null,
+  timeline: null,
+};
+
+export const TENDER_TYPES = [
+  "Open Tender",
+  "Limited Tender",
+  "Selective Tender",
+  "International Tender",
+  "Local Tender",
+  "Government Tender",
+  "Private Tender",
+  "EPC Tender",
+  "Framework Tender",
+  "Prequalification",
+  "Expression of Interest",
+  "Request for Proposal",
+] as const;
+
+export const CompanyTenderPrefsSchema = z.object({
+  types: z.array(z.enum(TENDER_TYPES)),
+  sector: z.string().trim().nullable(),
+  countries: z.string().trim().nullable(),
+  value: z.string().trim().nullable(),
+  categories: z.string().trim().nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export type CompanyTenderPrefsInput = z.infer<typeof CompanyTenderPrefsSchema>;
+
+export const DEFAULT_TENDER_PREFS: CompanyTenderPrefsInput = {
+  types: [],
+  sector: null,
+  countries: null,
+  value: null,
+  categories: null,
+  timeline: null,
+};
+
+export const CONTRACT_TYPES = [
+  "Supply Contract",
+  "Service Contract",
+  "EPC Contract",
+  "Framework Agreement",
+  "Distribution Agreement",
+  "Agency Agreement",
+  "Purchase Agreement",
+  "Long-Term Supply Agreement",
+  "Maintenance Contract",
+  "Consulting Contract",
+] as const;
+
+export const CONTRACT_DURATIONS = ["Under 1 Year", "1-5 Years", "5+ Years"] as const;
+
+export const CompanyContractPrefsSchema = z.object({
+  types: z.array(z.enum(CONTRACT_TYPES)),
+  value: z.string().trim().nullable(),
+  duration: z.enum(CONTRACT_DURATIONS).nullable(),
+  industries: z.string().trim().nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export type CompanyContractPrefsInput = z.infer<typeof CompanyContractPrefsSchema>;
+
+export const DEFAULT_CONTRACT_PREFS: CompanyContractPrefsInput = {
+  types: [],
+  value: null,
+  duration: null,
+  industries: null,
+  timeline: null,
+};
+
+/**
  * Lightweight sector -> suggested certification map, ported verbatim
  * from the mockup. Used only as a one-click starting point on the
  * Compliance page -- the user can add/remove freely afterward. Sectors

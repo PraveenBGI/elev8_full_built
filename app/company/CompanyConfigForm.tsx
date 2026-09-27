@@ -49,6 +49,17 @@ import {
   SECTOR_CERT_SUGGEST,
   type CompanyComplianceInput,
   type CompanyDocChecklistInput,
+  TIMELINE_HORIZONS,
+  RFQ_OPPORTUNITY_TYPES,
+  DEFAULT_RFQ_PREFS,
+  type CompanyRfqPrefsInput,
+  TENDER_TYPES,
+  DEFAULT_TENDER_PREFS,
+  type CompanyTenderPrefsInput,
+  CONTRACT_TYPES,
+  CONTRACT_DURATIONS,
+  DEFAULT_CONTRACT_PREFS,
+  type CompanyContractPrefsInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
@@ -57,14 +68,17 @@ import {
   listCompanyAuditLogAction,
   saveCompanyCommercialTermsAction,
   saveCompanyComplianceAction,
+  saveCompanyContractPrefsAction,
   saveCompanyDocChecklistAction,
   saveCompanyGeographyAction,
   saveCompanyGoalsAction,
   saveCompanyIdentityAction,
   saveCompanyMarketPriorityAction,
   saveCompanyPillarSelectionAction,
+  saveCompanyRfqPrefsAction,
   saveCompanyRiskReviewedAction,
   saveCompanyRoleAction,
+  saveCompanyTenderPrefsAction,
   saveCompanyTradeIntentAction,
 } from "./actions";
 
@@ -1813,8 +1827,331 @@ function DocumentRoomSection({ company }: { company: CompanyRow }) {
   );
 }
 
+function RfqPrefsSection({ company }: { company: CompanyRow }) {
+  const stored = company.procurement_rfq_prefs as Partial<CompanyRfqPrefsInput>;
+  const [form, setForm] = useState<CompanyRfqPrefsInput>({ ...DEFAULT_RFQ_PREFS, ...stored });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyRfqPrefsAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Every RFQ you respond to or publish follows the same path, from
+        requirement to contract. Configure your preferences to control
+        what reaches the top of your feed.
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Categories">
+          <input
+            className={inputClass}
+            placeholder="e.g. Renewable Energy, Electrical"
+            value={form.categories ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, categories: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Countries">
+          <input
+            className={inputClass}
+            placeholder="e.g. Oman, Saudi Arabia"
+            value={form.countries ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, countries: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="RFQ size (budget)">
+          <input
+            className={inputClass}
+            placeholder="e.g. USD 50K-2M"
+            value={form.size ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, size: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Opportunity type">
+          <select
+            className={inputClass}
+            value={form.oppType ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, oppType: (e.target.value || null) as CompanyRfqPrefsInput["oppType"] }))
+            }
+          >
+            <option value="">Choose...</option>
+            {RFQ_OPPORTUNITY_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Target response timeline">
+          <select
+            className={inputClass}
+            value={form.timeline ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, timeline: (e.target.value || null) as CompanyRfqPrefsInput["timeline"] }))
+            }
+          >
+            <option value="">Choose...</option>
+            {TIMELINE_HORIZONS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function TenderPrefsSection({ company }: { company: CompanyRow }) {
+  const stored = company.procurement_tender_prefs as Partial<CompanyTenderPrefsInput>;
+  const [form, setForm] = useState<CompanyTenderPrefsInput>({ ...DEFAULT_TENDER_PREFS, ...stored });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyTenderPrefsAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Tender types, sectors and value ranges relevant to you.
+      </p>
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+        Tender types
+      </label>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {TENDER_TYPES.map((t) => (
+          <Chip
+            key={t}
+            label={t}
+            on={form.types.includes(t)}
+            onClick={() =>
+              setForm((f) => ({
+                ...f,
+                types: f.types.includes(t) ? f.types.filter((x) => x !== t) : [...f.types, t],
+              }))
+            }
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Tender sector">
+          <input
+            className={inputClass}
+            placeholder="e.g. Energy"
+            value={form.sector ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, sector: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Countries">
+          <input
+            className={inputClass}
+            placeholder="e.g. Oman, Saudi Arabia"
+            value={form.countries ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, countries: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Tender value (budget)">
+          <input
+            className={inputClass}
+            placeholder="e.g. USD 250K-10M"
+            value={form.value ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, value: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Product categories">
+          <input
+            className={inputClass}
+            placeholder="e.g. Solar, Electrical, EPC"
+            value={form.categories ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, categories: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Target submission timeline">
+          <select
+            className={inputClass}
+            value={form.timeline ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, timeline: (e.target.value || null) as CompanyTenderPrefsInput["timeline"] }))
+            }
+          >
+            <option value="">Choose...</option>
+            {TIMELINE_HORIZONS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function ContractPrefsSection({ company }: { company: CompanyRow }) {
+  const stored = company.procurement_contract_prefs as Partial<CompanyContractPrefsInput>;
+  const [form, setForm] = useState<CompanyContractPrefsInput>({ ...DEFAULT_CONTRACT_PREFS, ...stored });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyContractPrefsAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Contract types and value ranges you want to pursue.
+      </p>
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+        Contract types
+      </label>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {CONTRACT_TYPES.map((t) => (
+          <Chip
+            key={t}
+            label={t}
+            on={form.types.includes(t)}
+            onClick={() =>
+              setForm((f) => ({
+                ...f,
+                types: f.types.includes(t) ? f.types.filter((x) => x !== t) : [...f.types, t],
+              }))
+            }
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Interested contract value (budget)">
+          <input
+            className={inputClass}
+            placeholder="e.g. USD 100K-5M"
+            value={form.value ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, value: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Duration">
+          <select
+            className={inputClass}
+            value={form.duration ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, duration: (e.target.value || null) as CompanyContractPrefsInput["duration"] }))
+            }
+          >
+            <option value="">Choose...</option>
+            {CONTRACT_DURATIONS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Preferred industries">
+          <input
+            className={inputClass}
+            placeholder="e.g. Energy, Manufacturing"
+            value={form.industries ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, industries: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Target award timeline">
+          <select
+            className={inputClass}
+            value={form.timeline ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, timeline: (e.target.value || null) as CompanyContractPrefsInput["timeline"] }))
+            }
+          >
+            <option value="">Choose...</option>
+            {TIMELINE_HORIZONS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
 const UPCOMING_STEPS = [
-  "Procurement Pillar (RFQ/Tender/Contract Preferences)",
   "B2B Pillar (Products, Target Buyers/Suppliers)",
   "Import Pillar",
   "Export Pillar",
@@ -2018,6 +2355,50 @@ export function CompanyConfigForm({
               isComplete={company.doc_checklist.length > 0}
             >
               <DocumentRoomSection company={company} />
+            </SettingsGroup>
+          </>
+        )}
+
+        {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("procurement") && (
+          <>
+            <SettingsGroup
+              title="Procurement: RFQ Preferences"
+              summary={
+                (company.procurement_rfq_prefs as { categories?: string })?.categories ?? "Not set"
+              }
+              isComplete={Boolean(
+                (company.procurement_rfq_prefs as { categories?: string })?.categories,
+              )}
+            >
+              <RfqPrefsSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Procurement: Tender Preferences"
+              summary={
+                (company.procurement_tender_prefs as { types?: string[] })?.types?.length
+                  ? `${(company.procurement_tender_prefs as { types?: string[] }).types!.length} types`
+                  : "Not set"
+              }
+              isComplete={Boolean(
+                (company.procurement_tender_prefs as { types?: string[] })?.types?.length,
+              )}
+            >
+              <TenderPrefsSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Procurement: Contract Interests"
+              summary={
+                (company.procurement_contract_prefs as { types?: string[] })?.types?.length
+                  ? `${(company.procurement_contract_prefs as { types?: string[] }).types!.length} types`
+                  : "Not set"
+              }
+              isComplete={Boolean(
+                (company.procurement_contract_prefs as { types?: string[] })?.types?.length,
+              )}
+            >
+              <ContractPrefsSection company={company} />
             </SettingsGroup>
           </>
         )}

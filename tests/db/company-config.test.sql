@@ -270,6 +270,24 @@ begin
   raise notice 'PASS: audit log is genuinely append-only -- UPDATE and DELETE both silently affect zero rows (Postgres RLS behavior for a missing policy), not just blocked by convention';
 end $$;
 
+-- Procurement Pillar (20260925000002) -- three jsonb sub-groups, same
+-- pattern as every other pillar so far.
+do $$
+declare v_rfq jsonb;
+begin
+  update companies
+  set procurement_rfq_prefs = '{"categories":"Renewable Energy","countries":"Oman","size":"USD 50K-2M","oppType":"Product Supply","timeline":"Short-term (3-6 months)"}'::jsonb,
+      procurement_tender_prefs = '{"types":["Open Tender","EPC Tender"],"sector":"Energy","countries":"Oman","value":"USD 250K-10M","categories":"Solar","timeline":"Medium-term (6-12 months)"}'::jsonb,
+      procurement_contract_prefs = '{"types":["Supply Contract"],"value":"USD 100K-5M","duration":"1-5 Years","industries":"Energy","timeline":"Long-term (12-24 months)"}'::jsonb
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select procurement_rfq_prefs into v_rfq from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  if v_rfq->>'categories' != 'Renewable Energy' then
+    raise exception 'FAIL: owner could not save Procurement pillar preferences, got %', v_rfq;
+  end if;
+  raise notice 'PASS: owner can save Procurement pillar preferences (RFQ, Tender, Contract)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

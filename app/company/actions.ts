@@ -20,14 +20,17 @@ import {
   logCompanyAudit,
   updateCompanyCommercialTerms,
   updateCompanyCompliance,
+  updateCompanyContractPrefs,
   updateCompanyDocChecklist,
   updateCompanyGeography,
   updateCompanyGoals,
   updateCompanyIdentity,
   updateCompanyMarketPriority,
   updateCompanyPillarSelection,
+  updateCompanyRfqPrefs,
   updateCompanyRiskReviewed,
   updateCompanyRole,
+  updateCompanyTenderPrefs,
   updateCompanyTradeIntent,
 } from "@/lib/modules/company-config/adapter";
 import {
@@ -41,6 +44,9 @@ import {
   CompanyPillarSelectionSchema,
   CompanyComplianceSchema,
   CompanyDocChecklistSchema,
+  CompanyRfqPrefsSchema,
+  CompanyTenderPrefsSchema,
+  CompanyContractPrefsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -51,6 +57,9 @@ import {
   type CompanyPillarSelectionInput,
   type CompanyComplianceInput,
   type CompanyDocChecklistInput,
+  type CompanyRfqPrefsInput,
+  type CompanyTenderPrefsInput,
+  type CompanyContractPrefsInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -400,6 +409,74 @@ export async function saveCompanyDocChecklistAction(
 
   revalidatePath("/company");
   return { ok: true };
+}
+
+async function saveWithSchema<T>(
+  schema: { safeParse: (input: unknown) => { success: boolean; data?: T; error?: { flatten: () => { fieldErrors: unknown } } } },
+  input: T,
+  update: (companyId: string, parsed: T) => Promise<void>,
+  auditSection: string,
+  auditDetail: string,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = schema.safeParse(input);
+  if (!parsed.success || parsed.data === undefined) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: (parsed.error?.flatten().fieldErrors ?? {}) as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await update(scope.companyId, parsed.data);
+    await logCompanyAudit(scope.companyId, auditSection, auditDetail);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanyRfqPrefsAction(input: CompanyRfqPrefsInput): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyRfqPrefsSchema,
+    input,
+    updateCompanyRfqPrefs,
+    "RFQ Preferences",
+    "Saved RFQ feed preferences",
+  );
+}
+
+export async function saveCompanyTenderPrefsAction(
+  input: CompanyTenderPrefsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyTenderPrefsSchema,
+    input,
+    updateCompanyTenderPrefs,
+    "Tender Preferences",
+    "Saved tender filters",
+  );
+}
+
+export async function saveCompanyContractPrefsAction(
+  input: CompanyContractPrefsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyContractPrefsSchema,
+    input,
+    updateCompanyContractPrefs,
+    "Contract Interests",
+    "Saved contract interest filters",
+  );
 }
 
 export async function listCompanyAuditLogAction(): Promise<

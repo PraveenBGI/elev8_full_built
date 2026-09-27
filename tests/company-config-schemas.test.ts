@@ -33,6 +33,15 @@ import {
   CompanyDocChecklistSchema,
   REQUIRED_CERTIFICATIONS,
   SECTOR_CERT_SUGGEST,
+  CompanyRfqPrefsSchema,
+  type CompanyRfqPrefsInput,
+  DEFAULT_RFQ_PREFS,
+  CompanyTenderPrefsSchema,
+  type CompanyTenderPrefsInput,
+  DEFAULT_TENDER_PREFS,
+  CompanyContractPrefsSchema,
+  type CompanyContractPrefsInput,
+  DEFAULT_CONTRACT_PREFS,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -415,5 +424,89 @@ describe("SECTOR_CERT_SUGGEST", () => {
     for (const cert of allSuggested) {
       expect(REQUIRED_CERTIFICATIONS as readonly string[]).toContain(cert);
     }
+  });
+});
+
+describe("CompanyRfqPrefsSchema", () => {
+  it("accepts a complete, valid RFQ preferences payload", () => {
+    const valid: CompanyRfqPrefsInput = {
+      categories: "Renewable Energy",
+      countries: "Oman",
+      size: "USD 50K-2M",
+      oppType: "Product Supply",
+      timeline: "Short-term (3-6 months)",
+    };
+    expect(CompanyRfqPrefsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-null default", () => {
+    expect(CompanyRfqPrefsSchema.safeParse(DEFAULT_RFQ_PREFS).success).toBe(true);
+  });
+
+  it("rejects an invalid opportunity type", () => {
+    const result = CompanyRfqPrefsSchema.safeParse({
+      ...DEFAULT_RFQ_PREFS,
+      oppType: "Not A Real Type",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyTenderPrefsSchema", () => {
+  it("accepts a complete, valid tender preferences payload", () => {
+    const valid: CompanyTenderPrefsInput = {
+      types: ["Open Tender", "EPC Tender"],
+      sector: "Energy",
+      countries: "Oman",
+      value: "USD 250K-10M",
+      categories: "Solar",
+      timeline: "Medium-term (6-12 months)",
+    };
+    expect(CompanyTenderPrefsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-empty default", () => {
+    expect(CompanyTenderPrefsSchema.safeParse(DEFAULT_TENDER_PREFS).success).toBe(true);
+  });
+
+  it("rejects an invalid tender type", () => {
+    const result = CompanyTenderPrefsSchema.safeParse({
+      ...DEFAULT_TENDER_PREFS,
+      types: ["Not A Real Tender Type"],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyContractPrefsSchema", () => {
+  it("accepts a complete, valid contract preferences payload", () => {
+    const valid: CompanyContractPrefsInput = {
+      types: ["Supply Contract"],
+      value: "USD 100K-5M",
+      duration: "1-5 Years",
+      industries: "Energy",
+      timeline: "Long-term (12-24 months)",
+    };
+    expect(CompanyContractPrefsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-empty default", () => {
+    expect(CompanyContractPrefsSchema.safeParse(DEFAULT_CONTRACT_PREFS).success).toBe(true);
+  });
+
+  it("rejects an invalid contract duration", () => {
+    const result = CompanyContractPrefsSchema.safeParse({
+      ...DEFAULT_CONTRACT_PREFS,
+      duration: "10 Years",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid contract type", () => {
+    const result = CompanyContractPrefsSchema.safeParse({
+      ...DEFAULT_CONTRACT_PREFS,
+      types: ["Not A Real Contract Type"],
+    });
+    expect(result.success).toBe(false);
   });
 });
