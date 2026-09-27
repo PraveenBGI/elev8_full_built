@@ -170,6 +170,78 @@ export async function getCountryPillarReadiness(
 }
 
 /**
+ * Same as getCountryPillarReadiness but scoped to one delegated state --
+ * powers the State Admin dashboard, mirroring the country-level function
+ * exactly rather than inventing a different shape for the same concept.
+ */
+export async function getStatePillarReadiness(
+  stateId: string,
+): Promise<Record<string, string>> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("pillar_configs")
+    .select("pillar, readiness_level, approval_status")
+    .eq("state_id", stateId);
+
+  if (error) throw error;
+
+  const result: Record<string, string> = {};
+  for (const row of data ?? []) {
+    result[row.pillar as string] = row.readiness_level as string;
+  }
+  return result;
+}
+
+export type StatePillarApprovalRow = {
+  pillar: string;
+  approval_status: string;
+};
+
+export async function listStatePillarApprovalStatuses(
+  stateId: string,
+): Promise<StatePillarApprovalRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("pillar_configs")
+    .select("pillar, approval_status")
+    .eq("state_id", stateId);
+
+  if (error) throw error;
+  return (data ?? []) as StatePillarApprovalRow[];
+}
+
+export async function getStateById(stateId: string): Promise<
+  (StateRow & { country_name: string }) | null
+> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("states")
+    .select("id, name, is_active, is_thrust_cluster, config_control, approval_status, country_id")
+    .eq("id", stateId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const { data: countryRow, error: countryError } = await db
+    .from("countries")
+    .select("name")
+    .eq("id", data.country_id)
+    .maybeSingle();
+  if (countryError) throw countryError;
+
+  return {
+    id: data.id,
+    name: data.name,
+    is_active: data.is_active,
+    is_thrust_cluster: data.is_thrust_cluster,
+    config_control: data.config_control,
+    approval_status: data.approval_status,
+    country_name: countryRow?.name ?? "",
+  };
+}
+
+/**
  * Country Master Data -- HS Code Coverage.
  */
 export type HsCodeRow = {

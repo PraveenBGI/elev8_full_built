@@ -1337,16 +1337,66 @@ export function CompanyConfigForm({
   countries: { id: string; name: string }[];
   homeCountryStates: string[];
 }) {
+  const enterpriseStepsDone = [
+    Boolean(company.type && company.sector),
+    Boolean(company.primary_role),
+    company.sell_intents.length > 0 || company.buy_intents.length > 0,
+    Boolean(company.home_country_id),
+    Object.keys(company.market_priority).length > 0,
+    company.goals.length > 0,
+    Boolean((company.commercial_terms as { currency?: string })?.currency),
+  ].filter(Boolean).length;
+  const enterprisePercent = Math.round((enterpriseStepsDone / 7) * 100);
+
   return (
     <div className="max-w-[820px]">
       <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
         {company.name}
       </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
+      <p className="mt-1.5 mb-5 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
         Enterprise Configuration. What you set here shapes which
         opportunities, alerts, and recommendations gatewAI surfaces for
         your company.
       </p>
+
+      <div
+        className="mb-7 flex items-center gap-5 rounded-xl border bg-white p-4 shadow-[var(--elev8-shadow-sm)]"
+        style={{ borderColor: "var(--elev8-g100)" }}
+      >
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+          <svg viewBox="0 0 74 74" width="64" height="64">
+            <circle cx="37" cy="37" r="33" fill="none" stroke="var(--elev8-g100)" strokeWidth="6" />
+            <circle
+              cx="37"
+              cy="37"
+              r="33"
+              fill="none"
+              stroke="var(--elev8-blue)"
+              strokeWidth="6"
+              strokeDasharray={2 * Math.PI * 33}
+              strokeDashoffset={2 * Math.PI * 33 - (enterprisePercent / 100) * 2 * Math.PI * 33}
+              strokeLinecap="round"
+              transform="rotate(-90 37 37)"
+            />
+          </svg>
+          <span
+            className="absolute text-[13px] font-semibold"
+            style={{ color: "var(--elev8-ink)" }}
+          >
+            {enterprisePercent}%
+          </span>
+        </div>
+        <div>
+          <p className="text-[13.5px] font-medium" style={{ color: "var(--elev8-ink)" }}>
+            {enterpriseStepsDone} of 7 Enterprise Configuration steps complete
+          </p>
+          <p className="mt-0.5 text-[12.5px]" style={{ color: "var(--elev8-g500)" }}>
+            {company.primary_role ? `${company.primary_role} - ` : ""}
+            {company.goals.length} objective{company.goals.length === 1 ? "" : "s"} set,{" "}
+            {company.corridor_country_ids.length} corridor{company.corridor_country_ids.length === 1 ? "" : "s"} followed
+          </p>
+        </div>
+      </div>
 
       <div
         className="rounded-xl border bg-white px-5 shadow-[var(--elev8-shadow-sm)]"

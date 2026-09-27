@@ -23,6 +23,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getBrowserDb } from "@/lib/db/browser-client";
+import { resolvePostLoginRedirectAction } from "./actions";
 
 const inputClass =
   "w-full rounded-md border border-[var(--elev8-g200)] bg-white px-3 py-2 text-[13px] text-[var(--elev8-ink)] outline-none transition-colors focus:border-[var(--elev8-blue)] focus:ring-2 focus:ring-[var(--elev8-blue)]/15";
@@ -52,7 +53,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/admin/config-engine/identity");
+    const destination = await resolvePostLoginRedirectAction();
+    router.push(destination);
     router.refresh();
   }
 
