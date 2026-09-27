@@ -13,6 +13,7 @@ import { requireAuth } from "@/lib/auth/adapter";
 import {
   getCompanyById,
   getMyCompanyScope,
+  getRealStateNamesForCountry,
   listCountriesForDropdown,
 } from "@/lib/modules/company-config/adapter";
 import { CreateCompanyForm } from "./CreateCompanyForm";
@@ -38,5 +39,15 @@ export default async function CompanyPage() {
     );
   }
 
-  return <CompanyConfigForm company={company} countries={countries} />;
+  const homeCountryStates = company.home_country_id
+    ? await getRealStateNamesForCountry(company.home_country_id)
+    : [];
+
+  return (
+    <CompanyConfigForm
+      company={company}
+      countries={countries}
+      homeCountryStates={homeCountryStates}
+    />
+  );
 }
