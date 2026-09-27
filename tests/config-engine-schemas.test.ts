@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput, ExportPayloadSchema, DEFAULT_EXPORT_PAYLOAD, type ExportPayloadInput, InvestmentPayloadSchema, DEFAULT_INVESTMENT_PAYLOAD, type InvestmentPayloadInput, SustainabilityPayloadSchema, DEFAULT_SUSTAINABILITY_PAYLOAD, type SustainabilityPayloadInput, computeKpiAchievement } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput, ExportPayloadSchema, DEFAULT_EXPORT_PAYLOAD, type ExportPayloadInput, InvestmentPayloadSchema, DEFAULT_INVESTMENT_PAYLOAD, type InvestmentPayloadInput, SustainabilityPayloadSchema, DEFAULT_SUSTAINABILITY_PAYLOAD, type SustainabilityPayloadInput, computeKpiAchievement, IcvPayloadSchema, DEFAULT_ICV_PAYLOAD, type IcvPayloadInput, ICV_SCORE_LABELS } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -810,5 +810,88 @@ describe("SustainabilityPayloadSchema", () => {
       emissionFactorSource: null,
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("IcvPayloadSchema", () => {
+  const validPayload: IcvPayloadInput = {
+    enabled: true,
+    scoreBand: { bronze: 30, silver: 50, gold: 70, platinum: 100 },
+    obligationAllocation: [
+      { sector: "Construction", micro: 15, small: 12, medium: 10, lcc: 18, riyada: 15 },
+    ],
+    templates: {
+      fixedAssets: ["Machinery"],
+      csrHeads: ["Education"],
+      inDemandProducts: ["Steel pipes"],
+      inDemandServices: ["Logistics"],
+      capabilityDev: ["ISO training"],
+    },
+    contributionScore: {
+      goods: { msmeMicro: 10, msmeSmall: 8 },
+      csr: { infrastructure: 5 },
+    },
+    spendTargets: {
+      procGoodsTotal: 100,
+      procGoodsNationalPct: 40,
+      procGoodsIntlPct: 30,
+      procGoodsMsmePct: 15,
+      procGoodsLccPct: 10,
+      procGoodsNatProdPct: 5,
+      procServicesTotal: 50,
+      procServicesNationalPct: 40,
+      procServicesIntlPct: 30,
+      procServicesMsmePct: 20,
+      procServicesLccPct: 10,
+      investNewTotal: 200,
+      investMsmePct: 20,
+      investLargePct: 60,
+      investLccPct: 20,
+      workforceSalaryTotal: 80,
+      workforceNationalPct: 50,
+      workforceNationalisationPct: 40,
+      supplierDevTotal: 30,
+      supplierDevMicroPct: 25,
+      supplierDevSmallPct: 25,
+      supplierDevMediumPct: 25,
+      supplierDevLargePct: 25,
+    },
+  };
+
+  it("accepts a complete, valid payload with score bands in ascending order", () => {
+    expect(IcvPayloadSchema.safeParse(validPayload).success).toBe(true);
+  });
+
+  it("rejects score bands out of ascending order", () => {
+    const result = IcvPayloadSchema.safeParse({
+      ...validPayload,
+      scoreBand: { bronze: 50, silver: 30, gold: 70, platinum: 100 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("allows gold to equal platinum (the mockup's own <= on the last band)", () => {
+    const result = IcvPayloadSchema.safeParse({
+      ...validPayload,
+      scoreBand: { bronze: 30, silver: 50, gold: 100, platinum: 100 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("DEFAULT_ICV_PAYLOAD deliberately fails validation (all-zero score bands)", () => {
+    expect(IcvPayloadSchema.safeParse(DEFAULT_ICV_PAYLOAD).success).toBe(false);
+  });
+
+  it("contributionScore accepts an arbitrary dictionary shape, not a fixed key set", () => {
+    const result = IcvPayloadSchema.safeParse({
+      ...validPayload,
+      contributionScore: { anyTab: { anyCategory: 42 } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("ICV_SCORE_LABELS has no em dashes in any label (converted to colons)", () => {
+    const allLabels = Object.values(ICV_SCORE_LABELS).flatMap((tab) => Object.values(tab));
+    expect(allLabels.some((l) => l.includes("\u2014"))).toBe(false);
   });
 });

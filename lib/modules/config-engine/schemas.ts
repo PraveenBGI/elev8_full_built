@@ -755,6 +755,216 @@ export const IC_WORKFLOW_STAGES = [
 ] as const;
 
 /**
+ * ICV / Local Content pillar -- the last of the 8. Same self-contained
+ * shape as every other pillar -- one pillar_configs blob, no new
+ * migration.
+ *
+ * Contribution Score is deliberately NOT a strict per-key schema. The
+ * mockup's own ICV_SCORE_LABELS defines 58 distinct category keys spread
+ * across 6 tabs (goods, services, workforce, investment, supplierDev,
+ * csr), each tab with its own different key set. Hand-enumerating all 58
+ * as individual Zod fields would be a huge, error-prone undertaking for
+ * marginal safety benefit -- instead this validates the general SHAPE
+ * (a dictionary of tabs, each a dictionary of category -> percentage),
+ * while the UI still renders the exact real labels per tab from
+ * ICV_SCORE_TABS/ICV_SCORE_LABELS below, ported verbatim from the
+ * mockup. The labels' own em dashes ("National — MSME Micro") are
+ * rendered with a colon instead ("National: MSME Micro"), matching this
+ * project's no-em-dash rule.
+ */
+export const ICV_SCORE_TABS = [
+  ["goods", "Goods"],
+  ["services", "Services"],
+  ["workforce", "Workforce"],
+  ["investment", "Investment"],
+  ["supplierDev", "Supplier Development"],
+  ["csr", "CSR"],
+] as const;
+
+export const ICV_SCORE_LABELS: Record<string, Record<string, string>> = {
+  goods: {
+    msmeMicro: "National: MSME Micro",
+    msmeSmall: "National: MSME Small",
+    msmeMedium: "National: MSME Medium",
+    large: "National: Large",
+    mfn: "International: MFN",
+    row: "International: RoW",
+    lcc: "Special: LCC",
+    riyada: "Special: Riyada",
+    nationalProduct: "Product Categories: National Product",
+    perfAbove75: "Bonus: Supplier Performance > 75",
+    perfAbove50: "Bonus: Supplier Performance > 50",
+  },
+  services: {
+    msmeMicro: "National: MSME Micro",
+    msmeSmall: "National: MSME Small",
+    msmeMedium: "National: MSME Medium",
+    large: "National: Large",
+    mfn: "International: MFN",
+    row: "International: RoW",
+    lcc: "Special: LCC",
+    riyada: "Special: Riyada",
+    perfAbove75: "Bonus: Supplier Performance > 75",
+    perfAbove50: "Bonus: Supplier Performance > 50",
+  },
+  workforce: {
+    nationalSalary: "Salaries: National (% of Gross Salary)",
+    expatMfn: "Salaries: Expat MFN",
+    expatRow: "Salaries: Expat RoW",
+    trainNationalInst: "Training: National Institutes",
+    trainIntlMfn: "Training: Intl MFN Institutes",
+    trainIntlRow: "Training: Intl RoW Institutes",
+    apprenticeship: "Apprenticeship",
+    trainingLevy: "Training Levy",
+    perfAbove75: "Bonus: Enterprise Performance > 75",
+    perfAbove50: "Bonus: Enterprise Performance > 50",
+    natnAbove80: "Bonus: Nationalisation > 80%",
+    natnAbove50: "Bonus: Nationalisation > 50%",
+  },
+  investment: {
+    repairing: "Repairing Facility",
+    serviceMaint: "Service & Maintaining Facility",
+    heavyEquip: "Heavy Equipment",
+    rigsHoists: "Rigs & Hoists",
+    warehouse: "Warehouse",
+    newProdLine: "New Production Line",
+    perfAbove75: "Bonus: Performance > 75",
+    perfAbove50: "Bonus: Performance > 50",
+  },
+  supplierDev: {
+    isoCert: "Capability: ISO Certification",
+    training: "Capability: Training",
+    rnd: "Capability: R&D",
+    msmeMicro: "Classification: MSME Micro",
+    msmeSmall: "Classification: MSME Small",
+    msmeMedium: "Classification: MSME Medium",
+    large: "Classification: Large",
+    lcc: "Special: LCC",
+    riyada: "Special: Riyada",
+    ringfencing: "Capacity: Ringfencing",
+    inDemandProducts: "In-Demand Products",
+    inDemandServices: "In-Demand Services",
+    perfAbove75: "Bonus: Performance > 75",
+    perfAbove50: "Bonus: Performance > 50",
+  },
+  csr: {
+    infrastructure: "Infrastructure",
+    religious: "Religious Institutions",
+    charity: "Charity Institutions",
+  },
+};
+
+function zeroedScoreDefaults(): Record<string, Record<string, number>> {
+  const result: Record<string, Record<string, number>> = {};
+  for (const [tab] of ICV_SCORE_TABS) {
+    result[tab] = Object.fromEntries(Object.keys(ICV_SCORE_LABELS[tab]).map((k) => [k, 0]));
+  }
+  return result;
+}
+
+export const IcvObligationRowSchema = z.object({
+  sector: z.string().trim().min(1),
+  micro: z.coerce.number().min(0).max(100),
+  small: z.coerce.number().min(0).max(100),
+  medium: z.coerce.number().min(0).max(100),
+  lcc: z.coerce.number().min(0).max(100),
+  riyada: z.coerce.number().min(0).max(100),
+});
+
+export const IcvPayloadSchema = z.object({
+  enabled: z.boolean(),
+  scoreBand: z
+    .object({
+      bronze: z.coerce.number().min(0).max(100),
+      silver: z.coerce.number().min(0).max(100),
+      gold: z.coerce.number().min(0).max(100),
+      platinum: z.coerce.number().min(0).max(100),
+    })
+    .refine(
+      (b) => b.bronze < b.silver && b.silver < b.gold && b.gold <= b.platinum,
+      {
+        message: "Score bands must be in ascending order: bronze < silver < gold <= platinum.",
+        path: ["bronze"],
+      },
+    ),
+  obligationAllocation: z.array(IcvObligationRowSchema),
+  templates: z.object({
+    fixedAssets: z.array(z.string().trim().min(1)),
+    csrHeads: z.array(z.string().trim().min(1)),
+    inDemandProducts: z.array(z.string().trim().min(1)),
+    inDemandServices: z.array(z.string().trim().min(1)),
+    capabilityDev: z.array(z.string().trim().min(1)),
+  }),
+  contributionScore: z.record(z.string(), z.record(z.string(), z.coerce.number())),
+  spendTargets: z.object({
+    procGoodsTotal: z.coerce.number().min(0),
+    procGoodsNationalPct: z.coerce.number().min(0).max(100),
+    procGoodsIntlPct: z.coerce.number().min(0).max(100),
+    procGoodsMsmePct: z.coerce.number().min(0).max(100),
+    procGoodsLccPct: z.coerce.number().min(0).max(100),
+    procGoodsNatProdPct: z.coerce.number().min(0).max(100),
+    procServicesTotal: z.coerce.number().min(0),
+    procServicesNationalPct: z.coerce.number().min(0).max(100),
+    procServicesIntlPct: z.coerce.number().min(0).max(100),
+    procServicesMsmePct: z.coerce.number().min(0).max(100),
+    procServicesLccPct: z.coerce.number().min(0).max(100),
+    investNewTotal: z.coerce.number().min(0),
+    investMsmePct: z.coerce.number().min(0).max(100),
+    investLargePct: z.coerce.number().min(0).max(100),
+    investLccPct: z.coerce.number().min(0).max(100),
+    workforceSalaryTotal: z.coerce.number().min(0),
+    workforceNationalPct: z.coerce.number().min(0).max(100),
+    workforceNationalisationPct: z.coerce.number().min(0).max(100),
+    supplierDevTotal: z.coerce.number().min(0),
+    supplierDevMicroPct: z.coerce.number().min(0).max(100),
+    supplierDevSmallPct: z.coerce.number().min(0).max(100),
+    supplierDevMediumPct: z.coerce.number().min(0).max(100),
+    supplierDevLargePct: z.coerce.number().min(0).max(100),
+  }),
+});
+
+export type IcvPayloadInput = z.infer<typeof IcvPayloadSchema>;
+
+export const DEFAULT_ICV_PAYLOAD: IcvPayloadInput = {
+  enabled: false,
+  scoreBand: { bronze: 0, silver: 0, gold: 0, platinum: 0 },
+  obligationAllocation: [],
+  templates: {
+    fixedAssets: [],
+    csrHeads: [],
+    inDemandProducts: [],
+    inDemandServices: [],
+    capabilityDev: [],
+  },
+  contributionScore: zeroedScoreDefaults(),
+  spendTargets: {
+    procGoodsTotal: 0,
+    procGoodsNationalPct: 0,
+    procGoodsIntlPct: 0,
+    procGoodsMsmePct: 0,
+    procGoodsLccPct: 0,
+    procGoodsNatProdPct: 0,
+    procServicesTotal: 0,
+    procServicesNationalPct: 0,
+    procServicesIntlPct: 0,
+    procServicesMsmePct: 0,
+    procServicesLccPct: 0,
+    investNewTotal: 0,
+    investMsmePct: 0,
+    investLargePct: 0,
+    investLccPct: 0,
+    workforceSalaryTotal: 0,
+    workforceNationalPct: 0,
+    workforceNationalisationPct: 0,
+    supplierDevTotal: 0,
+    supplierDevMicroPct: 0,
+    supplierDevSmallPct: 0,
+    supplierDevMediumPct: 0,
+    supplierDevLargePct: 0,
+  },
+};
+
+/**
  * Sustainability pillar. Same self-contained shape as every other
  * pillar built so far -- one pillar_configs blob, no new tables. The
  * mockup's own framing: "Sustainability is the pillar that protects

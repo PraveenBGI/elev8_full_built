@@ -630,6 +630,37 @@ recommitting.
 13 new tests (5 for `computeKpiAchievement`'s formula branches, 8 for
 the payload schema). 85 total app-level tests.
 
+## ICV pillar (this session) -- eighth and FINAL of 8. All country pillars complete.
+
+`/admin/config-engine/icv`. Same self-contained pattern as every other
+pillar -- one pillar_configs blob, zero new migration. Same
+ascending-order band validation as Investment's risk bands
+(bronze < silver < gold <= platinum).
+
+**A real scope decision worth explaining**: Contribution Score is NOT a
+strict per-key schema. The mockup's own `ICV_SCORE_LABELS` defines 58
+distinct category keys across 6 tabs (goods, services, workforce,
+investment, supplierDev, csr), each tab with a genuinely different key
+set. Hand-enumerating all 58 as individual Zod fields would have been a
+large, error-prone undertaking for marginal safety benefit. Instead the
+schema validates the general shape (a dictionary of tabs, each a
+dictionary of category to percentage), while the UI still renders every
+real label per tab, ported verbatim.
+
+The mockup's own labels contain em dashes ("National — MSME Micro"),
+converted to colons ("National: MSME Micro") to match this project's
+rule -- verified with a real test asserting no label in
+`ICV_SCORE_LABELS` contains an em dash character, not just an eyeball
+check.
+
+One real, flagged gap: Spend Targets' value column should show currency
+from Company Corporate Classification (`S.corporateClass.currency` in
+the mockup), which doesn't exist anywhere in this schema -- falls back
+to a plain "Mn" unit label instead of a currency code.
+
+6 new schema unit tests. **This completes all 8 of the mockup's country
+pillar forms.** 91 total app-level tests.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.
@@ -647,6 +678,8 @@ the payload schema). 85 total app-level tests.
 11. **`pillar_configs` has no version history.** Since the resolver now gates a delegated state's payload on `approval_status = 'published'`, and any edit both overwrites the payload in place AND reverts status to `'draft'` (the existing auto-revert trigger), there is no way to serve "the state's last published version" while a new edit is under review -- companies just see the country's config for that window instead. Fixing this properly means a real versioning/snapshot table (e.g. a `pillar_config_versions` history, or a separate `published_payload` column distinct from the working `payload`), not built here. Worth doing before this gap causes real confusion for a state that publishes often.
 12. **No world-country reference list exists.** Export's Target Export Markets (and eventually Investment's target markets, likely) needs to name any country in the world, not just countries onboarded onto the platform (BGI's own `countries` table only has the countries actually running elev8, e.g. Oman/India/Tanzania). Currently free text. A real global country list (ISO 3166 or similar) is a genuinely separate, smaller reference-data need from Phase 1's master data -- worth deciding whether it lives in this schema or is sourced from a library/constant at the app layer.
 13. **Country Identity's Strategic Control watchlist doesn't exist, so Export can't exclude watchlisted countries from its target-market picker.** The mockup explicitly ties these two together ("Nations on the Watchlist... are excluded from the country picker below"). Once Identity's remaining 6 sub-sections are built (see the earlier note on Identity being partially complete), this integration should be added to Export's target market picker, not forgotten.
+14. **ICV Spend Targets has no currency source.** The mockup reads `S.corporateClass.currency` for its value-column unit label -- Company Corporate Classification doesn't exist in this schema (a Company Configuration concern, not Country/State), so ICV currently shows a plain "Mn" label instead of a real currency code. Worth revisiting once Company Configuration's own Commercial Terms step (or an equivalent) exists.
+15. **Contribution Score's 58 category keys are validated by shape, not by an exact enumerated key set.** A typo'd or unexpected key in `contributionScore.<tab>.<key>` would still pass validation as long as the value is numeric -- the schema can't catch "this key doesn't belong in this tab" the way a strict enum would. Acceptable trade-off given the alternative (58 hand-written fields) for now; worth reconsidering if this data ever needs stricter validation downstream (e.g. a scoring engine that assumes only real keys exist).
 
 ## Two real bugs caught by this module's own verification (not by inspection)
 
