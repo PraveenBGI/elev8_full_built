@@ -27,6 +27,12 @@ import {
   CompanyPillarSelectionSchema,
   type CompanyPillarSelectionInput,
   DEFAULT_PILLAR_SELECTION,
+  CompanyComplianceSchema,
+  type CompanyComplianceInput,
+  DEFAULT_COMPLIANCE,
+  CompanyDocChecklistSchema,
+  REQUIRED_CERTIFICATIONS,
+  SECTOR_CERT_SUGGEST,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -347,5 +353,67 @@ describe("CompanyPillarSelectionSchema", () => {
       pillarSource: { procurement: "algorithm" },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyComplianceSchema", () => {
+  const valid: CompanyComplianceInput = {
+    requiredCerts: ["ISO 9001"],
+    tradeRequirements: ["Export License"],
+    certsHeld: ["ISO 9001", "CE Marking"],
+    certExpiry: { "ISO 9001": "2027-01-01" },
+  };
+
+  it("accepts a complete, valid compliance payload", () => {
+    expect(CompanyComplianceSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-empty default", () => {
+    expect(CompanyComplianceSchema.safeParse(DEFAULT_COMPLIANCE).success).toBe(true);
+  });
+
+  it("rejects an invalid certification value", () => {
+    const result = CompanyComplianceSchema.safeParse({ ...valid, requiredCerts: ["Not A Real Cert"] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid trade requirement value", () => {
+    const result = CompanyComplianceSchema.safeParse({ ...valid, tradeRequirements: ["Not A Real Requirement"] });
+    expect(result.success).toBe(false);
+  });
+
+  it("certExpiry accepts an arbitrary dictionary of cert name to date string", () => {
+    const result = CompanyComplianceSchema.safeParse({
+      ...valid,
+      certExpiry: { "ISO 9001": "2027-01-01", "CE Marking": "2026-06-15" },
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("CompanyDocChecklistSchema", () => {
+  it("accepts a valid checklist", () => {
+    const result = CompanyDocChecklistSchema.safeParse({
+      docChecklist: ["Commercial Invoice", "Packing List"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an empty checklist", () => {
+    expect(CompanyDocChecklistSchema.safeParse({ docChecklist: [] }).success).toBe(true);
+  });
+
+  it("rejects an invalid document type", () => {
+    const result = CompanyDocChecklistSchema.safeParse({ docChecklist: ["Not A Real Document"] });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("SECTOR_CERT_SUGGEST", () => {
+  it("only suggests certifications from the real REQUIRED_CERTIFICATIONS list", () => {
+    const allSuggested = Object.values(SECTOR_CERT_SUGGEST).flat();
+    for (const cert of allSuggested) {
+      expect(REQUIRED_CERTIFICATIONS as readonly string[]).toContain(cert);
+    }
   });
 });

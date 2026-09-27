@@ -42,17 +42,28 @@ import {
   computePillarSignals,
   DEFAULT_PILLAR_SELECTION,
   type CompanyPillarSelectionInput,
+  REQUIRED_CERTIFICATIONS,
+  TRADE_REQUIREMENTS,
+  DOC_CHECKLIST,
+  DEFAULT_COMPLIANCE,
+  SECTOR_CERT_SUGGEST,
+  type CompanyComplianceInput,
+  type CompanyDocChecklistInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import {
   getRealStateNamesForCountryAction,
+  listCompanyAuditLogAction,
   saveCompanyCommercialTermsAction,
+  saveCompanyComplianceAction,
+  saveCompanyDocChecklistAction,
   saveCompanyGeographyAction,
   saveCompanyGoalsAction,
   saveCompanyIdentityAction,
   saveCompanyMarketPriorityAction,
   saveCompanyPillarSelectionAction,
+  saveCompanyRiskReviewedAction,
   saveCompanyRoleAction,
   saveCompanyTradeIntentAction,
 } from "./actions";
@@ -1470,7 +1481,347 @@ function PillarSelectionSection({ company }: { company: CompanyRow }) {
   );
 }
 
-const UPCOMING_STEPS = ["Pillar Preferences (per active pillar)"];
+function ComplianceSection({ company }: { company: CompanyRow }) {
+  const stored = company.compliance as Partial<CompanyComplianceInput>;
+  const [form, setForm] = useState<CompanyComplianceInput>({ ...DEFAULT_COMPLIANCE, ...stored });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  // Frozen once at mount rather than called during render (Date.now()
+  // is impure and React's own rules flag calling it in the render
+  // body) -- an expiry badge doesn't need live, per-render precision.
+  const [now] = useState(() => Date.now());
+
+  const suggestions = (company.sector ? SECTOR_CERT_SUGGEST[company.sector] : undefined)?.filter(
+    (c) => !form.certsHeld.includes(c),
+  );
+
+  function toggle(
+    field: "requiredCerts" | "tradeRequirements" | "certsHeld",
+    value: (typeof REQUIRED_CERTIFICATIONS)[number] | (typeof TRADE_REQUIREMENTS)[number],
+  ) {
+    setForm((f) => ({
+      ...f,
+      [field]: f[field].includes(value as never)
+        ? f[field].filter((v) => v !== value)
+        : [...f[field], value],
+    }));
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyComplianceAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+            Required certifications
+          </label>
+          <p className="mb-2 text-[11.5px]" style={{ color: "var(--elev8-g400)" }}>
+            What you expect from partners
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {REQUIRED_CERTIFICATIONS.map((c) => (
+              <Chip key={c} label={c} on={form.requiredCerts.includes(c)} onClick={() => toggle("requiredCerts", c)} />
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+            Trade &amp; regulatory requirements
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {TRADE_REQUIREMENTS.map((t) => (
+              <Chip key={t} label={t} on={form.tradeRequirements.includes(t)} onClick={() => toggle("tradeRequirements", t)} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <label className="mb-1 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          My certifications
+        </label>
+        <p className="mb-2 text-[11.5px]" style={{ color: "var(--elev8-g400)" }}>
+          Powers your credibility score and tender eligibility. Add expiry dates so gatewAI can alert you before they lapse.
+        </p>
+        {suggestions && suggestions.length > 0 && (
+          <div
+            className="mb-3 flex flex-wrap items-center gap-2 rounded-md border px-3 py-2"
+            style={{ background: "#E9F8EF", borderColor: "#CDEFDA" }}
+          >
+            <span className="text-[12px] font-semibold" style={{ color: "#00874A" }}>
+              Common for {company.sector}:
+            </span>
+            {suggestions.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => toggle("certsHeld", c)}
+                className="rounded-md border px-2.5 py-1 text-[11px] font-medium"
+                style={{ borderColor: "#CDEFDA", color: "#00874A", background: "white" }}
+              >
+                + {c}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {REQUIRED_CERTIFICATIONS.map((c) => (
+            <Chip key={c} label={c} on={form.certsHeld.includes(c)} onClick={() => toggle("certsHeld", c)} />
+          ))}
+        </div>
+        {form.certsHeld.length > 0 && (
+          <div className="mt-3 space-y-2 border-t pt-3" style={{ borderColor: "var(--elev8-g100)" }}>
+            {form.certsHeld.map((c) => {
+              const exp = form.certExpiry[c] ?? "";
+              const days = exp ? Math.round((new Date(exp).getTime() - now) / 86400000) : null;
+              const badge =
+                days === null
+                  ? null
+                  : days < 30
+                    ? { label: "Expiring soon", bg: "#FDECEC", fg: "var(--elev8-red)" }
+                    : days < 90
+                      ? { label: "Monitor", bg: "#FFF7E6", fg: "#8A6A1A" }
+                      : { label: "Valid", bg: "#E9F8EF", fg: "#00874A" };
+              return (
+                <div key={c} className="flex items-center gap-3">
+                  <span className="min-w-[180px] text-[13px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
+                    {c}
+                  </span>
+                  <input
+                    type="date"
+                    className={inputClass}
+                    style={{ maxWidth: 170 }}
+                    value={exp}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, certExpiry: { ...f.certExpiry, [c]: e.target.value } }))
+                    }
+                  />
+                  {badge && (
+                    <span
+                      className="rounded-full px-2.5 py-0.5 text-[11.5px] font-medium"
+                      style={{ background: badge.bg, color: badge.fg }}
+                    >
+                      {badge.label}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function RiskIntelligenceSection({ company }: { company: CompanyRow }) {
+  const [reviewed, setReviewed] = useState(company.risk_reviewed);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [isPending, startTransition] = useTransition();
+
+  function handleReview() {
+    startTransition(async () => {
+      const result = await saveCompanyRiskReviewedAction(true);
+      if (result.ok) {
+        setReviewed(true);
+        setStatus("saved");
+      } else {
+        setStatus("error");
+      }
+    });
+  }
+
+  return (
+    <div>
+      <p className="mb-3 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Never read demand or margin without risk context. Every corridor
+        carries a country, currency, payment and logistics risk rating.
+      </p>
+      <div
+        className="mb-4 rounded-md border px-4 py-6 text-center text-[13px]"
+        style={{ borderColor: "var(--elev8-g200)", color: "var(--elev8-g400)" }}
+      >
+        Add trade corridors (Import/Export Pillar) to see risk ratings
+        here. This table has nothing to show yet.
+      </div>
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {[
+          ["High Demand / Low Risk", "Prioritise"],
+          ["High Demand / High Risk", "Manage closely"],
+          ["Low Demand / Low Risk", "Stable / maintain"],
+          ["Low Demand / High Risk", "Review or exit"],
+        ].map(([label, sub]) => (
+          <div key={label} className="rounded-md border px-3 py-2.5" style={{ borderColor: "var(--elev8-g100)" }}>
+            <p className="text-[13px] font-medium" style={{ color: "var(--elev8-ink)" }}>
+              {label}
+            </p>
+            <p className="text-[12px]" style={{ color: "var(--elev8-g500)" }}>
+              {sub}
+            </p>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={handleReview}
+        disabled={isPending || reviewed}
+        className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        style={{ background: reviewed ? "var(--elev8-green)" : "var(--elev8-blue)" }}
+      >
+        {reviewed ? "Reviewed" : isPending ? "Saving..." : "Mark as reviewed"}
+      </button>
+      {status === "error" && (
+        <p className="mt-2 text-sm" style={{ color: "var(--elev8-red)" }}>
+          Save failed.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DocumentRoomSection({ company }: { company: CompanyRow }) {
+  const [form, setForm] = useState<CompanyDocChecklistInput>({ docChecklist: company.doc_checklist as CompanyDocChecklistInput["docChecklist"] });
+  const [auditLog, setAuditLog] = useState<Awaited<ReturnType<typeof listCompanyAuditLogAction>> | null>(null);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function loadAuditLog() {
+    startTransition(async () => {
+      const log = await listCompanyAuditLogAction();
+      setAuditLog(log);
+    });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyDocChecklistAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+        loadAuditLog();
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Status of the trade documents behind your active corridors and
+        contracts, plus a timestamped record of every change you save.
+      </p>
+
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+        Required documents by trade type
+      </label>
+      <div className="mb-5 flex flex-wrap gap-2">
+        {DOC_CHECKLIST.map((d) => (
+          <Chip
+            key={d}
+            label={d}
+            on={form.docChecklist.includes(d)}
+            onClick={() =>
+              setForm((f) => ({
+                ...f,
+                docChecklist: f.docChecklist.includes(d)
+                  ? f.docChecklist.filter((x) => x !== d)
+                  : [...f.docChecklist, d],
+              }))
+            }
+          />
+        ))}
+      </div>
+
+      <div className="mb-2 flex items-center justify-between">
+        <label className="text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          Configuration audit trail
+        </label>
+        <button type="button" onClick={loadAuditLog} className="text-[12px] font-medium" style={{ color: "var(--elev8-blue)" }}>
+          {auditLog ? "Refresh" : "Show"}
+        </button>
+      </div>
+      {auditLog && (
+        <div className="mb-5 space-y-1.5 rounded-md border p-3" style={{ borderColor: "var(--elev8-g100)" }}>
+          {auditLog.length === 0 ? (
+            <p className="text-[12.5px] italic" style={{ color: "var(--elev8-g400)" }}>
+              No changes recorded yet.
+            </p>
+          ) : (
+            auditLog.map((entry) => (
+              <div key={entry.id} className="flex gap-3 text-[12px]">
+                <span style={{ color: "var(--elev8-g400)" }}>{new Date(entry.created_at).toLocaleString()}</span>
+                <span className="font-medium" style={{ color: "var(--elev8-ink)" }}>{entry.section}</span>
+                <span style={{ color: "var(--elev8-g500)" }}>{entry.detail}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+const UPCOMING_STEPS = [
+  "Procurement Pillar (RFQ/Tender/Contract Preferences)",
+  "B2B Pillar (Products, Target Buyers/Suppliers)",
+  "Import Pillar",
+  "Export Pillar",
+  "Investment Pillar",
+  "Sustainability Pillar",
+  "ICV Pillar",
+];
 
 export function CompanyConfigForm({
   company,
@@ -1636,6 +1987,40 @@ export function CompanyConfigForm({
         >
           <PillarSelectionSection company={company} />
         </SettingsGroup>
+
+        {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("governance") && (
+          <>
+            <SettingsGroup
+              title="Governance: Compliance & Certs"
+              summary={
+                (company.compliance as { requiredCerts?: string[] })?.requiredCerts?.length
+                  ? `${(company.compliance as { requiredCerts?: string[] }).requiredCerts!.length} required`
+                  : "Not set"
+              }
+              isComplete={Boolean(
+                (company.compliance as { requiredCerts?: string[] })?.requiredCerts?.length,
+              )}
+            >
+              <ComplianceSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Governance: Risk Intelligence"
+              summary={company.risk_reviewed ? "Reviewed" : "Not reviewed"}
+              isComplete={company.risk_reviewed}
+            >
+              <RiskIntelligenceSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Governance: Document Room & Audit"
+              summary={company.doc_checklist.length > 0 ? `${company.doc_checklist.length} document types` : "Not set"}
+              isComplete={company.doc_checklist.length > 0}
+            >
+              <DocumentRoomSection company={company} />
+            </SettingsGroup>
+          </>
+        )}
       </div>
 
       <div className="mt-10">

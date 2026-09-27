@@ -409,3 +409,107 @@ export const DEFAULT_PILLAR_SELECTION: CompanyPillarSelectionInput = {
   pillarSource: {},
   autoApplied: false,
 };
+
+/**
+ * Governance Pillar, first of the 8 per-pillar preference sub-groups
+ * (Phase 2). Three sub-pages.
+ *
+ * Compliance & Certs: requiredCerts/tradeRequirements/certsHeld/
+ * certExpiry, one jsonb blob (same reasoning as commercial_terms).
+ * Both requiredCerts and certsHeld draw from the same fixed
+ * certification list -- "what you expect from partners" vs "what you
+ * hold yourself" are two different selections over one shared list,
+ * matching the mockup exactly.
+ *
+ * Risk Intelligence: the mockup's own risk table is entirely computed
+ * from trade corridor data (allCorridors(), built from Import/Export
+ * corridor sub-groups not built yet in this schema) -- there is
+ * genuinely no editable data here yet, so this is just an
+ * acknowledgment boolean, not a jsonb blob standing in for data that
+ * doesn't exist.
+ *
+ * Document Room & Audit: docChecklist is the one real editable field
+ * (a plain string array). "Documents Held on File" in the mockup is
+ * hardcoded illustrative sample data with no S.field backing it at
+ * all -- not reproduced here, since presenting fabricated document
+ * statuses as real would be actively misleading, not just incomplete.
+ */
+export const REQUIRED_CERTIFICATIONS = [
+  "ISO 9001",
+  "ISO 14001",
+  "ISO 45001",
+  "IEC Certification",
+  "CE Marking",
+  "ESG Qualification",
+  "GCC/GSO Mark",
+  "Product Certification",
+  "ICV Certificate",
+  "Country-specific Approval",
+] as const;
+
+export const TRADE_REQUIREMENTS = [
+  "Import License",
+  "Export License",
+  "Certificate of Origin",
+  "Customs Registration",
+  "Authorized Distributor",
+  "Local Content Requirement",
+  "ESG Requirement",
+  "Product Compliance",
+] as const;
+
+export const DOC_CHECKLIST = [
+  "Commercial Invoice",
+  "Proforma Invoice",
+  "Purchase Order",
+  "Packing List",
+  "Certificate of Origin",
+  "Bill of Lading / Airway Bill",
+  "Insurance Certificate",
+  "Inspection Certificate",
+  "Customs Declaration",
+  "Import / Export License",
+  "Quality Certificate",
+  "Letter of Credit Documentation",
+] as const;
+
+export const CompanyComplianceSchema = z.object({
+  requiredCerts: z.array(z.enum(REQUIRED_CERTIFICATIONS)),
+  tradeRequirements: z.array(z.enum(TRADE_REQUIREMENTS)),
+  certsHeld: z.array(z.enum(REQUIRED_CERTIFICATIONS)),
+  certExpiry: z.record(z.string(), z.string()),
+});
+
+export type CompanyComplianceInput = z.infer<typeof CompanyComplianceSchema>;
+
+export const DEFAULT_COMPLIANCE: CompanyComplianceInput = {
+  requiredCerts: [],
+  tradeRequirements: [],
+  certsHeld: [],
+  certExpiry: {},
+};
+
+export const CompanyDocChecklistSchema = z.object({
+  docChecklist: z.array(z.enum(DOC_CHECKLIST)),
+});
+
+export type CompanyDocChecklistInput = z.infer<typeof CompanyDocChecklistSchema>;
+
+/**
+ * Lightweight sector -> suggested certification map, ported verbatim
+ * from the mockup. Used only as a one-click starting point on the
+ * Compliance page -- the user can add/remove freely afterward. Sectors
+ * not listed simply show no suggestion row, so nothing forces a choice
+ * that doesn't apply.
+ */
+export const SECTOR_CERT_SUGGEST: Record<string, (typeof REQUIRED_CERTIFICATIONS)[number][]> = {
+  Energy: ["ISO 14001", "ESG Qualification"],
+  "Oil & Gas": ["ISO 14001", "ISO 45001", "Product Certification"],
+  Manufacturing: ["ISO 9001", "CE Marking"],
+  Construction: ["ISO 45001", "Country-specific Approval"],
+  ICT: ["ISO 9001", "IEC Certification"],
+  Healthcare: ["ISO 9001", "Product Certification"],
+  "Food & Agriculture": ["ISO 9001", "Product Certification", "Country-specific Approval"],
+  Mining: ["ISO 14001", "ISO 45001"],
+  "Financial Services": ["ISO 9001", "ESG Qualification"],
+};

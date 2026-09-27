@@ -188,6 +188,88 @@ begin
   raise notice 'PASS: owner can save Pillar Selection (Phase 2 begins)';
 end $$;
 
+-- Governance Pillar (20260925000001) -- Compliance & Certs and Document
+-- Room checklist are plain fields on companies, same pattern as
+-- everything else. The real new capability here is company_audit_log:
+-- a genuinely append-only table (only SELECT and INSERT policies exist,
+-- no UPDATE or DELETE policy at all -- verified below, not just
+-- asserted in a comment).
+do $$
+declare
+  v_company_id uuid;
+  v_compliance jsonb;
+begin
+  select id into v_company_id from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  update companies
+  set compliance = '{"requiredCerts":["ISO 9001"],"tradeRequirements":["Export License"],"certsHeld":["ISO 9001"],"certExpiry":{"ISO 9001":"2027-01-01"}}'::jsonb,
+      risk_reviewed = true,
+      doc_checklist = array['Commercial Invoice', 'Packing List']
+  where id = v_company_id;
+
+  select compliance into v_compliance from companies where id = v_company_id;
+  if not (v_compliance->'requiredCerts' ? 'ISO 9001') then
+    raise exception 'FAIL: owner could not save Compliance & Certs, got %', v_compliance;
+  end if;
+  raise notice 'PASS: owner can save Compliance & Certs, Risk Intelligence acknowledgment, and Document checklist';
+
+  insert into company_audit_log (company_id, section, detail)
+  values (v_company_id, 'Compliance & Certs', 'Saved certification & regulatory requirements');
+
+  if (select count(*) from company_audit_log where company_id = v_company_id) != 1 then
+    raise exception 'FAIL: audit log entry was not inserted';
+  end if;
+  raise notice 'PASS: owner can insert an audit log entry for their own company';
+end $$;
+
+-- A non-member must not be able to read or insert into the audit log.
+set request.jwt.claim.sub = 'aaaa6666-aaaa-6666-aaaa-666666666666';
+do $$
+declare
+  v_company_id uuid;
+  v_visible_count int;
+begin
+  select id into v_company_id from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select count(*) into v_visible_count from company_audit_log where company_id = v_company_id;
+  if v_visible_count != 0 then
+    raise exception 'FAIL: non-member could see % audit log row(s) for a company they do not belong to', v_visible_count;
+  end if;
+  raise notice 'PASS: audit log is correctly invisible to a non-member';
+end $$;
+reset request.jwt.claim.sub;
+
+-- The append-only claim: no UPDATE or DELETE policy exists at all. In
+-- Postgres RLS, a missing policy for a command does NOT raise an error --
+-- the statement succeeds but silently matches zero rows. So the real
+-- check is "did anything actually change", not "did it throw".
+set request.jwt.claim.sub = 'aaaa5555-aaaa-5555-aaaa-555555555555';
+do $$
+declare
+  v_company_id uuid;
+  v_log_id uuid;
+  v_original_detail text;
+  v_detail_after_update text;
+  v_count_after_delete int;
+begin
+  select id into v_company_id from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  select id, detail into v_log_id, v_original_detail from company_audit_log where company_id = v_company_id limit 1;
+
+  update company_audit_log set detail = 'tampered' where id = v_log_id;
+  select detail into v_detail_after_update from company_audit_log where id = v_log_id;
+  if v_detail_after_update != v_original_detail then
+    raise exception 'FAIL: UPDATE silently succeeded -- detail changed from % to %', v_original_detail, v_detail_after_update;
+  end if;
+
+  delete from company_audit_log where id = v_log_id;
+  select count(*) into v_count_after_delete from company_audit_log where id = v_log_id;
+  if v_count_after_delete = 0 then
+    raise exception 'FAIL: DELETE silently succeeded -- the row is gone';
+  end if;
+
+  raise notice 'PASS: audit log is genuinely append-only -- UPDATE and DELETE both silently affect zero rows (Postgres RLS behavior for a missing policy), not just blocked by convention';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

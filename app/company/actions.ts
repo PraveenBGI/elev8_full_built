@@ -16,12 +16,17 @@ import {
   createCompany,
   getMyCompanyScope,
   getRealStateNamesForCountry,
+  listCompanyAuditLog,
+  logCompanyAudit,
   updateCompanyCommercialTerms,
+  updateCompanyCompliance,
+  updateCompanyDocChecklist,
   updateCompanyGeography,
   updateCompanyGoals,
   updateCompanyIdentity,
   updateCompanyMarketPriority,
   updateCompanyPillarSelection,
+  updateCompanyRiskReviewed,
   updateCompanyRole,
   updateCompanyTradeIntent,
 } from "@/lib/modules/company-config/adapter";
@@ -34,6 +39,8 @@ import {
   CompanyGoalsSchema,
   CompanyCommercialTermsSchema,
   CompanyPillarSelectionSchema,
+  CompanyComplianceSchema,
+  CompanyDocChecklistSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -42,6 +49,8 @@ import {
   type CompanyGoalsInput,
   type CompanyCommercialTermsInput,
   type CompanyPillarSelectionInput,
+  type CompanyComplianceInput,
+  type CompanyDocChecklistInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -306,6 +315,98 @@ export async function saveCompanyPillarSelectionAction(
 
   revalidatePath("/company");
   return { ok: true };
+}
+
+export async function saveCompanyComplianceAction(
+  input: CompanyComplianceInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = CompanyComplianceSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCompanyCompliance(scope.companyId, parsed.data);
+    await logCompanyAudit(
+      scope.companyId,
+      "Compliance & Certs",
+      "Saved certification & regulatory requirements",
+    );
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanyRiskReviewedAction(reviewed: boolean): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await updateCompanyRiskReviewed(scope.companyId, reviewed);
+    if (reviewed) {
+      await logCompanyAudit(scope.companyId, "Risk Intelligence", "Reviewed corridor risk register");
+    }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanyDocChecklistAction(
+  input: CompanyDocChecklistInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = CompanyDocChecklistSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCompanyDocChecklist(scope.companyId, parsed.data);
+    await logCompanyAudit(scope.companyId, "Document Room", "Reviewed document checklist");
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function listCompanyAuditLogAction(): Promise<
+  ReturnType<typeof listCompanyAuditLog>
+> {
+  const scope = await requireCompanyScope();
+  return listCompanyAuditLog(scope.companyId);
 }
 
 /**

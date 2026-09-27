@@ -17,6 +17,8 @@ import {
   CompanyGoalsSchema,
   CompanyCommercialTermsSchema,
   CompanyPillarSelectionSchema,
+  CompanyComplianceSchema,
+  CompanyDocChecklistSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -25,6 +27,8 @@ import {
   type CompanyGoalsInput,
   type CompanyCommercialTermsInput,
   type CompanyPillarSelectionInput,
+  type CompanyComplianceInput,
+  type CompanyDocChecklistInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -104,10 +108,13 @@ export type CompanyRow = {
   goals: string[];
   commercial_terms: Record<string, unknown>;
   pillar_selection: Record<string, unknown>;
+  compliance: Record<string, unknown>;
+  risk_reviewed: boolean;
+  doc_checklist: string[];
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -250,6 +257,84 @@ export async function updateCompanyPillarSelection(
     .update({ pillar_selection: parsed })
     .eq("id", companyId);
   if (error) throw error;
+}
+
+export async function updateCompanyCompliance(
+  companyId: string,
+  input: CompanyComplianceInput,
+): Promise<void> {
+  const parsed = CompanyComplianceSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("companies").update({ compliance: parsed }).eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyRiskReviewed(
+  companyId: string,
+  reviewed: boolean,
+): Promise<void> {
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ risk_reviewed: reviewed })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyDocChecklist(
+  companyId: string,
+  input: CompanyDocChecklistInput,
+): Promise<void> {
+  const parsed = CompanyDocChecklistSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ doc_checklist: parsed.docChecklist })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+/**
+ * Appends one row to the real, append-only audit trail (see the
+ * migration's own RLS: only SELECT/INSERT policies exist, no UPDATE or
+ * DELETE, verified in tests/db/company-config.test.sql). SCOPE NOTE:
+ * only Governance's own save actions call this so far -- every earlier
+ * Enterprise Configuration and Pillar Selection action does not yet,
+ * and backfilling those is real, flagged follow-up work, not silently
+ * assumed done.
+ */
+export async function logCompanyAudit(
+  companyId: string,
+  section: string,
+  detail: string,
+): Promise<void> {
+  const db = await getDb();
+  const { error } = await db
+    .from("company_audit_log")
+    .insert({ company_id: companyId, section, detail });
+  if (error) throw error;
+}
+
+export type CompanyAuditLogRow = {
+  id: string;
+  section: string;
+  detail: string;
+  created_at: string;
+};
+
+export async function listCompanyAuditLog(
+  companyId: string,
+  limit = 20,
+): Promise<CompanyAuditLogRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("company_audit_log")
+    .select("id, section, detail, created_at")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as CompanyAuditLogRow[];
 }
 
 /**
