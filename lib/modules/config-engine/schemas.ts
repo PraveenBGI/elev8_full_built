@@ -658,6 +658,103 @@ export const DEFAULT_EXPORT_PAYLOAD: ExportPayloadInput = {
 };
 
 /**
+ * Investment pillar. Same self-contained shape as Import/Export -- one
+ * pillar_configs blob, no new tables. One real Master Data integration:
+ * Special Economic Zones references country_zones by name (same
+ * string-membership pattern as every other Master Data picker in this
+ * project). Investment Committee Governance's "Approval Workflow" list
+ * (IC_WORKFLOW_STAGES) is purely a reference display in the mockup --
+ * not bound to any field -- so it's not part of this schema at all,
+ * just rendered as a fixed constant in the UI.
+ */
+export const DUE_DILIGENCE_TYPES = [
+  "Financial DD",
+  "Legal DD",
+  "Commercial DD",
+  "Technical DD",
+  "Operational DD",
+  "Tax DD",
+  "ESG DD",
+  "Cybersecurity DD",
+] as const;
+
+export const InvestmentTicketBandSchema = z.object({
+  label: z.string().trim().min(1),
+  min: z.coerce.number().min(0),
+  max: z.coerce.number().min(0),
+});
+
+export const InvestmentPayloadSchema = z.object({
+  prioritySectors: z.array(z.string().trim().min(1)),
+  incentives: z.array(z.string().trim().min(1)),
+  sez: z.array(z.string()),
+  ticketBands: z.array(InvestmentTicketBandSchema),
+  dueDiligenceRequired: z.array(z.enum(DUE_DILIGENCE_TYPES)),
+  icThreshold: z.coerce.number().min(0),
+  riskBands: z
+    .object({
+      low: z.coerce.number().min(0).max(100),
+      moderate: z.coerce.number().min(0).max(100),
+      elevated: z.coerce.number().min(0).max(100),
+      high: z.coerce.number().min(0).max(100),
+    })
+    // Real business rule from the mockup's own "Out of order" check:
+    // each band's threshold must strictly exceed the one before it
+    // (high may equal its own ceiling, matching the mockup's "<=" on
+    // the last band specifically).
+    .refine((rb) => rb.low < rb.moderate && rb.moderate < rb.elevated && rb.elevated <= rb.high, {
+      message: "Risk bands must be in ascending order: low < moderate < elevated <= high.",
+      path: ["low"],
+    }),
+  investorMatchWeights: z
+    .object({
+      sectorFit: z.coerce.number().min(0).max(100),
+      riskAppetite: z.coerce.number().min(0).max(100),
+      esgAlignment: z.coerce.number().min(0).max(100),
+      icvPotential: z.coerce.number().min(0).max(100),
+      returnProfile: z.coerce.number().min(0).max(100),
+    })
+    .refine(
+      (w) => w.sectorFit + w.riskAppetite + w.esgAlignment + w.icvPotential + w.returnProfile === 100,
+      { message: "Investor matching weights must total 100%.", path: ["sectorFit"] },
+    ),
+});
+
+export type InvestmentPayloadInput = z.infer<typeof InvestmentPayloadSchema>;
+
+export const DEFAULT_INVESTMENT_PAYLOAD: InvestmentPayloadInput = {
+  prioritySectors: [],
+  incentives: [],
+  sez: [],
+  ticketBands: [
+    { label: "Micro", min: 0, max: 1 },
+    { label: "Small", min: 1, max: 10 },
+    { label: "Medium", min: 10, max: 50 },
+    { label: "Large", min: 50, max: 200 },
+    { label: "Mega", min: 200, max: 1000 },
+  ],
+  dueDiligenceRequired: [],
+  icThreshold: 0,
+  riskBands: { low: 0, moderate: 0, elevated: 0, high: 0 },
+  investorMatchWeights: {
+    sectorFit: 0,
+    riskAppetite: 0,
+    esgAlignment: 0,
+    icvPotential: 0,
+    returnProfile: 0,
+  },
+};
+
+export const IC_WORKFLOW_STAGES = [
+  "Screening",
+  "Investment Analysis",
+  "Due Diligence",
+  "Investment Committee Review",
+  "Approved",
+  "Committed",
+] as const;
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --

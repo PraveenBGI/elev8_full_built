@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput, ExportPayloadSchema, DEFAULT_EXPORT_PAYLOAD, type ExportPayloadInput } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput, ExportPayloadSchema, DEFAULT_EXPORT_PAYLOAD, type ExportPayloadInput, InvestmentPayloadSchema, DEFAULT_INVESTMENT_PAYLOAD, type InvestmentPayloadInput } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -638,5 +638,73 @@ describe("ExportPayloadSchema", () => {
       corridors: [{ ...validPayload.corridors[0], port: null }],
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("InvestmentPayloadSchema", () => {
+  const validPayload: InvestmentPayloadInput = {
+    prioritySectors: ["Manufacturing"],
+    incentives: ["Tax holiday"],
+    sez: ["Salalah Free Zone"],
+    ticketBands: [{ label: "Small", min: 1, max: 10 }],
+    dueDiligenceRequired: ["Financial DD", "Legal DD"],
+    icThreshold: 5,
+    riskBands: { low: 20, moderate: 40, elevated: 60, high: 100 },
+    investorMatchWeights: {
+      sectorFit: 25,
+      riskAppetite: 20,
+      esgAlignment: 20,
+      icvPotential: 20,
+      returnProfile: 15,
+    },
+  };
+
+  it("accepts a complete, valid payload with bands in order and weights totaling 100", () => {
+    expect(InvestmentPayloadSchema.safeParse(validPayload).success).toBe(true);
+  });
+
+  it("rejects risk bands that are out of ascending order", () => {
+    const result = InvestmentPayloadSchema.safeParse({
+      ...validPayload,
+      riskBands: { low: 50, moderate: 40, elevated: 60, high: 100 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects risk bands with two equal thresholds (low == moderate)", () => {
+    const result = InvestmentPayloadSchema.safeParse({
+      ...validPayload,
+      riskBands: { low: 40, moderate: 40, elevated: 60, high: 100 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("allows elevated to equal high (the mockup's own <= on the last band)", () => {
+    const result = InvestmentPayloadSchema.safeParse({
+      ...validPayload,
+      riskBands: { low: 20, moderate: 40, elevated: 100, high: 100 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects investor match weights that don't total 100", () => {
+    const result = InvestmentPayloadSchema.safeParse({
+      ...validPayload,
+      investorMatchWeights: { ...validPayload.investorMatchWeights, returnProfile: 5 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid due diligence type", () => {
+    const result = InvestmentPayloadSchema.safeParse({
+      ...validPayload,
+      dueDiligenceRequired: ["Not A Real DD Type"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("DEFAULT_INVESTMENT_PAYLOAD deliberately fails validation (all-zero risk bands)", () => {
+    const result = InvestmentPayloadSchema.safeParse(DEFAULT_INVESTMENT_PAYLOAD);
+    expect(result.success).toBe(false);
   });
 });

@@ -574,6 +574,28 @@ the same official list.
 
 6 new schema unit tests. 67 total app-level tests.
 
+## Investment pillar (this session) -- sixth of 8, ascending-order validation
+
+`/admin/config-engine/investment`. Same self-contained pattern as
+Import/Export -- one pillar_configs blob, zero new migration. One real
+Master Data integration: Special Economic Zones references
+`country_zones` by name, same string-membership pattern as every other
+Master Data picker.
+
+**A new kind of business rule, not just a weight sum**: Risk
+Classification Bands must be in strict ascending order (`low < moderate
+< elevated <= high`), matching the mockup's own "Out of order" check.
+First Zod refinement in this project checking relative order between
+fields rather than a fixed total.
+
+Investment Committee Governance's "Approval Workflow" list is purely a
+reference display in the mockup (not bound to any field), so it's
+rendered as a fixed constant in the UI, not part of the schema at all.
+
+7 new schema unit tests, including one confirming `elevated` is allowed
+to equal `high` (the mockup's own `<=` on the last band specifically,
+not a typo worth silently "fixing"). 74 total app-level tests.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.
