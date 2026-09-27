@@ -20,6 +20,9 @@ import {
   CompanyMarketPrioritySchema,
   type CompanyMarketPriorityInput,
   CompanyGoalsSchema,
+  CompanyCommercialTermsSchema,
+  type CompanyCommercialTermsInput,
+  DEFAULT_COMMERCIAL_TERMS,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -233,6 +236,46 @@ describe("CompanyGoalsSchema", () => {
 
   it("rejects an invalid goal value", () => {
     const result = CompanyGoalsSchema.safeParse({ goals: ["Not A Real Goal"] });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyCommercialTermsSchema", () => {
+  const valid: CompanyCommercialTermsInput = {
+    currency: "USD",
+    payment: "Letter of Credit",
+    acceptedCurrencies: ["USD", "OMR"],
+    dealSize: "250k1m",
+    dealMin: "USD 250,000",
+    dealMax: "USD 1,000,000",
+    contractPref: "Framework Agreement",
+    incotermsPreferred: ["FOB"],
+    incotermsAccepted: ["FOB", "CIF"],
+  };
+
+  it("accepts a complete, valid commercial terms payload", () => {
+    expect(CompanyCommercialTermsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-null/empty default (nothing set yet, in progress)", () => {
+    expect(CompanyCommercialTermsSchema.safeParse(DEFAULT_COMMERCIAL_TERMS).success).toBe(true);
+  });
+
+  it("rejects an invalid currency", () => {
+    const result = CompanyCommercialTermsSchema.safeParse({ ...valid, currency: "GBP" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid deal size band", () => {
+    const result = CompanyCommercialTermsSchema.safeParse({ ...valid, dealSize: "gt50m" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid Incoterm in either preferred or accepted list", () => {
+    const result = CompanyCommercialTermsSchema.safeParse({
+      ...valid,
+      incotermsPreferred: ["NOT_A_REAL_INCOTERM"],
+    });
     expect(result.success).toBe(false);
   });
 });

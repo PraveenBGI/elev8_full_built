@@ -15,12 +15,14 @@ import {
   CompanyGeographySchema,
   CompanyMarketPrioritySchema,
   CompanyGoalsSchema,
+  CompanyCommercialTermsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
   type CompanyGeographyInput,
   type CompanyMarketPriorityInput,
   type CompanyGoalsInput,
+  type CompanyCommercialTermsInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -98,10 +100,11 @@ export type CompanyRow = {
   market_priority: Record<string, string>;
   state_priority: Record<string, Record<string, string>>;
   goals: string[];
+  commercial_terms: Record<string, unknown>;
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -217,6 +220,19 @@ export async function updateCompanyGoals(
   const parsed = CompanyGoalsSchema.parse(input);
   const db = await getDb();
   const { error } = await db.from("companies").update({ goals: parsed.goals }).eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyCommercialTerms(
+  companyId: string,
+  input: CompanyCommercialTermsInput,
+): Promise<void> {
+  const parsed = CompanyCommercialTermsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ commercial_terms: parsed })
+    .eq("id", companyId);
   if (error) throw error;
 }
 

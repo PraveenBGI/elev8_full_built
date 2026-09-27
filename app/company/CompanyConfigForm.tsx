@@ -30,11 +30,19 @@ import {
   type CompanyMarketPriorityInput,
   GOALS,
   type CompanyGoalsInput,
+  CURRENCIES,
+  PAYMENT_TERMS,
+  INCOTERM_LIST,
+  CONTRACT_PREF_OPTIONS,
+  DEAL_SIZES,
+  DEFAULT_COMMERCIAL_TERMS,
+  type CompanyCommercialTermsInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import {
   getRealStateNamesForCountryAction,
+  saveCompanyCommercialTermsAction,
   saveCompanyGeographyAction,
   saveCompanyGoalsAction,
   saveCompanyIdentityAction,
@@ -1096,7 +1104,229 @@ function GoalsSection({ company }: { company: CompanyRow }) {
   );
 }
 
-const UPCOMING_STEPS = ["Commercial Terms", "Pillar Selection & Pillar Preferences"];
+function CommercialTermsSection({ company }: { company: CompanyRow }) {
+  const [form, setForm] = useState<CompanyCommercialTermsInput>({
+    ...DEFAULT_COMMERCIAL_TERMS,
+    ...(company.commercial_terms as Partial<CompanyCommercialTermsInput>),
+  });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+
+    startTransition(async () => {
+      const result = await saveCompanyCommercialTermsAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Currency, payment terms, Incoterms, and deal size preferences.
+      </p>
+
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Primary currency">
+          <select
+            className={inputClass}
+            value={form.currency ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                currency: e.target.value ? (e.target.value as CompanyCommercialTermsInput["currency"]) : null,
+              }))
+            }
+          >
+            <option value="">Choose...</option>
+            {CURRENCIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Payment term">
+          <select
+            className={inputClass}
+            value={form.payment ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                payment: e.target.value ? (e.target.value as CompanyCommercialTermsInput["payment"]) : null,
+              }))
+            }
+          >
+            <option value="">Choose...</option>
+            {PAYMENT_TERMS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <div className="mb-4">
+        <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          Other accepted currencies
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {CURRENCIES.map((c) => (
+            <Chip
+              key={c}
+              label={c}
+              on={form.acceptedCurrencies.includes(c)}
+              onClick={() =>
+                setForm((f) => ({
+                  ...f,
+                  acceptedCurrencies: f.acceptedCurrencies.includes(c)
+                    ? f.acceptedCurrencies.filter((x) => x !== c)
+                    : [...f.acceptedCurrencies, c],
+                }))
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          Deal size (band)
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {DEAL_SIZES.map(([val, label]) => (
+            <Chip
+              key={val}
+              label={label}
+              on={form.dealSize === val}
+              onClick={() => setForm((f) => ({ ...f, dealSize: val }))}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Deal size, min" optional>
+          <input
+            className={inputClass}
+            placeholder="e.g. USD 100,000"
+            value={form.dealMin ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, dealMin: e.target.value || null }))}
+          />
+        </Field>
+        <Field label="Deal size, max" optional>
+          <input
+            className={inputClass}
+            placeholder="e.g. USD 2,000,000"
+            value={form.dealMax ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, dealMax: e.target.value || null }))}
+          />
+        </Field>
+      </div>
+
+      <div className="mb-5">
+        <Field label="Preferred contract structure">
+          <select
+            className={inputClass}
+            value={form.contractPref ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                contractPref: e.target.value
+                  ? (e.target.value as CompanyCommercialTermsInput["contractPref"])
+                  : null,
+              }))
+            }
+          >
+            <option value="">Choose...</option>
+            {CONTRACT_PREF_OPTIONS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <div className="mb-4">
+        <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          Preferred Incoterms
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {INCOTERM_LIST.map((t) => (
+            <Chip
+              key={t}
+              label={t}
+              on={form.incotermsPreferred.includes(t)}
+              onClick={() =>
+                setForm((f) => ({
+                  ...f,
+                  incotermsPreferred: f.incotermsPreferred.includes(t)
+                    ? f.incotermsPreferred.filter((x) => x !== t)
+                    : [...f.incotermsPreferred, t],
+                }))
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          Also accepted
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {INCOTERM_LIST.map((t) => (
+            <Chip
+              key={t}
+              label={t}
+              on={form.incotermsAccepted.includes(t)}
+              onClick={() =>
+                setForm((f) => ({
+                  ...f,
+                  incotermsAccepted: f.incotermsAccepted.includes(t)
+                    ? f.incotermsAccepted.filter((x) => x !== t)
+                    : [...f.incotermsAccepted, t],
+                }))
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p
+            className="text-sm"
+            style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}
+          >
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+const UPCOMING_STEPS = ["Pillar Selection & Pillar Preferences"];
 
 export function CompanyConfigForm({
   company,
@@ -1185,6 +1415,18 @@ export function CompanyConfigForm({
           isComplete={company.goals.length > 0}
         >
           <GoalsSection company={company} />
+        </SettingsGroup>
+
+        <SettingsGroup
+          title="Commercial terms"
+          summary={
+            (company.commercial_terms as { currency?: string })?.currency
+              ? `${(company.commercial_terms as { currency?: string }).currency}`
+              : "Not set"
+          }
+          isComplete={Boolean((company.commercial_terms as { currency?: string })?.currency)}
+        >
+          <CommercialTermsSection company={company} />
         </SettingsGroup>
       </div>
 

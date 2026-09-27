@@ -16,6 +16,7 @@ import {
   createCompany,
   getMyCompanyScope,
   getRealStateNamesForCountry,
+  updateCompanyCommercialTerms,
   updateCompanyGeography,
   updateCompanyGoals,
   updateCompanyIdentity,
@@ -30,12 +31,14 @@ import {
   CompanyGeographySchema,
   CompanyMarketPrioritySchema,
   CompanyGoalsSchema,
+  CompanyCommercialTermsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
   type CompanyGeographyInput,
   type CompanyMarketPriorityInput,
   type CompanyGoalsInput,
+  type CompanyCommercialTermsInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -236,6 +239,35 @@ export async function saveCompanyGoalsAction(input: CompanyGoalsInput): Promise<
 
   try {
     await updateCompanyGoals(scope.companyId, parsed.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanyCommercialTermsAction(
+  input: CompanyCommercialTermsInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsed = CompanyCommercialTermsSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCompanyCommercialTerms(scope.companyId, parsed.data);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
   }

@@ -231,3 +231,82 @@ export const CompanyGoalsSchema = z.object({
 });
 
 export type CompanyGoalsInput = z.infer<typeof CompanyGoalsSchema>;
+
+/**
+ * Commercial Terms, the 7th and LAST of the Enterprise Configuration
+ * steps. One nested object stored in one jsonb column
+ * (companies.commercial_terms) -- these fields are always read/written
+ * together as one coherent unit (matching the mockup's own
+ * S.commercial sub-object), never queried individually elsewhere, so
+ * there's no reason to flatten them into their own columns the way
+ * Identity's fields were.
+ *
+ * incotermsPreferred/incotermsAccepted are folded into this same object
+ * even though the mockup keeps them as siblings of S.commercial
+ * (S.incotermsPreferred, not S.commercial.incotermsPreferred) -- a
+ * minor reshaping for one clean column, not a behavior change.
+ *
+ * INCOTERM_LIST is redeclared here rather than imported from
+ * config-engine's schemas (which has the identical list as
+ * IMPORT_INCOTERMS, reused between Import and Export there) --
+ * deliberately keeping company-config's only cross-module dependency on
+ * config-engine limited to the one real integration point
+ * (getRealStateNamesForCountry for Geography), not extended to trivial
+ * constants too.
+ */
+export const CURRENCIES = ["USD", "OMR", "SAR", "AED", "EUR", "INR"] as const;
+export const PAYMENT_TERMS = ["Letter of Credit", "Advance Payment", "Net 30", "Net 60"] as const;
+export const INCOTERM_LIST = [
+  "EXW",
+  "FCA",
+  "FOB",
+  "CFR",
+  "CIF",
+  "CPT",
+  "CIP",
+  "DAP",
+  "DPU",
+  "DDP",
+] as const;
+export const CONTRACT_PREF_OPTIONS = [
+  "Spot / One-off Deal",
+  "Short-Term Contract",
+  "Framework Agreement",
+  "Long-Term Contract",
+] as const;
+
+export const DEAL_SIZE_VALUES = ["lt50k", "50k250k", "250k1m", "1m5m", "gt5m"] as const;
+export const DEAL_SIZES: [(typeof DEAL_SIZE_VALUES)[number], string][] = [
+  ["lt50k", "<$50K"],
+  ["50k250k", "$50K-$250K"],
+  ["250k1m", "$250K-$1M"],
+  ["1m5m", "$1M-$5M"],
+  ["gt5m", ">$5M"],
+];
+export const DEAL_SIZE_LABELS: Record<string, string> = Object.fromEntries(DEAL_SIZES);
+
+export const CompanyCommercialTermsSchema = z.object({
+  currency: z.enum(CURRENCIES).nullable(),
+  payment: z.enum(PAYMENT_TERMS).nullable(),
+  acceptedCurrencies: z.array(z.enum(CURRENCIES)),
+  dealSize: z.enum(DEAL_SIZE_VALUES).nullable(),
+  dealMin: z.string().trim().nullable(),
+  dealMax: z.string().trim().nullable(),
+  contractPref: z.enum(CONTRACT_PREF_OPTIONS).nullable(),
+  incotermsPreferred: z.array(z.enum(INCOTERM_LIST)),
+  incotermsAccepted: z.array(z.enum(INCOTERM_LIST)),
+});
+
+export type CompanyCommercialTermsInput = z.infer<typeof CompanyCommercialTermsSchema>;
+
+export const DEFAULT_COMMERCIAL_TERMS: CompanyCommercialTermsInput = {
+  currency: null,
+  payment: null,
+  acceptedCurrencies: [],
+  dealSize: null,
+  dealMin: null,
+  dealMax: null,
+  contractPref: null,
+  incotermsPreferred: [],
+  incotermsAccepted: [],
+};

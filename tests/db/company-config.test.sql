@@ -150,6 +150,25 @@ begin
   raise notice 'PASS: owner can save Business Objectives (goals)';
 end $$;
 
+-- Commercial Terms (20260924000003) -- the last of 7 Enterprise
+-- Configuration steps, one jsonb blob for the whole "commercial
+-- preferences" unit.
+do $$
+declare v_terms jsonb;
+begin
+  update companies
+  set commercial_terms = '{"currency":"USD","payment":"Letter of Credit","acceptedCurrencies":["USD","OMR"],"dealSize":"250k1m","dealMin":"USD 250,000","dealMax":"USD 1,000,000","contractPref":"Framework Agreement","incotermsPreferred":["FOB"],"incotermsAccepted":["FOB","CIF"]}'::jsonb
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select commercial_terms into v_terms from companies
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  if v_terms->>'currency' != 'USD' then
+    raise exception 'FAIL: owner could not save commercial terms, got %', v_terms;
+  end if;
+  raise notice 'PASS: owner can save Commercial Terms (the last of 7 Enterprise Configuration steps)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

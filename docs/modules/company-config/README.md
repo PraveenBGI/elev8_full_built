@@ -185,6 +185,43 @@ unit tests, 104 total app-level tests.
 **Enterprise Configuration is now 6 of 7 steps built.** Only Commercial
 Terms remains before the whole Pillars Configuration phase can start.
 
+## Commercial Terms (this session) -- 7th and LAST of 7 Enterprise Configuration steps. All Enterprise Config complete.
+
+One `jsonb` column (`commercial_terms`) rather than ~9 separate columns
+-- these fields are always read/written together as one coherent unit
+(matching the mockup's own `S.commercial` sub-object), never queried
+individually elsewhere. `incotermsPreferred`/`incotermsAccepted` folded
+into this same object even though the mockup keeps them as siblings of
+`S.commercial`, not nested inside it -- a minor reshaping for one clean
+column, not a behavior change.
+
+`INCOTERM_LIST` is redeclared locally rather than imported from
+config-engine's identical `IMPORT_INCOTERMS` -- deliberately keeping
+company-config's only real cross-module dependency on config-engine
+limited to `getRealStateNamesForCountry` (Geography's genuine
+integration), not extended to trivial shared constants too.
+
+**A real TypeScript catch on this one**: the first draft's `<select>`
+`onChange` handlers wrote `e.target.value || null` directly into fields
+typed as literal unions (`"USD" | "OMR" | ... | null`), which
+`tsc --noEmit` correctly rejected on the fresh-clone typecheck pass --
+a plain `string` isn't assignable to a literal union without an
+explicit cast. Fixed with `e.target.value as
+CompanyCommercialTermsInput["currency"]` (and the same pattern for
+`payment` and `contractPref`), the same approach used everywhere else
+in this codebase for `<select>`-driven enum fields.
+
+Verified against real Postgres before any UI was written: 1 new
+assertion, 59 total DB assertions across 7 test files. 5 new schema
+unit tests, 109 total app-level tests.
+
+**THIS COMPLETES ALL 7 ENTERPRISE CONFIGURATION STEPS**: Business
+Identity, Role, Trade Intent, Geography & Corridors, Target Market
+Priority, Business Objectives, Commercial Terms. Phase 2 (Pillars
+Configuration, starting with Pillar Selection reading
+`ROLE_PILLAR_MATRIX` and `GOAL_PILLAR_MAP`) is the natural next piece of
+Company Configuration.
+
 ## Open questions
 
 1. **How does a user end up in `company_users` for a company they didn't
