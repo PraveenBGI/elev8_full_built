@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput } from "@/lib/modules/config-engine/schemas";
+import { CountryIdentitySchema, toCountryRow, HsCodeSchema, TaxSettingsSchema, FreeTradeAgreementSchema, ZoneSchema, PortAirportSchema, AuthoritySchema, StakeholderSchema, GovernancePayloadSchema, ProcurementPayloadSchema, DEFAULT_PROCUREMENT_PAYLOAD, type ProcurementPayloadInput, B2bPayloadSchema, DEFAULT_B2B_PAYLOAD, type B2bPayloadInput, ImportPayloadSchema, DEFAULT_IMPORT_PAYLOAD, type ImportPayloadInput, ExportPayloadSchema, DEFAULT_EXPORT_PAYLOAD, type ExportPayloadInput } from "@/lib/modules/config-engine/schemas";
 
 describe("CountryIdentitySchema", () => {
   const validInput = {
@@ -574,6 +574,68 @@ describe("ImportPayloadSchema", () => {
       ...validPayload,
       customsPoints: ["Any Port Name At All"],
       hsCodes: ["9999.99"],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("ExportPayloadSchema", () => {
+  const validPayload: ExportPayloadInput = {
+    prioritySectors: ["Manufacturing"],
+    targetCountries: [{ country: "India", budget: 500000, year: "2026", quarter: "Q2" }],
+    corridors: [{ origin: "Oman", destination: "India", status: "Strategic", port: "Port Sultan Qaboos" }],
+    hsCodes: ["8501.10"],
+    incoterms: ["FOB"],
+    tradeFinance: ["Letter of Credit"],
+    incentives: ["Export subsidy"],
+    readinessWeights: {
+      productReadiness: 20,
+      certifications: 15,
+      quality: 15,
+      pricing: 15,
+      logistics: 15,
+      financial: 10,
+      marketFit: 10,
+    },
+  };
+
+  it("accepts a complete, valid payload where readiness weights total exactly 100", () => {
+    expect(ExportPayloadSchema.safeParse(validPayload).success).toBe(true);
+  });
+
+  it("accepts the all-empty default payload structurally (weights will fail the total check)", () => {
+    const result = ExportPayloadSchema.safeParse(DEFAULT_EXPORT_PAYLOAD);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects readiness weights that don't total 100", () => {
+    const result = ExportPayloadSchema.safeParse({
+      ...validPayload,
+      readinessWeights: { ...validPayload.readinessWeights, marketFit: 5 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid corridor status", () => {
+    const result = ExportPayloadSchema.safeParse({
+      ...validPayload,
+      corridors: [{ ...validPayload.corridors[0], status: "Not A Real Status" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid trade finance instrument", () => {
+    const result = ExportPayloadSchema.safeParse({
+      ...validPayload,
+      tradeFinance: ["Not A Real Instrument"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("allows a corridor's port to be null (not yet assigned)", () => {
+    const result = ExportPayloadSchema.safeParse({
+      ...validPayload,
+      corridors: [{ ...validPayload.corridors[0], port: null }],
     });
     expect(result.success).toBe(true);
   });

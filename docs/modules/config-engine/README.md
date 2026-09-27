@@ -548,6 +548,32 @@ Watch reproduces the mockup's own estimate calculation client-side
 `hsCodes` are plain strings matched against whatever Master Data
 actually contains, not a closed enum. 61 total app-level tests.
 
+## Export pillar (this session) -- fifth of 8, FTA coverage integration
+
+`/admin/config-engine/export`. Same self-contained pattern as Import --
+one pillar_configs blob, zero new migration. Three Master Data
+integrations: Trade Corridors' port picker and Priority HS Codes (same
+as Import), plus a new one: **FTA Coverage**, computed at read time from
+`country_ftas` (an "In Force" agreement whose `partner_countries`
+includes a corridor's destination), displayed inline per corridor, never
+stored -- matching the mockup's own note that this is "informational
+only, it never changes a duty band or rate automatically."
+
+**Two things deliberately not built, flagged rather than faked**: Target
+Export Markets doesn't exclude countries on Country Identity's Strategic
+Control watchlist (that Identity sub-section was never built), and
+target country / priority sectors are free text rather than picked from
+a real world-country or sector master (neither exists in this schema
+yet). Both are real, named gaps, not silent omissions.
+
+Export Readiness Weighting enforces "must total 100%" the same way
+Procurement/B2B enforce their own weight totals. Reused
+`IMPORT_INCOTERMS` directly rather than duplicating the same Incoterms
+2020 list under a new name, since Import and Export both genuinely use
+the same official list.
+
+6 new schema unit tests. 67 total app-level tests.
+
 ## Open questions
 
 1. **Who authors `config_templates`?** **Resolved this session**: BGI-curated only, read-only to admins, no self-service authoring. A separate `country_saved_configs` table gives Country Admins their own private, reusable pillar presets scoped to their own country — a different, lesser tier from the global template library, not a way around the "no self-service authoring" decision.
@@ -563,6 +589,8 @@ actually contains, not a closed enum. 61 total app-level tests.
 9. **Sector/location matching is exact-string only.** A condition for `condition_value = 'Muscat'` only matches a company whose location is stored as the identical string `'Muscat'` -- no hierarchy (a governorate matching a city within it), no fuzzy matching, no case normalization. Fine for now since nothing populates a company's real location yet; worth revisiting once Company Configuration's Geography step exists and real location values start flowing in.
 10. **Delegated states authoring their own conditions has schema, no UI, and no test coverage yet.** `pillar_config_conditions` already supports `state_id` scoping (a State Admin managing conditions just for their own delegated pillar) and its RLS policy is written, but neither the policy nor a State Admin's actual ability to use it is covered by any test yet -- only the country-wide path was tested. `PillarGovernancePanel` also only renders the country-wide (`state_id is null`) case. Both the test and the UI for this are real, separate work, not done.
 11. **`pillar_configs` has no version history.** Since the resolver now gates a delegated state's payload on `approval_status = 'published'`, and any edit both overwrites the payload in place AND reverts status to `'draft'` (the existing auto-revert trigger), there is no way to serve "the state's last published version" while a new edit is under review -- companies just see the country's config for that window instead. Fixing this properly means a real versioning/snapshot table (e.g. a `pillar_config_versions` history, or a separate `published_payload` column distinct from the working `payload`), not built here. Worth doing before this gap causes real confusion for a state that publishes often.
+12. **No world-country reference list exists.** Export's Target Export Markets (and eventually Investment's target markets, likely) needs to name any country in the world, not just countries onboarded onto the platform (BGI's own `countries` table only has the countries actually running elev8, e.g. Oman/India/Tanzania). Currently free text. A real global country list (ISO 3166 or similar) is a genuinely separate, smaller reference-data need from Phase 1's master data -- worth deciding whether it lives in this schema or is sourced from a library/constant at the app layer.
+13. **Country Identity's Strategic Control watchlist doesn't exist, so Export can't exclude watchlisted countries from its target-market picker.** The mockup explicitly ties these two together ("Nations on the Watchlist... are excluded from the country picker below"). Once Identity's remaining 6 sub-sections are built (see the earlier note on Identity being partially complete), this integration should be added to Export's target market picker, not forgotten.
 
 ## Two real bugs caught by this module's own verification (not by inspection)
 

@@ -554,6 +554,110 @@ export const DEFAULT_IMPORT_PAYLOAD: ImportPayloadInput = {
 };
 
 /**
+ * Export pillar. Same self-contained shape as Import -- one
+ * pillar_configs blob, no new tables. Two real Master Data integrations:
+ * Trade Corridors' port picker (country_ports_airports) and Priority HS
+ * Codes (country_hs_codes/country_hs_code_packs), same as Import. FTA
+ * Coverage is computed at read time from country_ftas (In Force
+ * agreements whose partner_countries include a corridor's destination),
+ * never stored -- informational only, matching the mockup's own note
+ * that it "never changes a duty band or rate automatically."
+ *
+ * Two things the mockup has that this schema deliberately does NOT
+ * implement yet, because what they depend on doesn't exist:
+ * - Target Export Markets excludes countries on Country Identity's
+ *   Strategic Control watchlist. Identity's Strategic Control section
+ *   was never built (see docs/modules/config-engine/README.md's list of
+ *   Identity's 6 unbuilt sub-sections) -- there's nothing to exclude
+ *   against yet.
+ * - Target country and Priority Export Sectors are free text, not
+ *   picked from a real WORLD_COUNTRIES or sector master list -- neither
+ *   exists in this schema (Phase 1's future Master Data phase would own
+ *   a real sector master; a global country reference is a separate,
+ *   even larger open question).
+ */
+export const CORRIDOR_STATUSES = ["Strategic", "Preferred", "Active", "Emerging", "Restricted"] as const;
+
+export const TRADE_FINANCE_INSTRUMENTS = [
+  "Letter of Credit",
+  "Bank Guarantee",
+  "Advance Payment",
+  "Open Account",
+  "Documentary Collection",
+  "Export Credit Insurance",
+  "Invoice Financing",
+] as const;
+
+export const QUARTERS = ["Q1", "Q2", "Q3", "Q4"] as const;
+
+export const ExportTargetMarketSchema = z.object({
+  country: z.string().trim().min(1),
+  budget: z.coerce.number().min(0),
+  year: z.string().trim(),
+  quarter: z.enum(QUARTERS),
+});
+
+export const ExportCorridorSchema = z.object({
+  origin: z.string().trim(),
+  destination: z.string().trim(),
+  status: z.enum(CORRIDOR_STATUSES),
+  port: z.string().trim().nullable(),
+});
+
+export const ExportPayloadSchema = z.object({
+  prioritySectors: z.array(z.string().trim().min(1)),
+  targetCountries: z.array(ExportTargetMarketSchema),
+  corridors: z.array(ExportCorridorSchema),
+  hsCodes: z.array(z.string()),
+  incoterms: z.array(z.enum(IMPORT_INCOTERMS)),
+  tradeFinance: z.array(z.enum(TRADE_FINANCE_INSTRUMENTS)),
+  incentives: z.array(z.string().trim().min(1)),
+  readinessWeights: z
+    .object({
+      productReadiness: z.coerce.number().min(0).max(100),
+      certifications: z.coerce.number().min(0).max(100),
+      quality: z.coerce.number().min(0).max(100),
+      pricing: z.coerce.number().min(0).max(100),
+      logistics: z.coerce.number().min(0).max(100),
+      financial: z.coerce.number().min(0).max(100),
+      marketFit: z.coerce.number().min(0).max(100),
+    })
+    .refine(
+      (w) =>
+        w.productReadiness +
+          w.certifications +
+          w.quality +
+          w.pricing +
+          w.logistics +
+          w.financial +
+          w.marketFit ===
+        100,
+      { message: "Export readiness weights must total 100%.", path: ["productReadiness"] },
+    ),
+});
+
+export type ExportPayloadInput = z.infer<typeof ExportPayloadSchema>;
+
+export const DEFAULT_EXPORT_PAYLOAD: ExportPayloadInput = {
+  prioritySectors: [],
+  targetCountries: [],
+  corridors: [],
+  hsCodes: [],
+  incoterms: [],
+  tradeFinance: [],
+  incentives: [],
+  readinessWeights: {
+    productReadiness: 0,
+    certifications: 0,
+    quality: 0,
+    pricing: 0,
+    logistics: 0,
+    financial: 0,
+    marketFit: 0,
+  },
+};
+
+/**
  * Country Master Data -- Business Registration Types and Units of
  * Measurement. Both are plain string lists in the mockup (its own
  * chipBlock() helper: add a string, remove by index, no other fields) --
