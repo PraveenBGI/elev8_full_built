@@ -93,6 +93,16 @@ import {
   type CompanyExportCorridorsInput,
   type CompanyExportLogisticsInput,
   type CompanyExportPrefsInput,
+  INVESTMENT_TYPES,
+  OWNERSHIP_PREFS,
+  type InvestmentRequirementInput,
+  DEFAULT_INVESTMENT_REQ,
+  type CompanyInvestmentPrefsInput,
+  type LandedCostInputsInput,
+  DEFAULT_LANDED_COST,
+  computeLandedCost,
+  FINANCE_INSTRUMENTS,
+  type CompanyFinanceInstrumentsInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
@@ -104,11 +114,13 @@ import {
   saveCompanyCommercialTermsAction,
   saveCompanyComplianceAction,
   saveCompanyContractPrefsAction,
+  saveCompanyCorridorCompareReviewedAction,
   saveCompanyDocChecklistAction,
   saveCompanyExportCorridorsAction,
   saveCompanyExportLogisticsAction,
   saveCompanyExportPrefsAction,
   saveCompanyExportProductsAction,
+  saveCompanyFinanceInstrumentsAction,
   saveCompanyGeographyAction,
   saveCompanyGoalsAction,
   saveCompanyIdentityAction,
@@ -116,6 +128,8 @@ import {
   saveCompanyImportLogisticsAction,
   saveCompanyImportPrefsAction,
   saveCompanyImportProductsAction,
+  saveCompanyInvestmentPrefsAction,
+  saveCompanyLandedCostAction,
   saveCompanyMarketPriorityAction,
   saveCompanyPillarSelectionAction,
   saveCompanyRfqPrefsAction,
@@ -3452,7 +3466,410 @@ function ExportPrefsSection({ company }: { company: CompanyRow }) {
   );
 }
 
-const UPCOMING_STEPS = ["Investment Pillar", "Sustainability Pillar", "ICV Pillar"];
+function InvestmentPrefsSection({ company }: { company: CompanyRow }) {
+  const [countries, setCountries] = useState<string[]>(company.investment_countries);
+  const [countryDraft, setCountryDraft] = useState("");
+  const [tier, setTier] = useState<Record<string, string>>(company.investment_tier);
+  const [budget, setBudget] = useState<Record<string, string>>(company.investment_budget);
+  const [timeline, setTimeline] = useState<Record<string, string>>(company.investment_timeline);
+  const storedReq = company.investment_req as Partial<InvestmentRequirementInput>;
+  const [req, setReq] = useState<InvestmentRequirementInput>({ ...DEFAULT_INVESTMENT_REQ, ...storedReq });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function addCountry() {
+    if (!countryDraft.trim() || countries.includes(countryDraft)) return;
+    setCountries((prev) => [...prev, countryDraft]);
+    setCountryDraft("");
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyInvestmentPrefsAction({
+        investmentCountries: countries,
+        investmentTier: tier as CompanyInvestmentPrefsInput["investmentTier"],
+        investmentBudget: budget as CompanyInvestmentPrefsInput["investmentBudget"],
+        investmentTimeline: timeline as CompanyInvestmentPrefsInput["investmentTimeline"],
+        investmentReq: req,
+      });
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Preferred investment markets, deal structure, and the budget
+        and target timeline gatewAI uses to match projects, JV partners
+        and funding opportunities.
+      </p>
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>Preferred investment markets</label>
+      {countries.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {countries.map((c) => (
+            <span key={c} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]" style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}>
+              {c}
+              <button type="button" onClick={() => setCountries((prev) => prev.filter((x) => x !== c))} className="opacity-70 hover:opacity-100">x</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="mb-4 flex gap-2">
+        <input className={inputClass} placeholder="e.g. Kenya" value={countryDraft} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCountry(); } }} onChange={(e) => setCountryDraft(e.target.value)} />
+        <button type="button" onClick={addCountry} className="shrink-0 rounded-md px-4 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>Add</button>
+      </div>
+
+      {countries.length > 0 && (
+        <div className="mb-5 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+          <table className="w-full text-left text-[12.5px]">
+            <thead>
+              <tr style={{ background: "var(--elev8-g50)" }}>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Country</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Priority tier</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Budget</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Target timeline</th>
+              </tr>
+            </thead>
+            <tbody>
+              {countries.map((c) => (
+                <tr key={c} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-3 py-2 font-semibold">{c}</td>
+                  <td className="px-3 py-2">
+                    <select className={inputClass} value={tier[c] ?? "medium"} onChange={(e) => setTier((t) => ({ ...t, [c]: e.target.value }))}>
+                      {MARKET_TIERS.map((mt) => <option key={mt} value={mt}>{MARKET_TIER_LABELS[mt]}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <select className={inputClass} value={budget[c] ?? ""} onChange={(e) => setBudget((b) => ({ ...b, [c]: e.target.value }))}>
+                      <option value="">-</option>
+                      {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <select className={inputClass} value={timeline[c] ?? ""} onChange={(e) => setTimeline((t) => ({ ...t, [c]: e.target.value }))}>
+                      <option value="">-</option>
+                      {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Investment type">
+          <select className={inputClass} value={req.type ?? ""} onChange={(e) => setReq((r) => ({ ...r, type: (e.target.value || null) as InvestmentRequirementInput["type"] }))}>
+            <option value="">Choose...</option>
+            {INVESTMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+        <Field label="Ownership preference">
+          <select className={inputClass} value={req.ownership ?? ""} onChange={(e) => setReq((r) => ({ ...r, ownership: (e.target.value || null) as InvestmentRequirementInput["ownership"] }))}>
+            <option value="">Choose...</option>
+            {OWNERSHIP_PREFS.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </Field>
+      </div>
+      <div className="mb-3">
+        <Field label="Sector focus">
+          <input className={inputClass} placeholder="e.g. Renewable Energy, Logistics Infrastructure" value={req.sectorFocus ?? ""} onChange={(e) => setReq((r) => ({ ...r, sectorFocus: e.target.value || null }))} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Investment budget / ticket size">
+          <select className={inputClass} value={req.budget ?? ""} onChange={(e) => setReq((r) => ({ ...r, budget: (e.target.value || null) as InvestmentRequirementInput["budget"] }))}>
+            <option value="">Choose...</option>
+            {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </Field>
+        <Field label="Target deal timeline">
+          <select className={inputClass} value={req.timeline ?? ""} onChange={(e) => setReq((r) => ({ ...r, timeline: (e.target.value || null) as InvestmentRequirementInput["timeline"] }))}>
+            <option value="">Choose...</option>
+            {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button type="submit" disabled={isPending} className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "var(--elev8-blue)" }}>
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>{statusMessage}</p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function fmtUSD(n: number): string {
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return `${sign}USD ${(abs / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${sign}USD ${(abs / 1e3).toFixed(1)}K`;
+  return `${sign}USD ${abs.toFixed(0)}`;
+}
+
+function LandedCostSection({ company }: { company: CompanyRow }) {
+  const stored = company.landed_cost as Partial<LandedCostInputsInput>;
+  const [inputs, setInputs] = useState<LandedCostInputsInput>({ ...DEFAULT_LANDED_COST, ...stored });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const result = computeLandedCost(inputs);
+
+  function set(key: keyof LandedCostInputsInput, value: string) {
+    setInputs((i) => ({ ...i, [key]: Number(value) || 0 }));
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const res = await saveCompanyLandedCostAction(inputs);
+      if (res.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(res.error);
+      }
+    });
+  }
+
+  const verdict =
+    result.marginPct >= 20
+      ? { text: `Strong margin. At ${result.marginPct.toFixed(1)}%, this clears a typical 15-20% target and is worth pursuing at the assumed volume.`, color: "#00874A" }
+      : result.marginPct >= 8
+        ? { text: `Marginal. At ${result.marginPct.toFixed(1)}%, this is thin, consider renegotiating freight or duty, or a higher selling price.`, color: "#8A6A1A" }
+        : { text: `Not commercially attractive. At ${result.marginPct.toFixed(1)}%, landed cost is too close to selling price. Re-check the corridor or Incoterm.`, color: "var(--elev8-red)" };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Never look at product price alone. Change any assumption below
+        and the landed cost and margin recalculate automatically.
+      </p>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <Field label="Product unit cost (USD)"><input className={inputClass} type="number" value={inputs.cost} onChange={(e) => set("cost", e.target.value)} /></Field>
+            <Field label="Quantity"><input className={inputClass} type="number" value={inputs.qty} onChange={(e) => set("qty", e.target.value)} /></Field>
+          </div>
+          <div className="mb-3"><Field label="Freight cost, total (USD)"><input className={inputClass} type="number" value={inputs.freight} onChange={(e) => set("freight", e.target.value)} /></Field></div>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <Field label="Insurance %"><input className={inputClass} type="number" step="0.1" value={inputs.ins} onChange={(e) => set("ins", e.target.value)} /></Field>
+            <Field label="Customs duty %"><input className={inputClass} type="number" value={inputs.duty} onChange={(e) => set("duty", e.target.value)} /></Field>
+          </div>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <Field label="Tax / VAT %"><input className={inputClass} type="number" value={inputs.tax} onChange={(e) => set("tax", e.target.value)} /></Field>
+            <Field label="Port &amp; handling (USD)"><input className={inputClass} type="number" value={inputs.port} onChange={(e) => set("port", e.target.value)} /></Field>
+          </div>
+          <div className="mb-3"><Field label="Banking &amp; documentation (USD)"><input className={inputClass} type="number" value={inputs.bank} onChange={(e) => set("bank", e.target.value)} /></Field></div>
+          <Field label="Expected selling price (USD / unit)"><input className={inputClass} type="number" value={inputs.sell} onChange={(e) => set("sell", e.target.value)} /></Field>
+        </div>
+        <div>
+          <p className="mb-3 text-[13px] font-semibold" style={{ color: "var(--elev8-ink)" }}>Is this trade commercially worth pursuing?</p>
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            <div className="rounded-md border p-3" style={{ borderColor: "var(--elev8-g100)" }}>
+              <p className="text-[16px] font-semibold" style={{ color: "var(--elev8-ink)" }}>{fmtUSD(result.landedPerUnit)}</p>
+              <p className="text-[11.5px]" style={{ color: "var(--elev8-g500)" }}>Landed / unit</p>
+            </div>
+            <div className="rounded-md border p-3" style={{ borderColor: "var(--elev8-g100)" }}>
+              <p className="text-[16px] font-semibold" style={{ color: "var(--elev8-ink)" }}>{fmtUSD(result.landedTotal)}</p>
+              <p className="text-[11.5px]" style={{ color: "var(--elev8-g500)" }}>Total landed</p>
+            </div>
+            <div className="rounded-md border p-3" style={{ borderColor: "var(--elev8-g100)" }}>
+              <p className="text-[16px] font-semibold" style={{ color: result.profit >= 0 ? "var(--elev8-green)" : "var(--elev8-red)" }}>{fmtUSD(result.profit)}</p>
+              <p className="text-[11.5px]" style={{ color: "var(--elev8-g500)" }}>Gross profit</p>
+            </div>
+            <div className="rounded-md border p-3" style={{ borderColor: "var(--elev8-g100)" }}>
+              <p className="text-[16px] font-semibold" style={{ color: result.marginPct >= 0 ? "var(--elev8-green)" : "var(--elev8-red)" }}>{result.marginPct.toFixed(1)}%</p>
+              <p className="text-[11.5px]" style={{ color: "var(--elev8-g500)" }}>Margin %</p>
+            </div>
+          </div>
+          {result.landedTotal > 0 && (
+            <div className="mb-4 flex h-6 overflow-hidden rounded-md">
+              {([
+                ["Goods", result.goods, "#0B1C2E"],
+                ["Freight", inputs.freight, "#F5A623"],
+                ["Insurance", result.insurance, "#004AA5"],
+                ["Duty", result.duty, "#E5393B"],
+                ["Tax", result.tax, "#00A867"],
+                ["Port/Bank", inputs.port + inputs.bank, "#6B7C95"],
+              ] as const).map(([label, val, color]) => {
+                const pct = (val / result.landedTotal) * 100;
+                return pct > 0.5 ? <div key={label} title={`${label}: ${fmtUSD(val)}`} style={{ width: `${pct}%`, background: color }} /> : null;
+              })}
+            </div>
+          )}
+          <p className="text-[13px]" style={{ color: verdict.color }}>
+            <strong>{verdict.text.split(".")[0]}.</strong>{verdict.text.slice(verdict.text.indexOf(".") + 1)}
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 flex items-center gap-3">
+        <button type="submit" disabled={isPending} className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "var(--elev8-blue)" }}>
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>{statusMessage}</p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+type CompareCorridor = {
+  o: string;
+  d: string;
+  incoterm: string;
+  duty: number;
+  freight: number;
+  transit: number;
+  demand: string;
+  risk: string;
+  corridorType: "Import" | "Export";
+};
+
+function CorridorCompareCol({ c, win }: { c: CompareCorridor; win: boolean }) {
+  return (
+    <div className="rounded-md border p-3" style={win ? { borderColor: "var(--elev8-green)", background: "#E9F8EF" } : { borderColor: "var(--elev8-g200)" }}>
+      {win && <span className="text-[11px] font-semibold" style={{ color: "#00874A" }}>Recommended</span>}
+      <p className="mt-1 text-[13px] font-semibold" style={{ color: "var(--elev8-ink)" }}>{c.o} to {c.d} ({c.corridorType})</p>
+      {([["Customs Duty", `${c.duty || 0}%`], ["Freight (est.)", fmtUSD(c.freight || 0)], ["Transit Time", `${c.transit || 0} days`], ["Demand", c.demand || "-"], ["Risk", c.risk || "-"], ["Incoterm", c.incoterm || "-"]] as const).map(([label, val]) => (
+        <div key={label} className="mt-1 flex justify-between text-[12px]"><span style={{ color: "var(--elev8-g500)" }}>{label}</span><strong style={{ color: "var(--elev8-ink)" }}>{val}</strong></div>
+      ))}
+    </div>
+  );
+}
+
+function CorridorCompareSection({ company }: { company: CompanyRow }) {
+  const allCorridors: CompareCorridor[] = [
+    ...(company.import_corridors as Omit<CompareCorridor, "corridorType">[]).map((c) => ({ ...c, corridorType: "Import" as const })),
+    ...(company.export_corridors as Omit<CompareCorridor, "corridorType">[]).map((c) => ({ ...c, corridorType: "Export" as const })),
+  ];
+  const [aIdx, setAIdx] = useState(0);
+  const [bIdx, setBIdx] = useState(allCorridors.length > 1 ? 1 : 0);
+  const [reviewed, setReviewed] = useState(company.corridor_compare_reviewed);
+  const [isPending, startTransition] = useTransition();
+
+  function riskScore(r: string) { const s = r.toLowerCase(); return s.includes("high") ? 3 : s.includes("med") ? 2 : 1; }
+  function demandScore(r: string) { const s = r.toLowerCase(); return s.includes("high") ? 3 : s.includes("med") ? 2 : 1; }
+
+  function handleReview() {
+    startTransition(async () => {
+      const res = await saveCompanyCorridorCompareReviewedAction(true);
+      if (res.ok) setReviewed(true);
+    });
+  }
+
+  if (allCorridors.length < 2) {
+    return (
+      <p className="text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Corridor comparison needs two trade routes to compare, from
+        either the Import or Export pillar, combined. Add another
+        corridor first.
+      </p>
+    );
+  }
+
+  const a = allCorridors[aIdx];
+  const b = allCorridors[bIdx];
+  const scoreA = demandScore(a.demand) * 10 - riskScore(a.risk) * 5 - (a.duty || 0) * 0.6 - (a.transit || 0) * 0.3;
+  const scoreB = demandScore(b.demand) * 10 - riskScore(b.risk) * 5 - (b.duty || 0) * 0.6 - (b.transit || 0) * 0.3;
+  const aWins = scoreA >= scoreB;
+
+  return (
+    <div>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Compare two of your configured corridors on duty, freight,
+        transit time, demand and risk. gatewAI recommends the stronger
+        commercial outcome, with reasoning.
+      </p>
+      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <select className={inputClass} value={aIdx} onChange={(e) => setAIdx(Number(e.target.value))}>
+          {allCorridors.map((c, i) => <option key={i} value={i}>{c.o} to {c.d} ({c.corridorType})</option>)}
+        </select>
+        <select className={inputClass} value={bIdx} onChange={(e) => setBIdx(Number(e.target.value))}>
+          {allCorridors.map((c, i) => <option key={i} value={i}>{c.o} to {c.d} ({c.corridorType})</option>)}
+        </select>
+      </div>
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <CorridorCompareCol c={a} win={aWins} />
+        <CorridorCompareCol c={b} win={!aWins} />
+      </div>
+      <button
+        type="button"
+        onClick={handleReview}
+        disabled={isPending || reviewed}
+        className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        style={{ background: reviewed ? "var(--elev8-green)" : "var(--elev8-blue)" }}
+      >
+        {reviewed ? "Reviewed" : isPending ? "Saving..." : "Mark as reviewed"}
+      </button>
+    </div>
+  );
+}
+
+function TradeFinanceSection({ company }: { company: CompanyRow }) {
+  const [instruments, setInstruments] = useState<string[]>(company.finance_instruments);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyFinanceInstrumentsAction({
+        financeInstruments: instruments as CompanyFinanceInstrumentsInput["financeInstruments"],
+      });
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Financing instruments you use or accept.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {FINANCE_INSTRUMENTS.map((f) => (
+          <Chip key={f} label={f} on={instruments.includes(f)} onClick={() => setInstruments((prev) => prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f])} />
+        ))}
+      </div>
+      <div className="mt-5 flex items-center gap-3">
+        <button type="submit" disabled={isPending} className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "var(--elev8-blue)" }}>
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>{statusMessage}</p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+const UPCOMING_STEPS = ["Sustainability Pillar", "ICV Pillar"];
 
 export function CompanyConfigForm({
   company,
@@ -3813,6 +4230,46 @@ export function CompanyConfigForm({
               isComplete={company.export_countries.length > 0}
             >
               <ExportPrefsSection company={company} />
+            </SettingsGroup>
+          </>
+        )}
+
+        {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("investment") && (
+          <>
+            <SettingsGroup
+              title="Investment: Preferences"
+              summary={company.investment_countries.length > 0 ? `${company.investment_countries.length} markets` : "Not set"}
+              isComplete={company.investment_countries.length > 0}
+            >
+              <InvestmentPrefsSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Investment: Landed Cost & Margin"
+              summary={
+                (company.landed_cost as { cost?: number })?.cost
+                  ? `Modelled at $${(company.landed_cost as { cost?: number }).cost}/unit`
+                  : "Not set"
+              }
+              isComplete={Boolean((company.landed_cost as { cost?: number })?.cost)}
+            >
+              <LandedCostSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Investment: Corridor Comparison"
+              summary={company.corridor_compare_reviewed ? "Reviewed" : "Not reviewed"}
+              isComplete={company.corridor_compare_reviewed}
+            >
+              <CorridorCompareSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Investment: Trade Finance"
+              summary={company.finance_instruments.length > 0 ? `${company.finance_instruments.length} instruments` : "Not set"}
+              isComplete={company.finance_instruments.length > 0}
+            >
+              <TradeFinanceSection company={company} />
             </SettingsGroup>
           </>
         )}

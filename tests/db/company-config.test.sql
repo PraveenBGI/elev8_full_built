@@ -353,6 +353,31 @@ begin
   raise notice 'PASS: owner can save Export Pillar preferences (Products, Corridors, Logistics, per-country Preferences)';
 end $$;
 
+-- Investment Pillar (20260925000006) -- per-country table (reusing
+-- MARKET_TIERS), a deal-structure object, a live-calculator's inputs
+-- only (never its computed outputs), an acknowledgment boolean, and a
+-- real chip picker.
+do $$
+declare v_req jsonb;
+begin
+  update companies
+  set investment_countries = array['Kenya'],
+      investment_tier = '{"Kenya":"high"}'::jsonb,
+      investment_budget = '{"Kenya":"$1M-$5M"}'::jsonb,
+      investment_timeline = '{"Kenya":"Long-term (12-24 months)"}'::jsonb,
+      investment_req = '{"type":"Joint Venture","ownership":"JV Partner","sectorFocus":"Renewable Energy","budget":"$1M-$5M","timeline":"Long-term (12-24 months)"}'::jsonb,
+      landed_cost = '{"cost":100,"qty":1000,"freight":1800,"ins":0.5,"duty":5,"tax":5,"port":500,"bank":300,"sell":150}'::jsonb,
+      corridor_compare_reviewed = true,
+      finance_instruments = array['Letter of Credit', 'Bank Guarantee']
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select investment_req into v_req from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  if v_req->>'type' != 'Joint Venture' then
+    raise exception 'FAIL: owner could not save Investment pillar preferences, got %', v_req;
+  end if;
+  raise notice 'PASS: owner can save Investment Pillar preferences (Preferences, Landed Cost inputs, Corridor Comparison ack, Trade Finance)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

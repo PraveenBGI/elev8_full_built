@@ -63,6 +63,12 @@ import {
   CompanyExportCorridorsSchema,
   CompanyExportPrefsSchema,
   type CompanyExportPrefsInput,
+  computeLandedCost,
+  DEFAULT_LANDED_COST,
+  CompanyInvestmentPrefsSchema,
+  type CompanyInvestmentPrefsInput,
+  DEFAULT_INVESTMENT_REQ,
+  CompanyFinanceInstrumentsSchema,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -781,6 +787,81 @@ describe("CompanyExportPrefsSchema", () => {
       exportTier: { Kenya: "urgent" },
       exportBudget: {},
       exportTimeline: {},
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("computeLandedCost", () => {
+  it("reproduces the mockup's own runLanded() formula exactly for a simple scenario", () => {
+    // goods = 100*1000 = 100,000; insurance = (100000+1800)*0.005 = 509;
+    // cif = 100000+1800+509 = 102309; duty = 102309*0.05 = 5115.45;
+    // tax = (102309+5115.45)*0.05 = 5371.225; landedTotal = 100000+1800+509+5115.45+5371.225+500+300 = 113595.675
+    const result = computeLandedCost({ cost: 100, qty: 1000, freight: 1800, ins: 0.5, duty: 5, tax: 5, port: 500, bank: 300, sell: 150 });
+    expect(result.goods).toBe(100000);
+    expect(result.landedTotal).toBeCloseTo(113595.675, 2);
+    expect(result.landedPerUnit).toBeCloseTo(113.595675, 5);
+    expect(result.revenue).toBe(150000);
+    expect(result.profit).toBeCloseTo(150000 - 113595.675, 2);
+  });
+
+  it("returns 0 landed-per-unit when quantity is 0 (avoids a divide-by-zero)", () => {
+    const result = computeLandedCost({ ...DEFAULT_LANDED_COST, cost: 100, qty: 0 });
+    expect(result.landedPerUnit).toBe(0);
+  });
+
+  it("returns 0 margin when revenue is 0 (avoids a divide-by-zero)", () => {
+    const result = computeLandedCost({ ...DEFAULT_LANDED_COST, cost: 100, qty: 10, sell: 0 });
+    expect(result.marginPct).toBe(0);
+  });
+
+  it("reports a negative profit when landed cost exceeds revenue", () => {
+    const result = computeLandedCost({ cost: 100, qty: 10, freight: 500, ins: 1, duty: 10, tax: 10, port: 100, bank: 50, sell: 50 });
+    expect(result.profit).toBeLessThan(0);
+  });
+});
+
+describe("CompanyInvestmentPrefsSchema", () => {
+  it("accepts a complete, valid investment preferences payload", () => {
+    const valid: CompanyInvestmentPrefsInput = {
+      investmentCountries: ["Kenya"],
+      investmentTier: { Kenya: "high" },
+      investmentBudget: { Kenya: "$1M-$5M" },
+      investmentTimeline: { Kenya: "Long-term (12-24 months)" },
+      investmentReq: {
+        type: "Joint Venture",
+        ownership: "JV Partner",
+        sectorFocus: "Renewable Energy",
+        budget: "$1M-$5M",
+        timeline: "Long-term (12-24 months)",
+      },
+    };
+    expect(CompanyInvestmentPrefsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects an invalid investment type", () => {
+    const result = CompanyInvestmentPrefsSchema.safeParse({
+      investmentCountries: [],
+      investmentTier: {},
+      investmentBudget: {},
+      investmentTimeline: {},
+      investmentReq: { ...DEFAULT_INVESTMENT_REQ, type: "Crowdfunding" },
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyFinanceInstrumentsSchema", () => {
+  it("accepts a valid set of finance instruments", () => {
+    const result = CompanyFinanceInstrumentsSchema.safeParse({
+      financeInstruments: ["Letter of Credit", "Bank Guarantee"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid finance instrument", () => {
+    const result = CompanyFinanceInstrumentsSchema.safeParse({
+      financeInstruments: ["Crypto Escrow"],
     });
     expect(result.success).toBe(false);
   });

@@ -35,6 +35,9 @@ import {
   CompanyExportCorridorsSchema,
   CompanyExportLogisticsSchema,
   CompanyExportPrefsSchema,
+  CompanyInvestmentPrefsSchema,
+  LandedCostInputsSchema,
+  CompanyFinanceInstrumentsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -61,6 +64,9 @@ import {
   type CompanyExportCorridorsInput,
   type CompanyExportLogisticsInput,
   type CompanyExportPrefsInput,
+  type CompanyInvestmentPrefsInput,
+  type LandedCostInputsInput,
+  type CompanyFinanceInstrumentsInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -163,10 +169,18 @@ export type CompanyRow = {
   export_tier: Record<string, string>;
   export_budget: Record<string, string>;
   export_timeline: Record<string, string>;
+  investment_countries: string[];
+  investment_tier: Record<string, string>;
+  investment_budget: Record<string, string>;
+  investment_timeline: Record<string, string>;
+  investment_req: Record<string, unknown>;
+  landed_cost: Record<string, unknown>;
+  corridor_compare_reviewed: boolean;
+  finance_instruments: string[];
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters, import_products, import_corridors, import_logistics, import_countries, import_req, export_products, export_corridors, export_logistics, export_countries, export_tier, export_budget, export_timeline";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters, import_products, import_corridors, import_logistics, import_countries, import_req, export_products, export_corridors, export_logistics, export_countries, export_tier, export_budget, export_timeline, investment_countries, investment_tier, investment_budget, investment_timeline, investment_req, landed_cost, corridor_compare_reviewed, finance_instruments";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -530,6 +544,60 @@ export async function updateCompanyExportPrefs(
       export_budget: parsed.exportBudget,
       export_timeline: parsed.exportTimeline,
     })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyInvestmentPrefs(
+  companyId: string,
+  input: CompanyInvestmentPrefsInput,
+): Promise<void> {
+  const parsed = CompanyInvestmentPrefsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({
+      investment_countries: parsed.investmentCountries,
+      investment_tier: parsed.investmentTier,
+      investment_budget: parsed.investmentBudget,
+      investment_timeline: parsed.investmentTimeline,
+      investment_req: parsed.investmentReq,
+    })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyLandedCost(
+  companyId: string,
+  input: LandedCostInputsInput,
+): Promise<void> {
+  const parsed = LandedCostInputsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("companies").update({ landed_cost: parsed }).eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyCorridorCompareReviewed(
+  companyId: string,
+  reviewed: boolean,
+): Promise<void> {
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ corridor_compare_reviewed: reviewed })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyFinanceInstruments(
+  companyId: string,
+  input: CompanyFinanceInstrumentsInput,
+): Promise<void> {
+  const parsed = CompanyFinanceInstrumentsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ finance_instruments: parsed.financeInstruments })
     .eq("id", companyId);
   if (error) throw error;
 }

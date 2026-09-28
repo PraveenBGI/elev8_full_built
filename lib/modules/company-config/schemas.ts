@@ -912,6 +912,129 @@ export const CompanyExportPrefsSchema = z.object({
 export type CompanyExportPrefsInput = z.infer<typeof CompanyExportPrefsSchema>;
 
 /**
+ * Investment Pillar, sixth of 8 per-pillar preference sub-groups. Four
+ * sub-pages: Investment Preferences, Landed Cost & Margin Calculator,
+ * Corridor Comparison, Trade Finance & Payments.
+ *
+ * Investment Preferences mirrors Export Preferences' per-country table
+ * shape (reusing MARKET_TIERS) plus its own deal-structure object.
+ *
+ * Landed Cost persists only the calculator's INPUTS, never its computed
+ * outputs (landed cost, total, profit, margin) -- those are always
+ * derived fresh from the formula, both in this codebase and in the
+ * mockup itself, avoiding a stored calculation ever drifting from the
+ * formula that produced it.
+ *
+ * Corridor Comparison has no real fields of its own -- it compares two
+ * of the company's own real corridors (import_corridors + export_corridors
+ * combined, mirroring the mockup's own allCorridors()) entirely
+ * client-side, so this is just an acknowledgment boolean, same honest
+ * pattern as Governance's Risk Intelligence.
+ *
+ * Trade Finance's "Upcoming Exposure" and "Payment & Receivables
+ * Monitoring" sections are hardcoded illustrative sample data in the
+ * mockup with zero backing fields -- not reproduced, same principle
+ * applied to every other fake "live" section skipped throughout this
+ * build.
+ */
+export const INVESTMENT_TYPES = [
+  "Equity",
+  "Joint Venture",
+  "PPP",
+  "Debt / Structured Finance",
+  "Co-Investment",
+] as const;
+
+export const OWNERSHIP_PREFS = ["Majority", "Minority", "JV Partner", "Silent Investor"] as const;
+
+export const InvestmentRequirementSchema = z.object({
+  type: z.enum(INVESTMENT_TYPES).nullable(),
+  ownership: z.enum(OWNERSHIP_PREFS).nullable(),
+  sectorFocus: z.string().trim().nullable(),
+  budget: z.enum(BUDGET_BANDS).nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export type InvestmentRequirementInput = z.infer<typeof InvestmentRequirementSchema>;
+
+export const DEFAULT_INVESTMENT_REQ: InvestmentRequirementInput = {
+  type: null,
+  ownership: null,
+  sectorFocus: null,
+  budget: null,
+  timeline: null,
+};
+
+export const CompanyInvestmentPrefsSchema = z.object({
+  investmentCountries: z.array(z.string().trim().min(1)),
+  investmentTier: z.record(z.string(), z.enum(MARKET_TIERS)),
+  investmentBudget: z.record(z.string(), z.enum(BUDGET_BANDS)),
+  investmentTimeline: z.record(z.string(), z.enum(TIMELINE_HORIZONS)),
+  investmentReq: InvestmentRequirementSchema,
+});
+
+export type CompanyInvestmentPrefsInput = z.infer<typeof CompanyInvestmentPrefsSchema>;
+
+export const LandedCostInputsSchema = z.object({
+  cost: z.coerce.number().min(0),
+  qty: z.coerce.number().min(0),
+  freight: z.coerce.number().min(0),
+  ins: z.coerce.number().min(0),
+  duty: z.coerce.number().min(0),
+  tax: z.coerce.number().min(0),
+  port: z.coerce.number().min(0),
+  bank: z.coerce.number().min(0),
+  sell: z.coerce.number().min(0),
+});
+
+export type LandedCostInputsInput = z.infer<typeof LandedCostInputsSchema>;
+
+export const DEFAULT_LANDED_COST: LandedCostInputsInput = {
+  cost: 0,
+  qty: 0,
+  freight: 0,
+  ins: 0,
+  duty: 0,
+  tax: 0,
+  port: 0,
+  bank: 0,
+  sell: 0,
+};
+
+/** Reproduces the mockup's own runLanded() formula exactly. */
+export function computeLandedCost(inputs: LandedCostInputsInput) {
+  const goods = inputs.cost * inputs.qty;
+  const insurance = (goods + inputs.freight) * (inputs.ins / 100);
+  const cif = goods + inputs.freight + insurance;
+  const duty = cif * (inputs.duty / 100);
+  const tax = (cif + duty) * (inputs.tax / 100);
+  const landedTotal = goods + inputs.freight + insurance + duty + tax + inputs.port + inputs.bank;
+  const landedPerUnit = inputs.qty > 0 ? landedTotal / inputs.qty : 0;
+  const revenue = inputs.sell * inputs.qty;
+  const profit = revenue - landedTotal;
+  const marginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
+  return { goods, insurance, cif, duty, tax, landedTotal, landedPerUnit, revenue, profit, marginPct };
+}
+
+export const FINANCE_INSTRUMENTS = [
+  "Letter of Credit",
+  "Bank Guarantee",
+  "Advance Payment",
+  "Open Account",
+  "Documentary Collection",
+  "Trade Credit",
+  "Invoice Financing",
+  "Supply Chain Finance",
+  "Export Finance",
+] as const;
+
+export const CompanyFinanceInstrumentsSchema = z.object({
+  financeInstruments: z.array(z.enum(FINANCE_INSTRUMENTS)),
+});
+
+export type CompanyFinanceInstrumentsInput = z.infer<typeof CompanyFinanceInstrumentsSchema>;
+
+/**
  * Lightweight sector -> suggested certification map, ported verbatim
  * from the mockup. Used only as a one-click starting point on the
  * Compliance page -- the user can add/remove freely afterward. Sectors

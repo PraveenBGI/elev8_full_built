@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth/adapter";
 import {
   createCompany,
+  getCompanyById,
   getMyCompanyScope,
   getRealStateNamesForCountry,
   listCompanyAuditLog,
@@ -23,11 +24,13 @@ import {
   updateCompanyCommercialTerms,
   updateCompanyCompliance,
   updateCompanyContractPrefs,
+  updateCompanyCorridorCompareReviewed,
   updateCompanyDocChecklist,
   updateCompanyExportCorridors,
   updateCompanyExportLogistics,
   updateCompanyExportPrefs,
   updateCompanyExportProducts,
+  updateCompanyFinanceInstruments,
   updateCompanyGeography,
   updateCompanyGoals,
   updateCompanyIdentity,
@@ -35,6 +38,8 @@ import {
   updateCompanyImportLogistics,
   updateCompanyImportPrefs,
   updateCompanyImportProducts,
+  updateCompanyInvestmentPrefs,
+  updateCompanyLandedCost,
   updateCompanyMarketPriority,
   updateCompanyPillarSelection,
   updateCompanyRfqPrefs,
@@ -71,6 +76,9 @@ import {
   CompanyExportCorridorsSchema,
   CompanyExportLogisticsSchema,
   CompanyExportPrefsSchema,
+  CompanyInvestmentPrefsSchema,
+  LandedCostInputsSchema,
+  CompanyFinanceInstrumentsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -97,6 +105,9 @@ import {
   type CompanyExportCorridorsInput,
   type CompanyExportLogisticsInput,
   type CompanyExportPrefsInput,
+  type CompanyInvestmentPrefsInput,
+  type LandedCostInputsInput,
+  type CompanyFinanceInstrumentsInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -686,6 +697,87 @@ export async function saveCompanyExportPrefsAction(
     "Export Preferences",
     "Saved export markets with budget/timeline",
   );
+}
+
+export async function saveCompanyInvestmentPrefsAction(
+  input: CompanyInvestmentPrefsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyInvestmentPrefsSchema,
+    input,
+    updateCompanyInvestmentPrefs,
+    "Investment Preferences",
+    "Saved investment markets with deal structure",
+  );
+}
+
+export async function saveCompanyLandedCostAction(
+  input: LandedCostInputsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    LandedCostInputsSchema,
+    input,
+    updateCompanyLandedCost,
+    "Landed Cost & Margin",
+    "Modelled a landed cost scenario",
+  );
+}
+
+export async function saveCompanyCorridorCompareReviewedAction(
+  reviewed: boolean,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await updateCompanyCorridorCompareReviewed(scope.companyId, reviewed);
+    if (reviewed) {
+      await logCompanyAudit(scope.companyId, "Corridor Comparison", "Compared two trade corridors");
+    }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanyFinanceInstrumentsAction(
+  input: CompanyFinanceInstrumentsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyFinanceInstrumentsSchema,
+    input,
+    updateCompanyFinanceInstruments,
+    "Trade Finance",
+    "Saved financing instrument preferences",
+  );
+}
+
+/**
+ * Fetches both import and export corridors combined for Corridor
+ * Comparison, mirroring the mockup's own allCorridors() -- one
+ * combined list regardless of which pillar a corridor was added under.
+ */
+export async function getCompanyAllCorridorsAction(): Promise<
+  Array<Record<string, unknown> & { corridorType: "Import" | "Export" }>
+> {
+  const scope = await requireCompanyScope();
+  const company = await getCompanyById(scope.companyId);
+  if (!company) return [];
+  const imports = (company.import_corridors as Record<string, unknown>[]).map((c) => ({
+    ...c,
+    corridorType: "Import" as const,
+  }));
+  const exports = (company.export_corridors as Record<string, unknown>[]).map((c) => ({
+    ...c,
+    corridorType: "Export" as const,
+  }));
+  return [...imports, ...exports];
 }
 
 export async function listCompanyAuditLogAction(): Promise<
