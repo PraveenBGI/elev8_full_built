@@ -27,6 +27,10 @@ import {
   updateCompanyGeography,
   updateCompanyGoals,
   updateCompanyIdentity,
+  updateCompanyImportCorridors,
+  updateCompanyImportLogistics,
+  updateCompanyImportPrefs,
+  updateCompanyImportProducts,
   updateCompanyMarketPriority,
   updateCompanyPillarSelection,
   updateCompanyRfqPrefs,
@@ -55,6 +59,10 @@ import {
   CompanyBuyerSegmentsSchema,
   CompanySupplierTargetSchema,
   CompanySupplierFiltersSchema,
+  CompanyImportProductsSchema,
+  CompanyImportCorridorsSchema,
+  CompanyImportLogisticsSchema,
+  CompanyImportPrefsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -73,6 +81,10 @@ import {
   type CompanyBuyerSegmentsInput,
   type CompanySupplierTargetInput,
   type CompanySupplierFiltersInput,
+  type CompanyImportProductsInput,
+  type CompanyImportCorridorsInput,
+  type CompanyImportLogisticsInput,
+  type CompanyImportPrefsInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -566,6 +578,54 @@ export async function saveCompanySupplierTargetAction(
 
   revalidatePath("/company");
   return { ok: true };
+}
+
+export async function saveCompanyImportProductsAction(
+  input: CompanyImportProductsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyImportProductsSchema,
+    input,
+    updateCompanyImportProducts,
+    "Import Products & Services",
+    "Saved import sourcing needs",
+  );
+}
+
+export async function saveCompanyImportCorridorsAction(
+  input: CompanyImportCorridorsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyImportCorridorsSchema,
+    input,
+    updateCompanyImportCorridors,
+    "Import Trade Corridors",
+    "Saved import corridors",
+  );
+}
+
+export async function saveCompanyImportLogisticsAction(
+  input: CompanyImportLogisticsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyImportLogisticsSchema,
+    input,
+    updateCompanyImportLogistics,
+    "Import Logistics Preferences",
+    "Saved ports & shipping mode",
+  );
+}
+
+export async function saveCompanyImportPrefsAction(
+  input: CompanyImportPrefsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyImportPrefsSchema,
+    input,
+    updateCompanyImportPrefs,
+    "Import Preferences",
+    "Saved sourcing requirement detail",
+  );
 }
 
 export async function listCompanyAuditLogAction(): Promise<

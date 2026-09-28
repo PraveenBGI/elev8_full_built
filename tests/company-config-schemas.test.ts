@@ -51,6 +51,14 @@ import {
   CompanySupplierTargetSchema,
   type CompanySupplierTargetInput,
   DEFAULT_SUPPLIER_TARGET,
+  ImportCorridorSchema,
+  type ImportCorridorInput,
+  CompanyImportLogisticsSchema,
+  DEFAULT_IMPORT_LOGISTICS,
+  SHIP_MODES,
+  SHIPMENT_VOLUMES,
+  ImportRequirementSchema,
+  DEFAULT_IMPORT_REQ,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -605,6 +613,110 @@ describe("CompanySupplierTargetSchema", () => {
 
   it("rejects an invalid ESG rating requirement", () => {
     const result = CompanySupplierTargetSchema.safeParse({ ...DEFAULT_SUPPLIER_TARGET, esg: "Optional" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ImportCorridorSchema", () => {
+  it("accepts a complete, valid import corridor", () => {
+    const valid: ImportCorridorInput = {
+      o: "India",
+      d: "Oman",
+      incoterm: "CIF",
+      products: "Solar Modules, Inverters",
+      port: "Mumbai to Sohar",
+      duty: 5,
+      freight: 1800,
+      transit: 14,
+      demand: "High",
+      risk: "Low",
+      budget: "$50K-$250K",
+      timeline: "Immediate (0-3 months)",
+    };
+    expect(ImportCorridorSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects a corridor missing an origin or destination", () => {
+    const result = ImportCorridorSchema.safeParse({
+      o: "",
+      d: "Oman",
+      incoterm: "CIF",
+      products: "",
+      port: "",
+      duty: 0,
+      freight: 0,
+      transit: 0,
+      demand: "Medium",
+      risk: "Medium",
+      budget: null,
+      timeline: null,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an incoterm outside the corridor's own 5-option dropdown (e.g. a valid Incoterm elsewhere but not here)", () => {
+    const result = ImportCorridorSchema.safeParse({
+      o: "India",
+      d: "Oman",
+      incoterm: "DPU",
+      products: "",
+      port: "",
+      duty: 0,
+      freight: 0,
+      transit: 0,
+      demand: "Medium",
+      risk: "Medium",
+      budget: null,
+      timeline: null,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a negative duty percentage", () => {
+    const result = ImportCorridorSchema.safeParse({
+      o: "India",
+      d: "Oman",
+      incoterm: "FOB",
+      products: "",
+      port: "",
+      duty: -5,
+      freight: 0,
+      transit: 0,
+      demand: "Medium",
+      risk: "Medium",
+      budget: null,
+      timeline: null,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyImportLogisticsSchema", () => {
+  it("accepts the all-empty default", () => {
+    expect(CompanyImportLogisticsSchema.safeParse(DEFAULT_IMPORT_LOGISTICS).success).toBe(true);
+  });
+
+  it("rejects an invalid shipping mode", () => {
+    const result = CompanyImportLogisticsSchema.safeParse({
+      ...DEFAULT_IMPORT_LOGISTICS,
+      shipModes: ["Space Freight"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("SHIP_MODES and SHIPMENT_VOLUMES contain no em dashes (converted to colons)", () => {
+    const all = [...SHIP_MODES, ...SHIPMENT_VOLUMES];
+    expect(all.some((v) => v.includes("\u2014"))).toBe(false);
+  });
+});
+
+describe("ImportRequirementSchema", () => {
+  it("accepts the all-null default", () => {
+    expect(ImportRequirementSchema.safeParse(DEFAULT_IMPORT_REQ).success).toBe(true);
+  });
+
+  it("rejects an incoterm outside import requirement's own smaller 3-option dropdown", () => {
+    const result = ImportRequirementSchema.safeParse({ ...DEFAULT_IMPORT_REQ, incoterm: "EXW" });
     expect(result.success).toBe(false);
   });
 });

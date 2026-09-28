@@ -310,6 +310,26 @@ begin
   raise notice 'PASS: owner can save B2B Pillar preferences (Products & Services, Target Buyers, Target Suppliers)';
 end $$;
 
+-- Import Pillar (20260925000004) -- four sub-groups, the richest being
+-- import_corridors (duty, freight, transit, demand, risk per corridor).
+do $$
+declare v_corridors jsonb;
+begin
+  update companies
+  set import_products = '[{"cat":"Solar","name":"Solar Panels","hs":"8541.40","price":"USD 0.20/W","lead":"45 days","src":"China","budget":"$250K-$1M","timeline":"Short-term (3-6 months)"}]'::jsonb,
+      import_corridors = '[{"o":"India","d":"Oman","incoterm":"CIF","products":"Solar Modules, Inverters","port":"Mumbai to Sohar","duty":5,"freight":1800,"transit":14,"demand":"High","risk":"Low","budget":"$50K-$250K","timeline":"Immediate (0-3 months)"}]'::jsonb,
+      import_logistics = '{"ports":["Mumbai"],"shipModes":["Sea Freight: FCL"],"regions":"GCC","partners":"DHL, Maersk","volume":"FCL: Full Container"}'::jsonb,
+      import_countries = array['China', 'India'],
+      import_req = '{"supplierType":"Manufacturer","moq":"500 units","price":"USD 210 / unit","lead":"45-60 days","certs":"IEC 62109, CE","incoterm":"FOB","budget":"$50K-$250K","timeline":"Medium-term (6-12 months)"}'::jsonb
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select import_corridors into v_corridors from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  if jsonb_array_length(v_corridors) != 1 or v_corridors->0->>'risk' != 'Low' then
+    raise exception 'FAIL: owner could not save Import pillar preferences, got %', v_corridors;
+  end if;
+  raise notice 'PASS: owner can save Import Pillar preferences (Products, Corridors, Logistics, Preferences)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

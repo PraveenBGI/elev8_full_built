@@ -746,6 +746,128 @@ export const CompanySupplierFiltersSchema = z.object({
 export type CompanySupplierFiltersInput = z.infer<typeof CompanySupplierFiltersSchema>;
 
 /**
+ * Import Pillar, fourth of 8 per-pillar preference sub-groups. Four
+ * sub-pages: Products & Services, Trade Corridors, Logistics
+ * Preferences, Import Preferences.
+ *
+ * importProducts reuses B2BSourceItemSchema's exact shape -- it's the
+ * identical concept (products I want to buy/import), not a
+ * coincidence, so no separate schema is declared for it.
+ *
+ * Import Corridors is the richest structure in Company Configuration
+ * so far: this is exactly the data Governance's Risk Intelligence page
+ * needs but has none of yet (that page's own empty state literally
+ * says "Add trade corridors to see risk ratings") -- once a company
+ * fills this in, that connection becomes real, though wiring the read
+ * itself is a separate, later piece of work, not done here.
+ *
+ * The mockup's own SHIP_MODES and the Typical Shipment Volume options
+ * contain em dashes ("Sea Freight — FCL", "FCL — Full Container"),
+ * converted to colons here, same rule applied to ICV_SCORE_LABELS
+ * earlier in this build.
+ */
+export const IMPORT_CORRIDOR_INCOTERMS = ["FOB", "CIF", "CFR", "EXW", "DDP"] as const;
+export const IMPORT_REQ_INCOTERMS = ["FOB", "CIF", "DDP"] as const;
+export const DEMAND_LEVELS = ["Low", "Medium", "High"] as const;
+export const RISK_LEVELS = ["Low", "Medium", "High"] as const;
+
+export const ImportCorridorSchema = z.object({
+  o: z.string().trim().min(1),
+  d: z.string().trim().min(1),
+  incoterm: z.enum(IMPORT_CORRIDOR_INCOTERMS),
+  products: z.string().trim(),
+  port: z.string().trim(),
+  duty: z.coerce.number().min(0),
+  freight: z.coerce.number().min(0),
+  transit: z.coerce.number().min(0),
+  demand: z.enum(DEMAND_LEVELS),
+  risk: z.enum(RISK_LEVELS),
+  budget: z.enum(BUDGET_BANDS).nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export type ImportCorridorInput = z.infer<typeof ImportCorridorSchema>;
+
+export const CompanyImportProductsSchema = z.object({
+  importProducts: z.array(B2BSourceItemSchema),
+});
+
+export type CompanyImportProductsInput = z.infer<typeof CompanyImportProductsSchema>;
+
+export const CompanyImportCorridorsSchema = z.object({
+  importCorridors: z.array(ImportCorridorSchema),
+});
+
+export type CompanyImportCorridorsInput = z.infer<typeof CompanyImportCorridorsSchema>;
+
+export const SHIP_MODES = [
+  "Sea Freight: FCL",
+  "Sea Freight: LCL",
+  "Air Freight",
+  "Road / Land Freight",
+  "Rail Freight",
+  "Multimodal",
+] as const;
+
+export const SHIPMENT_VOLUMES = [
+  "FCL: Full Container",
+  "LCL: Less than Container",
+  "Bulk / Breakbulk",
+  "Air Freight",
+] as const;
+
+export const CompanyImportLogisticsSchema = z.object({
+  ports: z.array(z.string().trim().min(1)),
+  shipModes: z.array(z.enum(SHIP_MODES)),
+  regions: z.string().trim().nullable(),
+  partners: z.string().trim().nullable(),
+  volume: z.enum(SHIPMENT_VOLUMES).nullable(),
+});
+
+export type CompanyImportLogisticsInput = z.infer<typeof CompanyImportLogisticsSchema>;
+
+export const DEFAULT_IMPORT_LOGISTICS: CompanyImportLogisticsInput = {
+  ports: [],
+  shipModes: [],
+  regions: null,
+  partners: null,
+  volume: null,
+};
+
+export const IMPORT_SUPPLIER_TYPES = ["Manufacturer", "Trading House", "Distributor"] as const;
+
+export const ImportRequirementSchema = z.object({
+  supplierType: z.enum(IMPORT_SUPPLIER_TYPES).nullable(),
+  moq: z.string().trim().nullable(),
+  price: z.string().trim().nullable(),
+  lead: z.string().trim().nullable(),
+  certs: z.string().trim().nullable(),
+  incoterm: z.enum(IMPORT_REQ_INCOTERMS).nullable(),
+  budget: z.enum(BUDGET_BANDS).nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export type ImportRequirementInput = z.infer<typeof ImportRequirementSchema>;
+
+export const DEFAULT_IMPORT_REQ: ImportRequirementInput = {
+  supplierType: null,
+  moq: null,
+  price: null,
+  lead: null,
+  certs: null,
+  incoterm: null,
+  budget: null,
+  timeline: null,
+};
+
+export const CompanyImportPrefsSchema = z.object({
+  importCountries: z.array(z.string().trim().min(1)),
+  importReq: ImportRequirementSchema,
+});
+
+export type CompanyImportPrefsInput = z.infer<typeof CompanyImportPrefsSchema>;
+
+/**
  * Lightweight sector -> suggested certification map, ported verbatim
  * from the mockup. Used only as a one-click starting point on the
  * Compliance page -- the user can add/remove freely afterward. Sectors
