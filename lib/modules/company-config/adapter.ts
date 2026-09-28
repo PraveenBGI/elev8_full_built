@@ -31,6 +31,10 @@ import {
   CompanyImportCorridorsSchema,
   CompanyImportLogisticsSchema,
   CompanyImportPrefsSchema,
+  CompanyExportProductsSchema,
+  CompanyExportCorridorsSchema,
+  CompanyExportLogisticsSchema,
+  CompanyExportPrefsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -53,6 +57,10 @@ import {
   type CompanyImportCorridorsInput,
   type CompanyImportLogisticsInput,
   type CompanyImportPrefsInput,
+  type CompanyExportProductsInput,
+  type CompanyExportCorridorsInput,
+  type CompanyExportLogisticsInput,
+  type CompanyExportPrefsInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -148,10 +156,17 @@ export type CompanyRow = {
   import_logistics: Record<string, unknown>;
   import_countries: string[];
   import_req: Record<string, unknown>;
+  export_products: unknown[];
+  export_corridors: unknown[];
+  export_logistics: Record<string, unknown>;
+  export_countries: string[];
+  export_tier: Record<string, string>;
+  export_budget: Record<string, string>;
+  export_timeline: Record<string, string>;
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters, import_products, import_corridors, import_logistics, import_countries, import_req";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters, import_products, import_corridors, import_logistics, import_countries, import_req, export_products, export_corridors, export_logistics, export_countries, export_tier, export_budget, export_timeline";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -458,6 +473,63 @@ export async function updateCompanyImportPrefs(
   const { error } = await db
     .from("companies")
     .update({ import_countries: parsed.importCountries, import_req: parsed.importReq })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyExportProducts(
+  companyId: string,
+  input: CompanyExportProductsInput,
+): Promise<void> {
+  const parsed = CompanyExportProductsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ export_products: parsed.exportProducts })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyExportCorridors(
+  companyId: string,
+  input: CompanyExportCorridorsInput,
+): Promise<void> {
+  const parsed = CompanyExportCorridorsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ export_corridors: parsed.exportCorridors })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyExportLogistics(
+  companyId: string,
+  input: CompanyExportLogisticsInput,
+): Promise<void> {
+  const parsed = CompanyExportLogisticsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ export_logistics: parsed })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyExportPrefs(
+  companyId: string,
+  input: CompanyExportPrefsInput,
+): Promise<void> {
+  const parsed = CompanyExportPrefsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({
+      export_countries: parsed.exportCountries,
+      export_tier: parsed.exportTier,
+      export_budget: parsed.exportBudget,
+      export_timeline: parsed.exportTimeline,
+    })
     .eq("id", companyId);
   if (error) throw error;
 }

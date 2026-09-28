@@ -59,6 +59,10 @@ import {
   SHIPMENT_VOLUMES,
   ImportRequirementSchema,
   DEFAULT_IMPORT_REQ,
+  CompanyExportProductsSchema,
+  CompanyExportCorridorsSchema,
+  CompanyExportPrefsSchema,
+  type CompanyExportPrefsInput,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -717,6 +721,67 @@ describe("ImportRequirementSchema", () => {
 
   it("rejects an incoterm outside import requirement's own smaller 3-option dropdown", () => {
     const result = ImportRequirementSchema.safeParse({ ...DEFAULT_IMPORT_REQ, incoterm: "EXW" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyExportProductsSchema and CompanyExportCorridorsSchema (reuse of B2B/Import shapes)", () => {
+  it("accepts an export product using B2B's sell item shape", () => {
+    const result = CompanyExportProductsSchema.safeParse({
+      exportProducts: [
+        { cat: "Solar", name: "Solar Panels", hs: "8541.40", country: "Oman", moq: "200 units", cert: "CE", budget: "$50K-$250K", timeline: "Short-term (3-6 months)" },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an export corridor using the same shape as an import corridor", () => {
+    const result = CompanyExportCorridorsSchema.safeParse({
+      exportCorridors: [
+        { o: "Oman", d: "Kenya", incoterm: "CIF", products: "Solar Modules", port: "Sohar to Mombasa", duty: 5, freight: 1500, transit: 18, demand: "Medium", risk: "Medium", budget: "$250K-$1M", timeline: "Medium-term (6-12 months)" },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an export corridor missing an origin or destination, same rule as import", () => {
+    const result = CompanyExportCorridorsSchema.safeParse({
+      exportCorridors: [
+        { o: "", d: "Kenya", incoterm: "CIF", products: "", port: "", duty: 0, freight: 0, transit: 0, demand: "Medium", risk: "Medium", budget: null, timeline: null },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyExportPrefsSchema", () => {
+  it("accepts a complete, valid per-country preferences payload", () => {
+    const valid: CompanyExportPrefsInput = {
+      exportCountries: ["Kenya", "Tanzania"],
+      exportTier: { Kenya: "high", Tanzania: "medium" },
+      exportBudget: { Kenya: "$250K-$1M" },
+      exportTimeline: { Kenya: "Medium-term (6-12 months)" },
+    };
+    expect(CompanyExportPrefsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts an empty export preferences payload (nothing added yet)", () => {
+    const result = CompanyExportPrefsSchema.safeParse({
+      exportCountries: [],
+      exportTier: {},
+      exportBudget: {},
+      exportTimeline: {},
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid market tier value, reusing the same MARKET_TIERS enum as company-level Target Market Priority", () => {
+    const result = CompanyExportPrefsSchema.safeParse({
+      exportCountries: ["Kenya"],
+      exportTier: { Kenya: "urgent" },
+      exportBudget: {},
+      exportTimeline: {},
+    });
     expect(result.success).toBe(false);
   });
 });

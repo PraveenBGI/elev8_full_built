@@ -330,6 +330,29 @@ begin
   raise notice 'PASS: owner can save Import Pillar preferences (Products, Corridors, Logistics, Preferences)';
 end $$;
 
+-- Export Pillar (20260925000005) -- reuses Import's corridor and
+-- logistics shapes exactly; export_tier/budget/timeline are per-country
+-- jsonb maps, genuinely different from Import's single flat object.
+do $$
+declare v_tier jsonb;
+begin
+  update companies
+  set export_products = '[{"cat":"Solar","name":"Solar Panels","hs":"8541.40","country":"Oman","moq":"200 units","cert":"CE","budget":"$50K-$250K","timeline":"Short-term (3-6 months)"}]'::jsonb,
+      export_corridors = '[{"o":"Oman","d":"Kenya","incoterm":"CIF","products":"Solar Modules","port":"Sohar to Mombasa","duty":5,"freight":1500,"transit":18,"demand":"Medium","risk":"Medium","budget":"$250K-$1M","timeline":"Medium-term (6-12 months)"}]'::jsonb,
+      export_logistics = '{"ports":["Sohar"],"shipModes":["Sea Freight: FCL"],"regions":"East Africa","partners":"Maersk","volume":"FCL: Full Container"}'::jsonb,
+      export_countries = array['Kenya', 'Tanzania'],
+      export_tier = '{"Kenya":"high","Tanzania":"medium"}'::jsonb,
+      export_budget = '{"Kenya":"$250K-$1M"}'::jsonb,
+      export_timeline = '{"Kenya":"Medium-term (6-12 months)"}'::jsonb
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select export_tier into v_tier from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  if v_tier->>'Kenya' != 'high' then
+    raise exception 'FAIL: owner could not save Export pillar preferences, got %', v_tier;
+  end if;
+  raise notice 'PASS: owner can save Export Pillar preferences (Products, Corridors, Logistics, per-country Preferences)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

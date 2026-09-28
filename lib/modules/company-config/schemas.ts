@@ -868,6 +868,50 @@ export const CompanyImportPrefsSchema = z.object({
 export type CompanyImportPrefsInput = z.infer<typeof CompanyImportPrefsSchema>;
 
 /**
+ * Export Pillar, fifth of 8 per-pillar preference sub-groups. Four
+ * sub-pages: Products & Services, Trade Corridors, Logistics
+ * Preferences, Export Preferences.
+ *
+ * exportProducts reuses B2BSellItemSchema exactly (confirmed identical
+ * in the mockup's own source). exportCorridors reuses ImportCorridorSchema
+ * exactly -- the mockup's own allCorridors() merges S.importCorridors and
+ * S.exportCorridors into one combined list for Risk Intelligence, Landed
+ * Cost, Corridor Comparison and global search, confirming these are
+ * genuinely the same shape, not a coincidence. exportLogistics reuses
+ * CompanyImportLogisticsSchema's shape too.
+ *
+ * Export Preferences is genuinely different from Import's flat
+ * requirement object: per-country priority tier (reusing MARKET_TIERS,
+ * the same enum Target Market Priority already uses at the company
+ * level), plus a per-country budget and timeline -- three separate
+ * maps keyed by country name, because each export market carries its
+ * own independent values, not one shared set.
+ */
+export const CompanyExportProductsSchema = z.object({
+  exportProducts: z.array(B2BSellItemSchema),
+});
+
+export type CompanyExportProductsInput = z.infer<typeof CompanyExportProductsSchema>;
+
+export const CompanyExportCorridorsSchema = z.object({
+  exportCorridors: z.array(ImportCorridorSchema),
+});
+
+export type CompanyExportCorridorsInput = z.infer<typeof CompanyExportCorridorsSchema>;
+
+export const CompanyExportLogisticsSchema = CompanyImportLogisticsSchema;
+export type CompanyExportLogisticsInput = CompanyImportLogisticsInput;
+
+export const CompanyExportPrefsSchema = z.object({
+  exportCountries: z.array(z.string().trim().min(1)),
+  exportTier: z.record(z.string(), z.enum(MARKET_TIERS)),
+  exportBudget: z.record(z.string(), z.enum(BUDGET_BANDS)),
+  exportTimeline: z.record(z.string(), z.enum(TIMELINE_HORIZONS)),
+});
+
+export type CompanyExportPrefsInput = z.infer<typeof CompanyExportPrefsSchema>;
+
+/**
  * Lightweight sector -> suggested certification map, ported verbatim
  * from the mockup. Used only as a one-click starting point on the
  * Compliance page -- the user can add/remove freely afterward. Sectors

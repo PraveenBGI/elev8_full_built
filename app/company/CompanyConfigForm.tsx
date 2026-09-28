@@ -89,6 +89,10 @@ import {
   DEFAULT_IMPORT_REQ,
   IMPORT_SUPPLIER_TYPES,
   IMPORT_REQ_INCOTERMS,
+  type CompanyExportProductsInput,
+  type CompanyExportCorridorsInput,
+  type CompanyExportLogisticsInput,
+  type CompanyExportPrefsInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
@@ -101,6 +105,10 @@ import {
   saveCompanyComplianceAction,
   saveCompanyContractPrefsAction,
   saveCompanyDocChecklistAction,
+  saveCompanyExportCorridorsAction,
+  saveCompanyExportLogisticsAction,
+  saveCompanyExportPrefsAction,
+  saveCompanyExportProductsAction,
   saveCompanyGeographyAction,
   saveCompanyGoalsAction,
   saveCompanyIdentityAction,
@@ -3024,12 +3032,427 @@ function ImportPrefsSection({ company }: { company: CompanyRow }) {
   );
 }
 
-const UPCOMING_STEPS = [
-  "Export Pillar",
-  "Investment Pillar",
-  "Sustainability Pillar",
-  "ICV Pillar",
-];
+function ExportProductsSection({ company }: { company: CompanyRow }) {
+  const [items, setItems] = useState(company.export_products as CompanyExportProductsInput["exportProducts"]);
+  const [draft, setDraft] = useState({ cat: "", name: "", hs: "", country: "", moq: "", cert: "", budget: "", timeline: "" });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function addItem() {
+    if (!draft.name.trim()) return;
+    setItems((prev) => [
+      ...prev,
+      {
+        ...draft,
+        budget: (draft.budget || null) as CompanyExportProductsInput["exportProducts"][number]["budget"],
+        timeline: (draft.timeline || null) as CompanyExportProductsInput["exportProducts"][number]["timeline"],
+      },
+    ]);
+    setDraft({ cat: "", name: "", hs: "", country: "", moq: "", cert: "", budget: "", timeline: "" });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyExportProductsAction({ exportProducts: items });
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Add what you sell or export. HS codes enable precision matching
+        with buyers.
+      </p>
+      {items.length > 0 && (
+        <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+          <table className="w-full text-left text-[12px]">
+            <thead>
+              <tr style={{ background: "var(--elev8-g50)" }}>
+                {["Category", "Product", "HS", "Country", "MOQ", "Certs", "Budget", "Timeline", ""].map((h) => (
+                  <th key={h} className="whitespace-nowrap px-2 py-1.5 font-medium" style={{ color: "var(--elev8-g600)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((p, i) => (
+                <tr key={i} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-2 py-1.5">{p.cat}</td>
+                  <td className="px-2 py-1.5 font-semibold">{p.name}</td>
+                  <td className="px-2 py-1.5 font-mono">{p.hs}</td>
+                  <td className="px-2 py-1.5">{p.country}</td>
+                  <td className="px-2 py-1.5">{p.moq}</td>
+                  <td className="px-2 py-1.5">{p.cert}</td>
+                  <td className="px-2 py-1.5">{p.budget ?? "-"}</td>
+                  <td className="px-2 py-1.5">{p.timeline ?? "-"}</td>
+                  <td className="px-2 py-1.5">
+                    <button type="button" onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))} style={{ color: "var(--elev8-red)" }}>x</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="mb-5 flex flex-wrap gap-2">
+        <input className={inputClass} style={{ maxWidth: 110 }} placeholder="Category" value={draft.cat} onChange={(e) => setDraft((d) => ({ ...d, cat: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 140 }} placeholder="Product" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 90 }} placeholder="HS Code" value={draft.hs} onChange={(e) => setDraft((d) => ({ ...d, hs: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 100 }} placeholder="Country" value={draft.country} onChange={(e) => setDraft((d) => ({ ...d, country: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 80 }} placeholder="MOQ" value={draft.moq} onChange={(e) => setDraft((d) => ({ ...d, moq: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 110 }} placeholder="Certs" value={draft.cert} onChange={(e) => setDraft((d) => ({ ...d, cert: e.target.value }))} />
+        <select className={inputClass} style={{ maxWidth: 120 }} value={draft.budget} onChange={(e) => setDraft((d) => ({ ...d, budget: e.target.value }))}>
+          <option value="">Budget...</option>
+          {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <select className={inputClass} style={{ maxWidth: 160 }} value={draft.timeline} onChange={(e) => setDraft((d) => ({ ...d, timeline: e.target.value }))}>
+          <option value="">Timeline...</option>
+          {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <button type="button" onClick={addItem} className="rounded-md px-3 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>+ Add</button>
+      </div>
+      <div className="flex items-center gap-3">
+        <button type="submit" disabled={isPending} className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "var(--elev8-blue)" }}>
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>{statusMessage}</p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function ExportCorridorsSection({ company }: { company: CompanyRow }) {
+  const [corridors, setCorridors] = useState(company.export_corridors as CompanyExportCorridorsInput["exportCorridors"]);
+  const [draft, setDraft] = useState({
+    o: "", d: "", incoterm: "FOB", port: "", products: "", duty: "", freight: "", transit: "",
+    demand: "Medium", risk: "Medium", budget: "", timeline: "",
+  });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function addCorridor() {
+    if (!draft.o.trim() || !draft.d.trim()) return;
+    setCorridors((prev) => [
+      ...prev,
+      {
+        o: draft.o,
+        d: draft.d,
+        incoterm: draft.incoterm as CompanyExportCorridorsInput["exportCorridors"][number]["incoterm"],
+        products: draft.products || "-",
+        port: draft.port || `${draft.o} to ${draft.d}`,
+        duty: Number(draft.duty) || 0,
+        freight: Number(draft.freight) || 0,
+        transit: Number(draft.transit) || 0,
+        demand: draft.demand as CompanyExportCorridorsInput["exportCorridors"][number]["demand"],
+        risk: draft.risk as CompanyExportCorridorsInput["exportCorridors"][number]["risk"],
+        budget: (draft.budget || null) as CompanyExportCorridorsInput["exportCorridors"][number]["budget"],
+        timeline: (draft.timeline || null) as CompanyExportCorridorsInput["exportCorridors"][number]["timeline"],
+      },
+    ]);
+    setDraft({ o: "", d: "", incoterm: "FOB", port: "", products: "", duty: "", freight: "", transit: "", demand: "Medium", risk: "Medium", budget: "", timeline: "" });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyExportCorridorsAction({ exportCorridors: corridors });
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Define origin to destination export routes with products, ports,
+        Incoterms, duty, freight, transit time, demand, risk, budget and
+        target timeline, the strongest signal for logistics-aware
+        matching.
+      </p>
+      {corridors.length > 0 && (
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {corridors.map((c, i) => (
+            <div key={i} className="rounded-md border p-3" style={{ borderColor: "var(--elev8-g200)" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-semibold" style={{ color: "var(--elev8-ink)" }}>{c.o} to {c.d}</span>
+                <button type="button" onClick={() => setCorridors((prev) => prev.filter((_, idx) => idx !== i))} style={{ color: "var(--elev8-red)" }}>x</button>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.incoterm}</span>
+                {c.duty > 0 && <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.duty}% duty</span>}
+                {c.transit > 0 && <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.transit}d transit</span>}
+                <span
+                  className="rounded-full px-2 py-0.5 font-medium"
+                  style={c.risk === "High" ? { background: "#FDECEC", color: "var(--elev8-red)" } : c.risk === "Low" ? { background: "#E9F8EF", color: "#00874A" } : { background: "#FFF7E6", color: "#8A6A1A" }}
+                >
+                  {c.risk} Risk
+                </span>
+              </div>
+              <p className="mt-1.5 text-[12px]" style={{ color: "var(--elev8-g500)" }}>{c.products}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="mb-5 rounded-md border p-3" style={{ borderColor: "var(--elev8-g200)", background: "var(--elev8-g50)" }}>
+        <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <input className={inputClass} placeholder="Origin, e.g. Oman" value={draft.o} onChange={(e) => setDraft((d) => ({ ...d, o: e.target.value }))} />
+          <input className={inputClass} placeholder="Destination, e.g. Kenya" value={draft.d} onChange={(e) => setDraft((d) => ({ ...d, d: e.target.value }))} />
+        </div>
+        <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <select className={inputClass} value={draft.incoterm} onChange={(e) => setDraft((d) => ({ ...d, incoterm: e.target.value }))}>
+            {IMPORT_CORRIDOR_INCOTERMS.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <input className={inputClass} placeholder="Port route, e.g. Sohar to Mombasa" value={draft.port} onChange={(e) => setDraft((d) => ({ ...d, port: e.target.value }))} />
+        </div>
+        <input className={inputClass} style={{ marginBottom: 8 }} placeholder="Products, e.g. Solar Modules, Inverters" value={draft.products} onChange={(e) => setDraft((d) => ({ ...d, products: e.target.value }))} />
+        <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <input className={inputClass} type="number" placeholder="Customs duty %" value={draft.duty} onChange={(e) => setDraft((d) => ({ ...d, duty: e.target.value }))} />
+          <input className={inputClass} type="number" placeholder="Freight cost (USD)" value={draft.freight} onChange={(e) => setDraft((d) => ({ ...d, freight: e.target.value }))} />
+        </div>
+        <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <input className={inputClass} type="number" placeholder="Transit time (days)" value={draft.transit} onChange={(e) => setDraft((d) => ({ ...d, transit: e.target.value }))} />
+          <select className={inputClass} value={draft.demand} onChange={(e) => setDraft((d) => ({ ...d, demand: e.target.value }))}>
+            {DEMAND_LEVELS.map((l) => <option key={l} value={l}>{l} demand</option>)}
+          </select>
+        </div>
+        <select className={inputClass} style={{ marginBottom: 8 }} value={draft.risk} onChange={(e) => setDraft((d) => ({ ...d, risk: e.target.value }))}>
+          {RISK_LEVELS.map((l) => <option key={l} value={l}>{l} risk</option>)}
+        </select>
+        <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <select className={inputClass} value={draft.budget} onChange={(e) => setDraft((d) => ({ ...d, budget: e.target.value }))}>
+            <option value="">Budget allocated...</option>
+            {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <select className={inputClass} value={draft.timeline} onChange={(e) => setDraft((d) => ({ ...d, timeline: e.target.value }))}>
+            <option value="">Target timeline...</option>
+            {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <button type="button" onClick={addCorridor} className="rounded-md px-3 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>+ Add corridor</button>
+      </div>
+      <div className="flex items-center gap-3">
+        <button type="submit" disabled={isPending} className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "var(--elev8-blue)" }}>
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>{statusMessage}</p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function ExportLogisticsSection({ company }: { company: CompanyRow }) {
+  const stored = company.export_logistics as Partial<CompanyExportLogisticsInput>;
+  const [form, setForm] = useState<CompanyExportLogisticsInput>({ ...DEFAULT_IMPORT_LOGISTICS, ...stored });
+  const [portDraft, setPortDraft] = useState("");
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function addPort() {
+    if (!portDraft.trim() || form.ports.includes(portDraft)) return;
+    setForm((f) => ({ ...f, ports: [...f.ports, portDraft] }));
+    setPortDraft("");
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyExportLogisticsAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Ports, shipping mode, delivery regions and logistics partners
+        for your export routes, used for logistics-aware opportunity
+        matching.
+      </p>
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>Preferred load ports</label>
+      {form.ports.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {form.ports.map((p) => (
+            <span key={p} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]" style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}>
+              {p}
+              <button type="button" onClick={() => setForm((f) => ({ ...f, ports: f.ports.filter((x) => x !== p) }))} className="opacity-70 hover:opacity-100">x</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="mb-4 flex gap-2">
+        <input className={inputClass} placeholder="e.g. Sohar" value={portDraft} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPort(); } }} onChange={(e) => setPortDraft(e.target.value)} />
+        <button type="button" onClick={addPort} className="shrink-0 rounded-md px-4 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>Add</button>
+      </div>
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>Shipping mode</label>
+      <div className="mb-5 flex flex-wrap gap-2">
+        {SHIP_MODES.map((m) => (
+          <Chip key={m} label={m} on={form.shipModes.includes(m)} onClick={() => setForm((f) => ({ ...f, shipModes: f.shipModes.includes(m) ? f.shipModes.filter((x) => x !== m) : [...f.shipModes, m] }))} />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Preferred delivery regions">
+          <input className={inputClass} placeholder="e.g. GCC, East Africa" value={form.regions ?? ""} onChange={(e) => setForm((f) => ({ ...f, regions: e.target.value || null }))} />
+        </Field>
+        <Field label="Preferred logistics partners">
+          <input className={inputClass} placeholder="e.g. DHL, Maersk, Agility" value={form.partners ?? ""} onChange={(e) => setForm((f) => ({ ...f, partners: e.target.value || null }))} />
+        </Field>
+        <Field label="Typical shipment volume">
+          <select className={inputClass} value={form.volume ?? ""} onChange={(e) => setForm((f) => ({ ...f, volume: (e.target.value || null) as CompanyExportLogisticsInput["volume"] }))}>
+            <option value="">Choose...</option>
+            {SHIPMENT_VOLUMES.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </Field>
+      </div>
+      <div className="mt-5 flex items-center gap-3">
+        <button type="submit" disabled={isPending} className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "var(--elev8-blue)" }}>
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>{statusMessage}</p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function ExportPrefsSection({ company }: { company: CompanyRow }) {
+  const [countries, setCountries] = useState<string[]>(company.export_countries);
+  const [countryDraft, setCountryDraft] = useState("");
+  const [tier, setTier] = useState<Record<string, string>>(company.export_tier);
+  const [budget, setBudget] = useState<Record<string, string>>(company.export_budget);
+  const [timeline, setTimeline] = useState<Record<string, string>>(company.export_timeline);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function addCountry() {
+    if (!countryDraft.trim() || countries.includes(countryDraft)) return;
+    setCountries((prev) => [...prev, countryDraft]);
+    setCountryDraft("");
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyExportPrefsAction({
+        exportCountries: countries,
+        exportTier: tier as CompanyExportPrefsInput["exportTier"],
+        exportBudget: budget as CompanyExportPrefsInput["exportBudget"],
+        exportTimeline: timeline as CompanyExportPrefsInput["exportTimeline"],
+      });
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Preferred export countries, priority tier, and the budget and
+        target timeline you want to push into each.
+      </p>
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>Preferred export countries</label>
+      {countries.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {countries.map((c) => (
+            <span key={c} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]" style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}>
+              {c}
+              <button type="button" onClick={() => setCountries((prev) => prev.filter((x) => x !== c))} className="opacity-70 hover:opacity-100">x</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="mb-5 flex gap-2">
+        <input className={inputClass} placeholder="e.g. Kenya" value={countryDraft} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCountry(); } }} onChange={(e) => setCountryDraft(e.target.value)} />
+        <button type="button" onClick={addCountry} className="shrink-0 rounded-md px-4 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>Add</button>
+      </div>
+
+      {countries.length > 0 && (
+        <div className="overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+          <table className="w-full text-left text-[12.5px]">
+            <thead>
+              <tr style={{ background: "var(--elev8-g50)" }}>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Country</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Priority tier</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Budget</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Target timeline</th>
+              </tr>
+            </thead>
+            <tbody>
+              {countries.map((c) => (
+                <tr key={c} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-3 py-2 font-semibold">{c}</td>
+                  <td className="px-3 py-2">
+                    <select className={inputClass} value={tier[c] ?? "medium"} onChange={(e) => setTier((t) => ({ ...t, [c]: e.target.value }))}>
+                      {MARKET_TIERS.map((mt) => <option key={mt} value={mt}>{MARKET_TIER_LABELS[mt]}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <select className={inputClass} value={budget[c] ?? ""} onChange={(e) => setBudget((b) => ({ ...b, [c]: e.target.value }))}>
+                      <option value="">-</option>
+                      {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <select className={inputClass} value={timeline[c] ?? ""} onChange={(e) => setTimeline((t) => ({ ...t, [c]: e.target.value }))}>
+                      <option value="">-</option>
+                      {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-5 flex items-center gap-3">
+        <button type="submit" disabled={isPending} className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "var(--elev8-blue)" }}>
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>{statusMessage}</p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+const UPCOMING_STEPS = ["Investment Pillar", "Sustainability Pillar", "ICV Pillar"];
 
 export function CompanyConfigForm({
   company,
@@ -3350,6 +3773,46 @@ export function CompanyConfigForm({
               isComplete={company.import_countries.length > 0}
             >
               <ImportPrefsSection company={company} />
+            </SettingsGroup>
+          </>
+        )}
+
+        {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("export") && (
+          <>
+            <SettingsGroup
+              title="Export: Products & Services"
+              summary={company.export_products.length > 0 ? `${company.export_products.length} products` : "Not set"}
+              isComplete={company.export_products.length > 0}
+            >
+              <ExportProductsSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Export: Trade Corridors"
+              summary={company.export_corridors.length > 0 ? `${company.export_corridors.length} corridors` : "Not set"}
+              isComplete={company.export_corridors.length > 0}
+            >
+              <ExportCorridorsSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Export: Logistics Preferences"
+              summary={
+                (company.export_logistics as { ports?: string[] })?.ports?.length
+                  ? `${(company.export_logistics as { ports?: string[] }).ports!.length} ports`
+                  : "Not set"
+              }
+              isComplete={Boolean((company.export_logistics as { ports?: string[] })?.ports?.length)}
+            >
+              <ExportLogisticsSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Export: Market Preferences"
+              summary={company.export_countries.length > 0 ? `${company.export_countries.length} markets` : "Not set"}
+              isComplete={company.export_countries.length > 0}
+            >
+              <ExportPrefsSection company={company} />
             </SettingsGroup>
           </>
         )}

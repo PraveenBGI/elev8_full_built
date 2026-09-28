@@ -24,6 +24,10 @@ import {
   updateCompanyCompliance,
   updateCompanyContractPrefs,
   updateCompanyDocChecklist,
+  updateCompanyExportCorridors,
+  updateCompanyExportLogistics,
+  updateCompanyExportPrefs,
+  updateCompanyExportProducts,
   updateCompanyGeography,
   updateCompanyGoals,
   updateCompanyIdentity,
@@ -63,6 +67,10 @@ import {
   CompanyImportCorridorsSchema,
   CompanyImportLogisticsSchema,
   CompanyImportPrefsSchema,
+  CompanyExportProductsSchema,
+  CompanyExportCorridorsSchema,
+  CompanyExportLogisticsSchema,
+  CompanyExportPrefsSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -85,6 +93,10 @@ import {
   type CompanyImportCorridorsInput,
   type CompanyImportLogisticsInput,
   type CompanyImportPrefsInput,
+  type CompanyExportProductsInput,
+  type CompanyExportCorridorsInput,
+  type CompanyExportLogisticsInput,
+  type CompanyExportPrefsInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -625,6 +637,54 @@ export async function saveCompanyImportPrefsAction(
     updateCompanyImportPrefs,
     "Import Preferences",
     "Saved sourcing requirement detail",
+  );
+}
+
+export async function saveCompanyExportProductsAction(
+  input: CompanyExportProductsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyExportProductsSchema,
+    input,
+    updateCompanyExportProducts,
+    "Export Products & Services",
+    "Saved export products",
+  );
+}
+
+export async function saveCompanyExportCorridorsAction(
+  input: CompanyExportCorridorsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyExportCorridorsSchema,
+    input,
+    updateCompanyExportCorridors,
+    "Export Trade Corridors",
+    "Saved export corridors",
+  );
+}
+
+export async function saveCompanyExportLogisticsAction(
+  input: CompanyExportLogisticsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyExportLogisticsSchema,
+    input,
+    updateCompanyExportLogistics,
+    "Export Logistics Preferences",
+    "Saved ports & shipping mode",
+  );
+}
+
+export async function saveCompanyExportPrefsAction(
+  input: CompanyExportPrefsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyExportPrefsSchema,
+    input,
+    updateCompanyExportPrefs,
+    "Export Preferences",
+    "Saved export markets with budget/timeline",
   );
 }
 
