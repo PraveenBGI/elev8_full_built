@@ -42,6 +42,15 @@ import {
   CompanyContractPrefsSchema,
   type CompanyContractPrefsInput,
   DEFAULT_CONTRACT_PREFS,
+  CompanyB2BProductsSchema,
+  type CompanyB2BProductsInput,
+  DEFAULT_B2B_PRODUCTS,
+  CompanyBuyerTargetSchema,
+  type CompanyBuyerTargetInput,
+  DEFAULT_BUYER_TARGET,
+  CompanySupplierTargetSchema,
+  type CompanySupplierTargetInput,
+  DEFAULT_SUPPLIER_TARGET,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -507,6 +516,95 @@ describe("CompanyContractPrefsSchema", () => {
       ...DEFAULT_CONTRACT_PREFS,
       types: ["Not A Real Contract Type"],
     });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyB2BProductsSchema", () => {
+  it("accepts a complete, valid products payload", () => {
+    const valid: CompanyB2BProductsInput = {
+      sell: [
+        {
+          cat: "Electronics",
+          name: "Solar Inverter",
+          hs: "8504.40",
+          country: "Oman",
+          moq: "100 units",
+          cert: "CE",
+          budget: "$50K-$250K",
+          timeline: "Short-term (3-6 months)",
+        },
+      ],
+      source: [],
+    };
+    expect(CompanyB2BProductsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-empty default", () => {
+    expect(CompanyB2BProductsSchema.safeParse(DEFAULT_B2B_PRODUCTS).success).toBe(true);
+  });
+
+  it("rejects a sell item missing a product name", () => {
+    const result = CompanyB2BProductsSchema.safeParse({
+      sell: [{ cat: "Electronics", name: "", hs: "", country: "", moq: "", cert: "", budget: null, timeline: null }],
+      source: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid budget band", () => {
+    const result = CompanyB2BProductsSchema.safeParse({
+      sell: [{ cat: "", name: "X", hs: "", country: "", moq: "", cert: "", budget: "Not A Real Band", timeline: null }],
+      source: [],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyBuyerTargetSchema", () => {
+  it("accepts a complete, valid buyer target", () => {
+    const valid: CompanyBuyerTargetInput = {
+      country: "Saudi Arabia",
+      type: "Government / Public Sector",
+      industry: "Energy",
+      size: "Large Enterprise",
+      contractValue: "USD 500K-5M",
+      budget: "$250K-$1M",
+      timeline: "Medium-term (6-12 months)",
+    };
+    expect(CompanyBuyerTargetSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-null default", () => {
+    expect(CompanyBuyerTargetSchema.safeParse(DEFAULT_BUYER_TARGET).success).toBe(true);
+  });
+
+  it("rejects an invalid buyer type", () => {
+    const result = CompanyBuyerTargetSchema.safeParse({ ...DEFAULT_BUYER_TARGET, type: "Not A Real Type" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanySupplierTargetSchema", () => {
+  it("accepts a complete, valid supplier target", () => {
+    const valid: CompanySupplierTargetInput = {
+      type: "Manufacturer",
+      countries: "China, India",
+      certs: "ISO 9001",
+      esg: "Preferred",
+      capability: "Export capable",
+      budget: "<$50K",
+      timeline: "Immediate (0-3 months)",
+    };
+    expect(CompanySupplierTargetSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-null default", () => {
+    expect(CompanySupplierTargetSchema.safeParse(DEFAULT_SUPPLIER_TARGET).success).toBe(true);
+  });
+
+  it("rejects an invalid ESG rating requirement", () => {
+    const result = CompanySupplierTargetSchema.safeParse({ ...DEFAULT_SUPPLIER_TARGET, esg: "Optional" });
     expect(result.success).toBe(false);
   });
 });

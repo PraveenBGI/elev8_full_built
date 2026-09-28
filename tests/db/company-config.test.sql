@@ -288,6 +288,28 @@ begin
   raise notice 'PASS: owner can save Procurement pillar preferences (RFQ, Tender, Contract)';
 end $$;
 
+-- B2B Pillar (20260925000003) -- b2b_products holds two dynamic arrays
+-- in one jsonb blob; buyer_target/supplier_target are their own
+-- columns since Target Buyers/Target Suppliers are separate,
+-- conditionally-visible pages.
+do $$
+declare v_products jsonb;
+begin
+  update companies
+  set b2b_products = '{"sell":[{"cat":"Electronics","name":"Solar Inverter","hs":"8504.40","country":"Oman","moq":"100 units","cert":"CE","budget":"$50K-$250K","timeline":"Short-term (3-6 months)"}],"source":[]}'::jsonb,
+      buyer_target = '{"country":"Saudi Arabia","type":"Government / Public Sector","industry":"Energy","size":"Large Enterprise","contractValue":"USD 500K-5M","budget":"$250K-$1M","timeline":"Medium-term (6-12 months)"}'::jsonb,
+      buyer_segments = array['Government Buyers', 'Renewable Energy Developers'],
+      supplier_target = '{"type":"Manufacturer","countries":"China, India","certs":"ISO 9001","esg":"Preferred","capability":"Export capable","budget":"<$50K","timeline":"Immediate (0-3 months)"}'::jsonb,
+      supplier_filters = array['ISO 9001 certified', 'Export capable']
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select b2b_products into v_products from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  if jsonb_array_length(v_products->'sell') != 1 then
+    raise exception 'FAIL: owner could not save B2B products, got %', v_products;
+  end if;
+  raise notice 'PASS: owner can save B2B Pillar preferences (Products & Services, Target Buyers, Target Suppliers)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

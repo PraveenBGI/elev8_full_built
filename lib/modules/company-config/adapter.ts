@@ -22,6 +22,11 @@ import {
   CompanyRfqPrefsSchema,
   CompanyTenderPrefsSchema,
   CompanyContractPrefsSchema,
+  CompanyB2BProductsSchema,
+  CompanyBuyerTargetSchema,
+  CompanyBuyerSegmentsSchema,
+  CompanySupplierTargetSchema,
+  CompanySupplierFiltersSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -35,6 +40,11 @@ import {
   type CompanyRfqPrefsInput,
   type CompanyTenderPrefsInput,
   type CompanyContractPrefsInput,
+  type CompanyB2BProductsInput,
+  type CompanyBuyerTargetInput,
+  type CompanyBuyerSegmentsInput,
+  type CompanySupplierTargetInput,
+  type CompanySupplierFiltersInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -120,10 +130,15 @@ export type CompanyRow = {
   procurement_rfq_prefs: Record<string, unknown>;
   procurement_tender_prefs: Record<string, unknown>;
   procurement_contract_prefs: Record<string, unknown>;
+  b2b_products: Record<string, unknown>;
+  buyer_target: Record<string, unknown>;
+  buyer_segments: string[];
+  supplier_target: Record<string, unknown>;
+  supplier_filters: string[];
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -338,6 +353,46 @@ export async function updateCompanyContractPrefs(
   const { error } = await db
     .from("companies")
     .update({ procurement_contract_prefs: parsed })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyB2BProducts(
+  companyId: string,
+  input: CompanyB2BProductsInput,
+): Promise<void> {
+  const parsed = CompanyB2BProductsSchema.parse(input);
+  const db = await getDb();
+  const { error } = await db.from("companies").update({ b2b_products: parsed }).eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyBuyerTarget(
+  companyId: string,
+  target: CompanyBuyerTargetInput,
+  segments: CompanyBuyerSegmentsInput,
+): Promise<void> {
+  const parsedTarget = CompanyBuyerTargetSchema.parse(target);
+  const parsedSegments = CompanyBuyerSegmentsSchema.parse(segments);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ buyer_target: parsedTarget, buyer_segments: parsedSegments.buyerSegments })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanySupplierTarget(
+  companyId: string,
+  target: CompanySupplierTargetInput,
+  filters: CompanySupplierFiltersInput,
+): Promise<void> {
+  const parsedTarget = CompanySupplierTargetSchema.parse(target);
+  const parsedFilters = CompanySupplierFiltersSchema.parse(filters);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ supplier_target: parsedTarget, supplier_filters: parsedFilters.supplierFilters })
     .eq("id", companyId);
   if (error) throw error;
 }

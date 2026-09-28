@@ -18,6 +18,8 @@ import {
   getRealStateNamesForCountry,
   listCompanyAuditLog,
   logCompanyAudit,
+  updateCompanyB2BProducts,
+  updateCompanyBuyerTarget,
   updateCompanyCommercialTerms,
   updateCompanyCompliance,
   updateCompanyContractPrefs,
@@ -30,6 +32,7 @@ import {
   updateCompanyRfqPrefs,
   updateCompanyRiskReviewed,
   updateCompanyRole,
+  updateCompanySupplierTarget,
   updateCompanyTenderPrefs,
   updateCompanyTradeIntent,
 } from "@/lib/modules/company-config/adapter";
@@ -47,6 +50,11 @@ import {
   CompanyRfqPrefsSchema,
   CompanyTenderPrefsSchema,
   CompanyContractPrefsSchema,
+  CompanyB2BProductsSchema,
+  CompanyBuyerTargetSchema,
+  CompanyBuyerSegmentsSchema,
+  CompanySupplierTargetSchema,
+  CompanySupplierFiltersSchema,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -60,6 +68,11 @@ import {
   type CompanyRfqPrefsInput,
   type CompanyTenderPrefsInput,
   type CompanyContractPrefsInput,
+  type CompanyB2BProductsInput,
+  type CompanyBuyerTargetInput,
+  type CompanyBuyerSegmentsInput,
+  type CompanySupplierTargetInput,
+  type CompanySupplierFiltersInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -477,6 +490,82 @@ export async function saveCompanyContractPrefsAction(
     "Contract Interests",
     "Saved contract interest filters",
   );
+}
+
+export async function saveCompanyB2BProductsAction(
+  input: CompanyB2BProductsInput,
+): Promise<ActionResult> {
+  return saveWithSchema(
+    CompanyB2BProductsSchema,
+    input,
+    updateCompanyB2BProducts,
+    "Products & Services",
+    "Saved B2B products and sourcing needs",
+  );
+}
+
+export async function saveCompanyBuyerTargetAction(
+  target: CompanyBuyerTargetInput,
+  segments: CompanyBuyerSegmentsInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsedTarget = CompanyBuyerTargetSchema.safeParse(target);
+  const parsedSegments = CompanyBuyerSegmentsSchema.safeParse(segments);
+  if (!parsedTarget.success || !parsedSegments.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: (parsedTarget.error?.flatten().fieldErrors ?? {}) as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCompanyBuyerTarget(scope.companyId, parsedTarget.data, parsedSegments.data);
+    await logCompanyAudit(scope.companyId, "Target Buyers", "Saved buyer target profile");
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanySupplierTargetAction(
+  target: CompanySupplierTargetInput,
+  filters: CompanySupplierFiltersInput,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  const parsedTarget = CompanySupplierTargetSchema.safeParse(target);
+  const parsedFilters = CompanySupplierFiltersSchema.safeParse(filters);
+  if (!parsedTarget.success || !parsedFilters.success) {
+    return {
+      ok: false,
+      error: "Some fields need attention.",
+      fieldErrors: (parsedTarget.error?.flatten().fieldErrors ?? {}) as Record<string, string[]>,
+    };
+  }
+
+  try {
+    await updateCompanySupplierTarget(scope.companyId, parsedTarget.data, parsedFilters.data);
+    await logCompanyAudit(scope.companyId, "Target Suppliers", "Saved supplier target profile");
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
 }
 
 export async function listCompanyAuditLogAction(): Promise<

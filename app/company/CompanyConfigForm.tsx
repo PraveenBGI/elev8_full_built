@@ -60,12 +60,30 @@ import {
   CONTRACT_DURATIONS,
   DEFAULT_CONTRACT_PREFS,
   type CompanyContractPrefsInput,
+  BUDGET_BANDS,
+  DEFAULT_B2B_PRODUCTS,
+  type CompanyB2BProductsInput,
+  BUYER_TYPES,
+  COMPANY_SIZE_BANDS,
+  TYPICAL_CONTRACT_VALUES,
+  BUYER_SEGMENTS,
+  DEFAULT_BUYER_TARGET,
+  type CompanyBuyerTargetInput,
+  type CompanyBuyerSegmentsInput,
+  SUPPLIER_TYPES,
+  ESG_RATING_REQUIREMENTS,
+  SUPPLIER_FILTERS,
+  DEFAULT_SUPPLIER_TARGET,
+  type CompanySupplierTargetInput,
+  type CompanySupplierFiltersInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import {
   getRealStateNamesForCountryAction,
   listCompanyAuditLogAction,
+  saveCompanyB2BProductsAction,
+  saveCompanyBuyerTargetAction,
   saveCompanyCommercialTermsAction,
   saveCompanyComplianceAction,
   saveCompanyContractPrefsAction,
@@ -78,6 +96,7 @@ import {
   saveCompanyRfqPrefsAction,
   saveCompanyRiskReviewedAction,
   saveCompanyRoleAction,
+  saveCompanySupplierTargetAction,
   saveCompanyTenderPrefsAction,
   saveCompanyTradeIntentAction,
 } from "./actions";
@@ -2151,8 +2170,399 @@ function ContractPrefsSection({ company }: { company: CompanyRow }) {
   );
 }
 
+function B2BProductsSection({ company }: { company: CompanyRow }) {
+  const stored = company.b2b_products as Partial<CompanyB2BProductsInput>;
+  const [form, setForm] = useState<CompanyB2BProductsInput>({ ...DEFAULT_B2B_PRODUCTS, ...stored });
+  const [sellDraft, setSellDraft] = useState({ cat: "", name: "", hs: "", country: "", moq: "", cert: "", budget: "", timeline: "" });
+  const [sourceDraft, setSourceDraft] = useState({ cat: "", name: "", hs: "", price: "", lead: "", src: "", budget: "", timeline: "" });
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function addSell() {
+    if (!sellDraft.name.trim()) return;
+    setForm((f) => ({
+      ...f,
+      sell: [
+        ...f.sell,
+        {
+          ...sellDraft,
+          budget: (sellDraft.budget || null) as CompanyB2BProductsInput["sell"][number]["budget"],
+          timeline: (sellDraft.timeline || null) as CompanyB2BProductsInput["sell"][number]["timeline"],
+        },
+      ],
+    }));
+    setSellDraft({ cat: "", name: "", hs: "", country: "", moq: "", cert: "", budget: "", timeline: "" });
+  }
+
+  function addSource() {
+    if (!sourceDraft.name.trim()) return;
+    setForm((f) => ({
+      ...f,
+      source: [
+        ...f.source,
+        {
+          ...sourceDraft,
+          budget: (sourceDraft.budget || null) as CompanyB2BProductsInput["source"][number]["budget"],
+          timeline: (sourceDraft.timeline || null) as CompanyB2BProductsInput["source"][number]["timeline"],
+        },
+      ],
+    }));
+    setSourceDraft({ cat: "", name: "", hs: "", price: "", lead: "", src: "", budget: "", timeline: "" });
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyB2BProductsAction(form);
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Add what you sell and what you source for B2B trade. HS codes
+        enable precision matching. Budget and target timeline per item
+        tell gatewAI how aggressively to surface opportunities for it.
+      </p>
+
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+        Products &amp; services I supply
+      </label>
+      {form.sell.length > 0 && (
+        <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+          <table className="w-full text-left text-[12px]">
+            <thead>
+              <tr style={{ background: "var(--elev8-g50)" }}>
+                {["Category", "Product", "HS", "Country", "MOQ", "Certs", "Budget", "Timeline", ""].map((h) => (
+                  <th key={h} className="whitespace-nowrap px-2 py-1.5 font-medium" style={{ color: "var(--elev8-g600)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {form.sell.map((p, i) => (
+                <tr key={i} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-2 py-1.5">{p.cat}</td>
+                  <td className="px-2 py-1.5 font-semibold">{p.name}</td>
+                  <td className="px-2 py-1.5 font-mono">{p.hs}</td>
+                  <td className="px-2 py-1.5">{p.country}</td>
+                  <td className="px-2 py-1.5">{p.moq}</td>
+                  <td className="px-2 py-1.5">{p.cert}</td>
+                  <td className="px-2 py-1.5">{p.budget ?? "-"}</td>
+                  <td className="px-2 py-1.5">{p.timeline ?? "-"}</td>
+                  <td className="px-2 py-1.5">
+                    <button type="button" onClick={() => setForm((f) => ({ ...f, sell: f.sell.filter((_, idx) => idx !== i) }))} style={{ color: "var(--elev8-red)" }}>x</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <input className={inputClass} style={{ maxWidth: 110 }} placeholder="Category" value={sellDraft.cat} onChange={(e) => setSellDraft((d) => ({ ...d, cat: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 140 }} placeholder="Product" value={sellDraft.name} onChange={(e) => setSellDraft((d) => ({ ...d, name: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 90 }} placeholder="HS Code" value={sellDraft.hs} onChange={(e) => setSellDraft((d) => ({ ...d, hs: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 100 }} placeholder="Country" value={sellDraft.country} onChange={(e) => setSellDraft((d) => ({ ...d, country: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 80 }} placeholder="MOQ" value={sellDraft.moq} onChange={(e) => setSellDraft((d) => ({ ...d, moq: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 110 }} placeholder="Certs" value={sellDraft.cert} onChange={(e) => setSellDraft((d) => ({ ...d, cert: e.target.value }))} />
+        <select className={inputClass} style={{ maxWidth: 120 }} value={sellDraft.budget} onChange={(e) => setSellDraft((d) => ({ ...d, budget: e.target.value }))}>
+          <option value="">Budget...</option>
+          {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <select className={inputClass} style={{ maxWidth: 160 }} value={sellDraft.timeline} onChange={(e) => setSellDraft((d) => ({ ...d, timeline: e.target.value }))}>
+          <option value="">Timeline...</option>
+          {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <button type="button" onClick={addSell} className="rounded-md px-3 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>+ Add</button>
+      </div>
+
+      <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+        Products I want to buy
+      </label>
+      {form.source.length > 0 && (
+        <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
+          <table className="w-full text-left text-[12px]">
+            <thead>
+              <tr style={{ background: "var(--elev8-g50)" }}>
+                {["Category", "Product", "HS", "Price", "Lead time", "Source", "Budget", "Timeline", ""].map((h) => (
+                  <th key={h} className="whitespace-nowrap px-2 py-1.5 font-medium" style={{ color: "var(--elev8-g600)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {form.source.map((p, i) => (
+                <tr key={i} className="border-t" style={{ borderColor: "var(--elev8-g100)" }}>
+                  <td className="px-2 py-1.5">{p.cat}</td>
+                  <td className="px-2 py-1.5 font-semibold">{p.name}</td>
+                  <td className="px-2 py-1.5 font-mono">{p.hs}</td>
+                  <td className="px-2 py-1.5">{p.price}</td>
+                  <td className="px-2 py-1.5">{p.lead}</td>
+                  <td className="px-2 py-1.5">{p.src}</td>
+                  <td className="px-2 py-1.5">{p.budget ?? "-"}</td>
+                  <td className="px-2 py-1.5">{p.timeline ?? "-"}</td>
+                  <td className="px-2 py-1.5">
+                    <button type="button" onClick={() => setForm((f) => ({ ...f, source: f.source.filter((_, idx) => idx !== i) }))} style={{ color: "var(--elev8-red)" }}>x</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="mb-2 flex flex-wrap gap-2">
+        <input className={inputClass} style={{ maxWidth: 110 }} placeholder="Category" value={sourceDraft.cat} onChange={(e) => setSourceDraft((d) => ({ ...d, cat: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 140 }} placeholder="Product" value={sourceDraft.name} onChange={(e) => setSourceDraft((d) => ({ ...d, name: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 90 }} placeholder="HS Code" value={sourceDraft.hs} onChange={(e) => setSourceDraft((d) => ({ ...d, hs: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 100 }} placeholder="Target Price" value={sourceDraft.price} onChange={(e) => setSourceDraft((d) => ({ ...d, price: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 90 }} placeholder="Lead Time" value={sourceDraft.lead} onChange={(e) => setSourceDraft((d) => ({ ...d, lead: e.target.value }))} />
+        <input className={inputClass} style={{ maxWidth: 110 }} placeholder="Source" value={sourceDraft.src} onChange={(e) => setSourceDraft((d) => ({ ...d, src: e.target.value }))} />
+        <select className={inputClass} style={{ maxWidth: 120 }} value={sourceDraft.budget} onChange={(e) => setSourceDraft((d) => ({ ...d, budget: e.target.value }))}>
+          <option value="">Budget...</option>
+          {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <select className={inputClass} style={{ maxWidth: 160 }} value={sourceDraft.timeline} onChange={(e) => setSourceDraft((d) => ({ ...d, timeline: e.target.value }))}>
+          <option value="">Timeline...</option>
+          {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <button type="button" onClick={addSource} className="rounded-md px-3 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>+ Add</button>
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function TargetBuyersSection({ company }: { company: CompanyRow }) {
+  const storedTarget = company.buyer_target as Partial<CompanyBuyerTargetInput>;
+  const [target, setTarget] = useState<CompanyBuyerTargetInput>({ ...DEFAULT_BUYER_TARGET, ...storedTarget });
+  const [segments, setSegments] = useState<string[]>(company.buyer_segments);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyBuyerTargetAction(target, {
+        buyerSegments: segments as CompanyBuyerSegmentsInput["buyerSegments"],
+      });
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Build your ideal customer profile, gatewAI uses this to power
+        Buyer Discovery and match RFQs to the right accounts.
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Buyer country">
+          <input className={inputClass} placeholder="e.g. Saudi Arabia" value={target.country ?? ""} onChange={(e) => setTarget((t) => ({ ...t, country: e.target.value || null }))} />
+        </Field>
+        <Field label="Buyer type">
+          <select className={inputClass} value={target.type ?? ""} onChange={(e) => setTarget((t) => ({ ...t, type: (e.target.value || null) as CompanyBuyerTargetInput["type"] }))}>
+            <option value="">Choose...</option>
+            {BUYER_TYPES.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </Field>
+        <Field label="Industry / procurement interest">
+          <input className={inputClass} placeholder="e.g. Energy, Oil & Gas" value={target.industry ?? ""} onChange={(e) => setTarget((t) => ({ ...t, industry: e.target.value || null }))} />
+        </Field>
+        <Field label="Company size">
+          <select className={inputClass} value={target.size ?? ""} onChange={(e) => setTarget((t) => ({ ...t, size: (e.target.value || null) as CompanyBuyerTargetInput["size"] }))}>
+            <option value="">Choose...</option>
+            {COMPANY_SIZE_BANDS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </Field>
+        <Field label="Typical contract value">
+          <select className={inputClass} value={target.contractValue ?? ""} onChange={(e) => setTarget((t) => ({ ...t, contractValue: (e.target.value || null) as CompanyBuyerTargetInput["contractValue"] }))}>
+            <option value="">Choose...</option>
+            {TYPICAL_CONTRACT_VALUES.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </Field>
+        <Field label="Buyer acquisition budget">
+          <select className={inputClass} value={target.budget ?? ""} onChange={(e) => setTarget((t) => ({ ...t, budget: (e.target.value || null) as CompanyBuyerTargetInput["budget"] }))}>
+            <option value="">Choose...</option>
+            {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </Field>
+        <Field label="Target timeline to first deal">
+          <select className={inputClass} value={target.timeline ?? ""} onChange={(e) => setTarget((t) => ({ ...t, timeline: (e.target.value || null) as CompanyBuyerTargetInput["timeline"] }))}>
+            <option value="">Choose...</option>
+            {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      <div className="mt-4">
+        <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          Buyer segments
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {BUYER_SEGMENTS.map((s) => (
+            <Chip key={s} label={s} on={segments.includes(s)} onClick={() => setSegments((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])} />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function TargetSuppliersSection({ company }: { company: CompanyRow }) {
+  const storedTarget = company.supplier_target as Partial<CompanySupplierTargetInput>;
+  const [target, setTarget] = useState<CompanySupplierTargetInput>({ ...DEFAULT_SUPPLIER_TARGET, ...storedTarget });
+  const [filters, setFilters] = useState<string[]>(company.supplier_filters);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanySupplierTargetAction(target, {
+        supplierFilters: filters as CompanySupplierFiltersInput["supplierFilters"],
+      });
+      if (result.ok) {
+        setStatus("saved");
+        setStatusMessage("Saved");
+      } else {
+        setStatus("error");
+        setStatusMessage(result.error);
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>
+        Configure supplier qualification criteria, gatewAI uses this to
+        power Supplier Discovery and pre-qualify RFQ responses.
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Supplier type">
+          <select className={inputClass} value={target.type ?? ""} onChange={(e) => setTarget((t) => ({ ...t, type: (e.target.value || null) as CompanySupplierTargetInput["type"] }))}>
+            <option value="">Choose...</option>
+            {SUPPLIER_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </Field>
+        <Field label="Preferred countries">
+          <input className={inputClass} placeholder="e.g. China, India, Germany" value={target.countries ?? ""} onChange={(e) => setTarget((t) => ({ ...t, countries: e.target.value || null }))} />
+        </Field>
+        <Field label="Required certifications">
+          <input className={inputClass} placeholder="e.g. ISO 9001, ISO 14001, IEC" value={target.certs ?? ""} onChange={(e) => setTarget((t) => ({ ...t, certs: e.target.value || null }))} />
+        </Field>
+        <Field label="ESG rating requirement">
+          <select className={inputClass} value={target.esg ?? ""} onChange={(e) => setTarget((t) => ({ ...t, esg: (e.target.value || null) as CompanySupplierTargetInput["esg"] }))}>
+            <option value="">Choose...</option>
+            {ESG_RATING_REQUIREMENTS.map((e2) => <option key={e2} value={e2}>{e2}</option>)}
+          </select>
+        </Field>
+      </div>
+      <div className="mt-3">
+        <Field label="Capability requirements">
+          <textarea
+            className={inputClass}
+            style={{ minHeight: 70 }}
+            placeholder="Minimum production capacity, delivery capability, export experience..."
+            value={target.capability ?? ""}
+            onChange={(e) => setTarget((t) => ({ ...t, capability: e.target.value || null }))}
+          />
+        </Field>
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Supplier onboarding budget">
+          <select className={inputClass} value={target.budget ?? ""} onChange={(e) => setTarget((t) => ({ ...t, budget: (e.target.value || null) as CompanySupplierTargetInput["budget"] }))}>
+            <option value="">Choose...</option>
+            {BUDGET_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </Field>
+        <Field label="Target qualification timeline">
+          <select className={inputClass} value={target.timeline ?? ""} onChange={(e) => setTarget((t) => ({ ...t, timeline: (e.target.value || null) as CompanySupplierTargetInput["timeline"] }))}>
+            <option value="">Choose...</option>
+            {TIMELINE_HORIZONS.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      <div className="mt-4">
+        <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>
+          Supplier qualification filters
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {SUPPLIER_FILTERS.map((f) => (
+            <Chip key={f} label={f} on={filters.includes(f)} onClick={() => setFilters((prev) => prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f])} />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>
+            {statusMessage}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
 const UPCOMING_STEPS = [
-  "B2B Pillar (Products, Target Buyers/Suppliers)",
   "Import Pillar",
   "Export Pillar",
   "Investment Pillar",
@@ -2400,6 +2810,46 @@ export function CompanyConfigForm({
             >
               <ContractPrefsSection company={company} />
             </SettingsGroup>
+          </>
+        )}
+
+        {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("b2b") && (
+          <>
+            <SettingsGroup
+              title="B2B: Products & Services"
+              summary={
+                (company.b2b_products as { sell?: unknown[]; source?: unknown[] })?.sell?.length ||
+                (company.b2b_products as { sell?: unknown[]; source?: unknown[] })?.source?.length
+                  ? `${(company.b2b_products as { sell?: unknown[] }).sell?.length ?? 0} sell, ${(company.b2b_products as { source?: unknown[] }).source?.length ?? 0} source`
+                  : "Not set"
+              }
+              isComplete={Boolean(
+                (company.b2b_products as { sell?: unknown[]; source?: unknown[] })?.sell?.length ||
+                  (company.b2b_products as { sell?: unknown[]; source?: unknown[] })?.source?.length,
+              )}
+            >
+              <B2BProductsSection company={company} />
+            </SettingsGroup>
+
+            {company.sell_intents.length > 0 && (
+              <SettingsGroup
+                title="B2B: Target Buyers"
+                summary={company.buyer_segments.length > 0 ? `${company.buyer_segments.length} segments` : "Not set"}
+                isComplete={company.buyer_segments.length > 0}
+              >
+                <TargetBuyersSection company={company} />
+              </SettingsGroup>
+            )}
+
+            {company.buy_intents.length > 0 && (
+              <SettingsGroup
+                title="B2B: Target Suppliers"
+                summary={company.supplier_filters.length > 0 ? `${company.supplier_filters.length} filters` : "Not set"}
+                isComplete={company.supplier_filters.length > 0}
+              >
+                <TargetSuppliersSection company={company} />
+              </SettingsGroup>
+            )}
           </>
         )}
       </div>

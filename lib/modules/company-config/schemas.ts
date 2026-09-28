@@ -599,6 +599,153 @@ export const DEFAULT_CONTRACT_PREFS: CompanyContractPrefsInput = {
 };
 
 /**
+ * B2B Pillar, third of 8 per-pillar preference sub-groups. Three
+ * sub-pages: Products & Services, Target Buyers, Target Suppliers.
+ *
+ * Target Buyers is only shown when the company has at least one sell
+ * intent, Target Suppliers only with at least one buy intent --
+ * reproducing the mockup's own hideIf logic using this schema's real
+ * sellIntents/buyIntents fields (already captured by Trade Intent),
+ * not a separate flag.
+ *
+ * "Sample Matched Buyers"/"Sample Matched Suppliers" in the mockup are
+ * hardcoded illustrative rows, same principle as every other fake
+ * "live match" section skipped so far.
+ */
+export const BUDGET_BANDS = ["<$50K", "$50K-$250K", "$250K-$1M", "$1M-$5M", ">$5M"] as const;
+
+export const B2BSellItemSchema = z.object({
+  cat: z.string().trim(),
+  name: z.string().trim().min(1),
+  hs: z.string().trim(),
+  country: z.string().trim(),
+  moq: z.string().trim(),
+  cert: z.string().trim(),
+  budget: z.enum(BUDGET_BANDS).nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export const B2BSourceItemSchema = z.object({
+  cat: z.string().trim(),
+  name: z.string().trim().min(1),
+  hs: z.string().trim(),
+  price: z.string().trim(),
+  lead: z.string().trim(),
+  src: z.string().trim(),
+  budget: z.enum(BUDGET_BANDS).nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export const CompanyB2BProductsSchema = z.object({
+  sell: z.array(B2BSellItemSchema),
+  source: z.array(B2BSourceItemSchema),
+});
+
+export type CompanyB2BProductsInput = z.infer<typeof CompanyB2BProductsSchema>;
+
+export const DEFAULT_B2B_PRODUCTS: CompanyB2BProductsInput = { sell: [], source: [] };
+
+export const BUYER_TYPES = [
+  "Government / Public Sector",
+  "Operator",
+  "EPC Contractor",
+  "Distributor",
+  "Large Industrial Enterprise",
+] as const;
+
+export const COMPANY_SIZE_BANDS = ["Large Enterprise", "Mid-Market", "SME"] as const;
+
+export const TYPICAL_CONTRACT_VALUES = [
+  "USD 500K-5M",
+  "USD 50K-500K",
+  "USD 5M+",
+] as const;
+
+export const BUYER_SEGMENTS = [
+  "Government Buyers",
+  "Oil & Gas Operators",
+  "EPC Contractors",
+  "Renewable Energy Developers",
+  "Industrial Distributors",
+] as const;
+
+export const CompanyBuyerTargetSchema = z.object({
+  country: z.string().trim().nullable(),
+  type: z.enum(BUYER_TYPES).nullable(),
+  industry: z.string().trim().nullable(),
+  size: z.enum(COMPANY_SIZE_BANDS).nullable(),
+  contractValue: z.enum(TYPICAL_CONTRACT_VALUES).nullable(),
+  budget: z.enum(BUDGET_BANDS).nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export type CompanyBuyerTargetInput = z.infer<typeof CompanyBuyerTargetSchema>;
+
+export const DEFAULT_BUYER_TARGET: CompanyBuyerTargetInput = {
+  country: null,
+  type: null,
+  industry: null,
+  size: null,
+  contractValue: null,
+  budget: null,
+  timeline: null,
+};
+
+export const CompanyBuyerSegmentsSchema = z.object({
+  buyerSegments: z.array(z.enum(BUYER_SEGMENTS)),
+});
+
+export type CompanyBuyerSegmentsInput = z.infer<typeof CompanyBuyerSegmentsSchema>;
+
+export const SUPPLIER_TYPES = [
+  "Manufacturer",
+  "Distributor",
+  "Trading House",
+  "Service Provider",
+] as const;
+
+export const ESG_RATING_REQUIREMENTS = ["Not required", "Preferred", "Mandatory"] as const;
+
+export const SUPPLIER_FILTERS = [
+  "Manufacturer only",
+  "ISO 9001 certified",
+  "ISO 14001 certified",
+  "Local content compliant",
+  "ESG qualified",
+  "Minimum 5 years in business",
+  "Export capable",
+  "Financially verified",
+] as const;
+
+export const CompanySupplierTargetSchema = z.object({
+  type: z.enum(SUPPLIER_TYPES).nullable(),
+  countries: z.string().trim().nullable(),
+  certs: z.string().trim().nullable(),
+  esg: z.enum(ESG_RATING_REQUIREMENTS).nullable(),
+  capability: z.string().trim().nullable(),
+  budget: z.enum(BUDGET_BANDS).nullable(),
+  timeline: z.enum(TIMELINE_HORIZONS).nullable(),
+});
+
+export type CompanySupplierTargetInput = z.infer<typeof CompanySupplierTargetSchema>;
+
+export const DEFAULT_SUPPLIER_TARGET: CompanySupplierTargetInput = {
+  type: null,
+  countries: null,
+  certs: null,
+  esg: null,
+  capability: null,
+  budget: null,
+  timeline: null,
+};
+
+export const CompanySupplierFiltersSchema = z.object({
+  supplierFilters: z.array(z.enum(SUPPLIER_FILTERS)),
+});
+
+export type CompanySupplierFiltersInput = z.infer<typeof CompanySupplierFiltersSchema>;
+
+/**
  * Lightweight sector -> suggested certification map, ported verbatim
  * from the mockup. Used only as a one-click starting point on the
  * Compliance page -- the user can add/remove freely afterward. Sectors
