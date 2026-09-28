@@ -378,6 +378,25 @@ begin
   raise notice 'PASS: owner can save Investment Pillar preferences (Preferences, Landed Cost inputs, Corridor Comparison ack, Trade Finance)';
 end $$;
 
+-- Sustainability Pillar (seventh) and ICV Pillar (eighth, LAST) --
+-- both built from one shared shape, one jsonb column per pillar with
+-- each sub-page owning its own key within it.
+do $$
+declare v_sus jsonb; v_icv jsonb;
+begin
+  update companies
+  set sustainability_deep = '{"sustainability_prefs":["Green Products & Services"],"esg_ghg":["ESG Reporting","Scope 1 & 2 Emissions"],"green_cert":["Eco-labelled Products"],"priority":"high","esgMeasuresScope1":true,"esgMeasuresScope2":false,"esgMeasuresScope3":false}'::jsonb,
+      icv_deep = '{"icv_prefs":["Local Procurement"],"icv_local_content":["Local Supplier Sourcing"],"icv_workforce":["Omanisation / Local Employment"],"icv_certification":["ICV Certificate / Score"],"priority":"interested","icvScore":35,"icvLocalProcPct":40}'::jsonb
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select sustainability_deep into v_sus from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  select icv_deep into v_icv from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  if not (v_sus->'sustainability_prefs' ? 'Green Products & Services') or v_icv->>'icvScore' != '35' then
+    raise exception 'FAIL: owner could not save Sustainability/ICV pillar preferences, got % / %', v_sus, v_icv;
+  end if;
+  raise notice 'PASS: owner can save Sustainability Pillar and ICV Pillar preferences (all 7 sub-pages, the final two pillars)';
+end $$;
+
 -- Direct INSERT bypassing create_company() must be structurally
 -- impossible, not just discouraged -- a fresh row can never already be
 -- in company_users at INSERT-check time, so companies_member_rw's WITH

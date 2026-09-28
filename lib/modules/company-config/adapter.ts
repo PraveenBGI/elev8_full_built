@@ -38,6 +38,10 @@ import {
   CompanyInvestmentPrefsSchema,
   LandedCostInputsSchema,
   CompanyFinanceInstrumentsSchema,
+  CompanySustainabilityDeepSchema,
+  DEFAULT_SUSTAINABILITY_DEEP,
+  CompanyIcvDeepSchema,
+  DEFAULT_ICV_DEEP,
   type CompanyIdentityInput,
   type CompanyRoleInput,
   type CompanyTradeIntentInput,
@@ -67,6 +71,8 @@ import {
   type CompanyInvestmentPrefsInput,
   type LandedCostInputsInput,
   type CompanyFinanceInstrumentsInput,
+  type CompanySustainabilityDeepInput,
+  type CompanyIcvDeepInput,
 } from "./schemas";
 
 export type CompanyScope = {
@@ -177,10 +183,12 @@ export type CompanyRow = {
   landed_cost: Record<string, unknown>;
   corridor_compare_reviewed: boolean;
   finance_instruments: string[];
+  sustainability_deep: Record<string, unknown>;
+  icv_deep: Record<string, unknown>;
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters, import_products, import_corridors, import_logistics, import_countries, import_req, export_products, export_corridors, export_logistics, export_countries, export_tier, export_budget, export_timeline, investment_countries, investment_tier, investment_budget, investment_timeline, investment_req, landed_cost, corridor_compare_reviewed, finance_instruments";
+  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters, import_products, import_corridors, import_logistics, import_countries, import_req, export_products, export_corridors, export_logistics, export_countries, export_tier, export_budget, export_timeline, investment_countries, investment_tier, investment_budget, investment_timeline, investment_req, landed_cost, corridor_compare_reviewed, finance_instruments, sustainability_deep, icv_deep";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -599,6 +607,51 @@ export async function updateCompanyFinanceInstruments(
     .from("companies")
     .update({ finance_instruments: parsed.financeInstruments })
     .eq("id", companyId);
+  if (error) throw error;
+}
+
+/**
+ * Sustainability's 3 sub-pages and ICV's 4 sub-pages each write to just
+ * one key within their pillar's single shared jsonb blob (matching the
+ * mockup's own S.sustainabilityDeep/S.icvDeep) -- so each save is a
+ * read-merge-write against the current row rather than a plain update,
+ * reproducing the mockup's own per-page save functions without needing
+ * a separate column per sub-page.
+ */
+export async function updateCompanySustainabilityDeep(
+  companyId: string,
+  patch: Partial<CompanySustainabilityDeepInput>,
+): Promise<void> {
+  const current = await getCompanyById(companyId);
+  if (!current) throw new Error("Company not found.");
+  const merged = {
+    ...DEFAULT_SUSTAINABILITY_DEEP,
+    ...(current.sustainability_deep as Partial<CompanySustainabilityDeepInput>),
+    ...patch,
+  };
+  const parsed = CompanySustainabilityDeepSchema.parse(merged);
+  const db = await getDb();
+  const { error } = await db
+    .from("companies")
+    .update({ sustainability_deep: parsed })
+    .eq("id", companyId);
+  if (error) throw error;
+}
+
+export async function updateCompanyIcvDeep(
+  companyId: string,
+  patch: Partial<CompanyIcvDeepInput>,
+): Promise<void> {
+  const current = await getCompanyById(companyId);
+  if (!current) throw new Error("Company not found.");
+  const merged = {
+    ...DEFAULT_ICV_DEEP,
+    ...(current.icv_deep as Partial<CompanyIcvDeepInput>),
+    ...patch,
+  };
+  const parsed = CompanyIcvDeepSchema.parse(merged);
+  const db = await getDb();
+  const { error } = await db.from("companies").update({ icv_deep: parsed }).eq("id", companyId);
   if (error) throw error;
 }
 

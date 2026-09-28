@@ -69,6 +69,16 @@ import {
   type CompanyInvestmentPrefsInput,
   DEFAULT_INVESTMENT_REQ,
   CompanyFinanceInstrumentsSchema,
+  CompanySustainabilityDeepSchema,
+  type CompanySustainabilityDeepInput,
+  DEFAULT_SUSTAINABILITY_DEEP,
+  CompanyIcvDeepSchema,
+  type CompanyIcvDeepInput,
+  DEFAULT_ICV_DEEP,
+  SUS_ICV_PRIORITY_LEVELS,
+  SUS_ICV_PRIORITY_LABELS,
+  SUSTAINABILITY_ITEMS,
+  ICV_DEEP_ITEMS,
 } from "@/lib/modules/company-config/schemas";
 
 describe("CompanyIdentitySchema", () => {
@@ -864,5 +874,73 @@ describe("CompanyFinanceInstrumentsSchema", () => {
       financeInstruments: ["Crypto Escrow"],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanySustainabilityDeepSchema", () => {
+  it("accepts a complete, valid payload across all 3 sub-pages", () => {
+    const valid: CompanySustainabilityDeepInput = {
+      sustainability_prefs: ["Green Products & Services"],
+      esg_ghg: ["ESG Reporting", "Scope 1 & 2 Emissions"],
+      green_cert: ["Eco-labelled Products"],
+      priority: "high",
+      esgMeasuresScope1: true,
+      esgMeasuresScope2: false,
+      esgMeasuresScope3: false,
+    };
+    expect(CompanySustainabilityDeepSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-empty default", () => {
+    expect(CompanySustainabilityDeepSchema.safeParse(DEFAULT_SUSTAINABILITY_DEEP).success).toBe(true);
+  });
+
+  it("rejects an invalid priority value", () => {
+    const result = CompanySustainabilityDeepSchema.safeParse({
+      ...DEFAULT_SUSTAINABILITY_DEEP,
+      priority: "urgent",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("CompanyIcvDeepSchema", () => {
+  it("accepts a complete, valid payload across all 4 sub-pages", () => {
+    const valid: CompanyIcvDeepInput = {
+      icv_prefs: ["Local Procurement"],
+      icv_local_content: ["Local Supplier Sourcing"],
+      icv_workforce: ["Omanisation / Local Employment"],
+      icv_certification: ["ICV Certificate / Score"],
+      priority: "interested",
+      icvScore: 35,
+      icvLocalProcPct: 40,
+    };
+    expect(CompanyIcvDeepSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts the all-empty/null default", () => {
+    expect(CompanyIcvDeepSchema.safeParse(DEFAULT_ICV_DEEP).success).toBe(true);
+  });
+
+  it("rejects an ICV score outside 0-100", () => {
+    const result = CompanyIcvDeepSchema.safeParse({ ...DEFAULT_ICV_DEEP, icvScore: 150 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a local procurement percentage outside 0-100", () => {
+    const result = CompanyIcvDeepSchema.safeParse({ ...DEFAULT_ICV_DEEP, icvLocalProcPct: -5 });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("Sustainability/ICV shared architecture", () => {
+  it("both pillars share the exact same priority enum and labels, confirming one shared shape, not two coincidentally similar ones", () => {
+    expect(SUS_ICV_PRIORITY_LEVELS).toEqual(["high", "interested", "not_now"]);
+    expect(Object.keys(SUS_ICV_PRIORITY_LABELS).sort()).toEqual([...SUS_ICV_PRIORITY_LEVELS].sort());
+  });
+
+  it("Sustainability has exactly 3 item groups and ICV has exactly 4, matching the mockup's own step counts", () => {
+    expect(Object.keys(SUSTAINABILITY_ITEMS)).toHaveLength(3);
+    expect(Object.keys(ICV_DEEP_ITEMS)).toHaveLength(4);
   });
 });

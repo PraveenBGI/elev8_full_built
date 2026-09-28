@@ -1035,6 +1035,123 @@ export const CompanyFinanceInstrumentsSchema = z.object({
 export type CompanyFinanceInstrumentsInput = z.infer<typeof CompanyFinanceInstrumentsSchema>;
 
 /**
+ * Sustainability Pillar (seventh) and ICV Pillar (eighth, LAST) --
+ * built from one shared shape, confirmed identical in the mockup's own
+ * source: a single reusable renderer (renderPillarSubPage) and a
+ * single shared save/validate function (saveDeepPillarStep) power all
+ * 7 sub-pages across both pillars. Only the last sub-page of each
+ * pillar carries a priority selector -- a single value per pillar, not
+ * per sub-page, matching the mockup's own state.priority living once on
+ * the whole deep object.
+ */
+export const SUS_ICV_PRIORITY_LEVELS = ["high", "interested", "not_now"] as const;
+export const SUS_ICV_PRIORITY_LABELS: Record<string, string> = {
+  high: "High Priority",
+  interested: "Interested",
+  not_now: "Not Now",
+};
+
+export const SUSTAINABILITY_ITEMS = {
+  sustainability_prefs: [
+    "Sustainable Procurement",
+    "Green Products & Services",
+    "Sustainable Suppliers",
+    "Circular Economy",
+    "Renewable & Clean Technology",
+    "Low-Carbon Trade",
+  ],
+  esg_ghg: [
+    "ESG Reporting",
+    "GHG Emission Measurement",
+    "Scope 1 & 2 Emissions",
+    "Scope 3 / Supply Chain Emissions",
+    "Carbon Reduction & Net Zero",
+  ],
+  green_cert: [
+    "Eco-labelled Products",
+    "Environmental Product Declaration (EPD)",
+    "Product Carbon Footprint",
+    "Energy Efficiency",
+    "Recycled / Circular Products",
+    "Other Green Certifications",
+  ],
+} as const;
+
+export const CompanySustainabilityDeepSchema = z.object({
+  sustainability_prefs: z.array(z.string()),
+  esg_ghg: z.array(z.string()),
+  green_cert: z.array(z.string()),
+  priority: z.enum(SUS_ICV_PRIORITY_LEVELS).nullable(),
+  esgMeasuresScope1: z.boolean(),
+  esgMeasuresScope2: z.boolean(),
+  esgMeasuresScope3: z.boolean(),
+});
+
+export type CompanySustainabilityDeepInput = z.infer<typeof CompanySustainabilityDeepSchema>;
+
+export const DEFAULT_SUSTAINABILITY_DEEP: CompanySustainabilityDeepInput = {
+  sustainability_prefs: [],
+  esg_ghg: [],
+  green_cert: [],
+  priority: null,
+  esgMeasuresScope1: false,
+  esgMeasuresScope2: false,
+  esgMeasuresScope3: false,
+};
+
+export const ICV_DEEP_ITEMS = {
+  icv_prefs: [
+    "Local Procurement",
+    "Local Products & Services",
+    "Local Suppliers",
+    "SME Development",
+    "Local Manufacturing",
+    "Local Investment",
+  ],
+  icv_local_content: [
+    "Local Supplier Sourcing",
+    "Local Product Sourcing",
+    "Local Service Providers",
+    "ICV-focused RFQs & Tenders",
+    "Local Supply Chain Development",
+  ],
+  icv_workforce: [
+    "Omanisation / Local Employment",
+    "Local Skills Development",
+    "Training & Capability Building",
+    "Knowledge & Technology Transfer",
+  ],
+  icv_certification: [
+    "Interested in ICV-certified Companies",
+    "Interested in ICV-certified Suppliers",
+    "ICV Certificate / Score",
+    "ICV Compliance",
+  ],
+} as const;
+
+export const CompanyIcvDeepSchema = z.object({
+  icv_prefs: z.array(z.string()),
+  icv_local_content: z.array(z.string()),
+  icv_workforce: z.array(z.string()),
+  icv_certification: z.array(z.string()),
+  priority: z.enum(SUS_ICV_PRIORITY_LEVELS).nullable(),
+  icvScore: z.coerce.number().min(0).max(100).nullable(),
+  icvLocalProcPct: z.coerce.number().min(0).max(100).nullable(),
+});
+
+export type CompanyIcvDeepInput = z.infer<typeof CompanyIcvDeepSchema>;
+
+export const DEFAULT_ICV_DEEP: CompanyIcvDeepInput = {
+  icv_prefs: [],
+  icv_local_content: [],
+  icv_workforce: [],
+  icv_certification: [],
+  priority: null,
+  icvScore: null,
+  icvLocalProcPct: null,
+};
+
+/**
  * Lightweight sector -> suggested certification map, ported verbatim
  * from the mockup. Used only as a one-click starting point on the
  * Compliance page -- the user can add/remove freely afterward. Sectors

@@ -33,6 +33,7 @@ import {
   updateCompanyFinanceInstruments,
   updateCompanyGeography,
   updateCompanyGoals,
+  updateCompanyIcvDeep,
   updateCompanyIdentity,
   updateCompanyImportCorridors,
   updateCompanyImportLogistics,
@@ -46,6 +47,7 @@ import {
   updateCompanyRiskReviewed,
   updateCompanyRole,
   updateCompanySupplierTarget,
+  updateCompanySustainabilityDeep,
   updateCompanyTenderPrefs,
   updateCompanyTradeIntent,
 } from "@/lib/modules/company-config/adapter";
@@ -108,6 +110,8 @@ import {
   type CompanyInvestmentPrefsInput,
   type LandedCostInputsInput,
   type CompanyFinanceInstrumentsInput,
+  type CompanySustainabilityDeepInput,
+  type CompanyIcvDeepInput,
 } from "@/lib/modules/company-config/schemas";
 
 export type ActionResult =
@@ -756,6 +760,55 @@ export async function saveCompanyFinanceInstrumentsAction(
     "Trade Finance",
     "Saved financing instrument preferences",
   );
+}
+
+/**
+ * One shared action per pillar rather than 7 near-identical ones --
+ * each sub-page passes just its own field's patch, matching the
+ * mockup's own shared saveDeepPillarStep() covering all 7 sub-pages.
+ */
+export async function saveCompanySustainabilityDeepAction(
+  patch: Partial<CompanySustainabilityDeepInput>,
+  auditLabel: string,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await updateCompanySustainabilityDeep(scope.companyId, patch);
+    await logCompanyAudit(scope.companyId, auditLabel, `Saved ${auditLabel.toLowerCase()} interests`);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
+}
+
+export async function saveCompanyIcvDeepAction(
+  patch: Partial<CompanyIcvDeepInput>,
+  auditLabel: string,
+): Promise<ActionResult> {
+  let scope;
+  try {
+    scope = await requireCompanyScope();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Not authorized." };
+  }
+
+  try {
+    await updateCompanyIcvDeep(scope.companyId, patch);
+    await logCompanyAudit(scope.companyId, auditLabel, `Saved ${auditLabel.toLowerCase()} interests`);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Save failed." };
+  }
+
+  revalidatePath("/company");
+  return { ok: true };
 }
 
 /**

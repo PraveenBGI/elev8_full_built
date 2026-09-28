@@ -103,6 +103,12 @@ import {
   computeLandedCost,
   FINANCE_INSTRUMENTS,
   type CompanyFinanceInstrumentsInput,
+  SUS_ICV_PRIORITY_LEVELS,
+  SUS_ICV_PRIORITY_LABELS,
+  SUSTAINABILITY_ITEMS,
+  type CompanySustainabilityDeepInput,
+  ICV_DEEP_ITEMS,
+  type CompanyIcvDeepInput,
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
@@ -123,6 +129,7 @@ import {
   saveCompanyFinanceInstrumentsAction,
   saveCompanyGeographyAction,
   saveCompanyGoalsAction,
+  saveCompanyIcvDeepAction,
   saveCompanyIdentityAction,
   saveCompanyImportCorridorsAction,
   saveCompanyImportLogisticsAction,
@@ -136,6 +143,7 @@ import {
   saveCompanyRiskReviewedAction,
   saveCompanyRoleAction,
   saveCompanySupplierTargetAction,
+  saveCompanySustainabilityDeepAction,
   saveCompanyTenderPrefsAction,
   saveCompanyTradeIntentAction,
 } from "./actions";
@@ -3869,7 +3877,348 @@ function TradeFinanceSection({ company }: { company: CompanyRow }) {
   );
 }
 
-const UPCOMING_STEPS = ["Sustainability Pillar", "ICV Pillar"];
+function PriorityPicker({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
+  return (
+    <div className="mt-5 rounded-md border p-3" style={{ borderColor: "var(--elev8-g200)" }}>
+      <p className="mb-1 text-[13px] font-semibold" style={{ color: "var(--elev8-ink)" }}>Preference</p>
+      <p className="mb-2 text-[12px]" style={{ color: "var(--elev8-g500)" }}>
+        How important is this to your trade strategy overall?
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {SUS_ICV_PRIORITY_LEVELS.map((p) => (
+          <Chip key={p} label={SUS_ICV_PRIORITY_LABELS[p]} on={value === p} onClick={() => onChange(p)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DeepChecklistBody({
+  description,
+  items,
+  selected,
+  onToggle,
+  showPriority,
+  priority,
+  onPriorityChange,
+  extraContent,
+  onSave,
+  isPending,
+  status,
+  statusMessage,
+}: {
+  description: string;
+  items: readonly string[];
+  selected: string[];
+  onToggle: (item: string) => void;
+  showPriority: boolean;
+  priority: string | null;
+  onPriorityChange: (v: string) => void;
+  extraContent?: React.ReactNode;
+  onSave: () => void;
+  isPending: boolean;
+  status: "idle" | "saved" | "error";
+  statusMessage: string | null;
+}) {
+  return (
+    <div>
+      <p className="mb-4 text-[13px]" style={{ color: "var(--elev8-g500)" }}>{description}</p>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <Chip key={item} label={item} on={selected.includes(item)} onClick={() => onToggle(item)} />
+        ))}
+      </div>
+      {extraContent}
+      {showPriority && <PriorityPicker value={priority} onChange={onPriorityChange} />}
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={isPending}
+          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--elev8-blue)" }}
+        >
+          {isPending ? "Saving..." : "Save"}
+        </button>
+        {statusMessage && (
+          <p className="text-sm" style={{ color: status === "saved" ? "var(--elev8-green-dk)" : "var(--elev8-red)" }}>{statusMessage}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SustainabilityPrefsSection({ company }: { company: CompanyRow }) {
+  const stored = company.sustainability_deep as Partial<CompanySustainabilityDeepInput>;
+  const [selected, setSelected] = useState<string[]>(stored.sustainability_prefs ?? []);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanySustainabilityDeepAction({ sustainability_prefs: selected }, "Sustainability Preferences");
+      if (result.ok) { setStatus("saved"); setStatusMessage("Saved"); } else { setStatus("error"); setStatusMessage(result.error); }
+    });
+  }
+
+  return (
+    <DeepChecklistBody
+      description="Tell us your sustainability interests to personalize green trade opportunities, suppliers, products and insights."
+      items={SUSTAINABILITY_ITEMS.sustainability_prefs}
+      selected={selected}
+      onToggle={(item) => setSelected((prev) => prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item])}
+      showPriority={false}
+      priority={null}
+      onPriorityChange={() => {}}
+      onSave={handleSave}
+      isPending={isPending}
+      status={status}
+      statusMessage={statusMessage}
+    />
+  );
+}
+
+function EsgGhgSection({ company }: { company: CompanyRow }) {
+  const stored = company.sustainability_deep as Partial<CompanySustainabilityDeepInput>;
+  const [selected, setSelected] = useState<string[]>(stored.esg_ghg ?? []);
+  const [scope1, setScope1] = useState(stored.esgMeasuresScope1 ?? false);
+  const [scope2, setScope2] = useState(stored.esgMeasuresScope2 ?? false);
+  const [scope3, setScope3] = useState(stored.esgMeasuresScope3 ?? false);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanySustainabilityDeepAction(
+        { esg_ghg: selected, esgMeasuresScope1: scope1, esgMeasuresScope2: scope2, esgMeasuresScope3: scope3 },
+        "ESG Reporting & GHG Emission",
+      );
+      if (result.ok) { setStatus("saved"); setStatusMessage("Saved"); } else { setStatus("error"); setStatusMessage(result.error); }
+    });
+  }
+
+  return (
+    <DeepChecklistBody
+      description="ESG reporting scope and greenhouse-gas emission tracking you want reflected in your matches and alerts."
+      items={SUSTAINABILITY_ITEMS.esg_ghg}
+      selected={selected}
+      onToggle={(item) => setSelected((prev) => prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item])}
+      showPriority={false}
+      priority={null}
+      onPriorityChange={() => {}}
+      extraContent={
+        <div className="mt-4 rounded-md border p-3" style={{ borderColor: "var(--elev8-g200)" }}>
+          <p className="text-[13px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
+            Your current measurement status <span className="font-normal text-[11px]" style={{ color: "var(--elev8-g500)" }}>(optional, sharpens your ESG readiness score)</span>
+          </p>
+          <p className="mb-2 text-[12px]" style={{ color: "var(--elev8-g500)" }}>What you already track today, distinct from what you&apos;d like matched above.</p>
+          <div className="flex flex-wrap gap-2">
+            <Chip label="We measure Scope 1 (direct emissions)" on={scope1} onClick={() => setScope1((v) => !v)} />
+            <Chip label="We measure Scope 2 (energy indirect)" on={scope2} onClick={() => setScope2((v) => !v)} />
+            <Chip label="We measure Scope 3 (value chain)" on={scope3} onClick={() => setScope3((v) => !v)} />
+          </div>
+        </div>
+      }
+      onSave={handleSave}
+      isPending={isPending}
+      status={status}
+      statusMessage={statusMessage}
+    />
+  );
+}
+
+function GreenCertSection({ company }: { company: CompanyRow }) {
+  const stored = company.sustainability_deep as Partial<CompanySustainabilityDeepInput>;
+  const [selected, setSelected] = useState<string[]>(stored.green_cert ?? []);
+  const [priority, setPriority] = useState<string | null>(stored.priority ?? null);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanySustainabilityDeepAction(
+        { green_cert: selected, priority: priority as CompanySustainabilityDeepInput["priority"] },
+        "Green Product Certification",
+      );
+      if (result.ok) { setStatus("saved"); setStatusMessage("Saved"); } else { setStatus("error"); setStatusMessage(result.error); }
+    });
+  }
+
+  return (
+    <DeepChecklistBody
+      description="Eco-labels, EPDs and other green certifications you look for in products, suppliers and trade opportunities."
+      items={SUSTAINABILITY_ITEMS.green_cert}
+      selected={selected}
+      onToggle={(item) => setSelected((prev) => prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item])}
+      showPriority
+      priority={priority}
+      onPriorityChange={setPriority}
+      onSave={handleSave}
+      isPending={isPending}
+      status={status}
+      statusMessage={statusMessage}
+    />
+  );
+}
+
+function IcvPrefsSection({ company }: { company: CompanyRow }) {
+  const stored = company.icv_deep as Partial<CompanyIcvDeepInput>;
+  const [selected, setSelected] = useState<string[]>(stored.icv_prefs ?? []);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyIcvDeepAction({ icv_prefs: selected }, "ICV Preferences");
+      if (result.ok) { setStatus("saved"); setStatusMessage("Saved"); } else { setStatus("error"); setStatusMessage(result.error); }
+    });
+  }
+
+  return (
+    <DeepChecklistBody
+      description="Tell us your In-Country Value interests to personalize local suppliers, products, procurement opportunities and trade recommendations."
+      items={ICV_DEEP_ITEMS.icv_prefs}
+      selected={selected}
+      onToggle={(item) => setSelected((prev) => prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item])}
+      showPriority={false}
+      priority={null}
+      onPriorityChange={() => {}}
+      onSave={handleSave}
+      isPending={isPending}
+      status={status}
+      statusMessage={statusMessage}
+    />
+  );
+}
+
+function IcvLocalContentSection({ company }: { company: CompanyRow }) {
+  const stored = company.icv_deep as Partial<CompanyIcvDeepInput>;
+  const [selected, setSelected] = useState<string[]>(stored.icv_local_content ?? []);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyIcvDeepAction({ icv_local_content: selected }, "Local Content & Procurement");
+      if (result.ok) { setStatus("saved"); setStatusMessage("Saved"); } else { setStatus("error"); setStatusMessage(result.error); }
+    });
+  }
+
+  return (
+    <DeepChecklistBody
+      description="Local sourcing, local supplier development and ICV-focused procurement opportunities you want surfaced."
+      items={ICV_DEEP_ITEMS.icv_local_content}
+      selected={selected}
+      onToggle={(item) => setSelected((prev) => prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item])}
+      showPriority={false}
+      priority={null}
+      onPriorityChange={() => {}}
+      onSave={handleSave}
+      isPending={isPending}
+      status={status}
+      statusMessage={statusMessage}
+    />
+  );
+}
+
+function IcvWorkforceSection({ company }: { company: CompanyRow }) {
+  const stored = company.icv_deep as Partial<CompanyIcvDeepInput>;
+  const [selected, setSelected] = useState<string[]>(stored.icv_workforce ?? []);
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyIcvDeepAction({ icv_workforce: selected }, "Workforce & Capability");
+      if (result.ok) { setStatus("saved"); setStatusMessage("Saved"); } else { setStatus("error"); setStatusMessage(result.error); }
+    });
+  }
+
+  return (
+    <DeepChecklistBody
+      description="Omanisation/local employment, local skills development and knowledge & technology transfer priorities."
+      items={ICV_DEEP_ITEMS.icv_workforce}
+      selected={selected}
+      onToggle={(item) => setSelected((prev) => prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item])}
+      showPriority={false}
+      priority={null}
+      onPriorityChange={() => {}}
+      onSave={handleSave}
+      isPending={isPending}
+      status={status}
+      statusMessage={statusMessage}
+    />
+  );
+}
+
+function IcvCertificationSection({ company }: { company: CompanyRow }) {
+  const stored = company.icv_deep as Partial<CompanyIcvDeepInput>;
+  const [selected, setSelected] = useState<string[]>(stored.icv_certification ?? []);
+  const [priority, setPriority] = useState<string | null>(stored.priority ?? null);
+  const [score, setScore] = useState(stored.icvScore != null ? String(stored.icvScore) : "");
+  const [localProc, setLocalProc] = useState(stored.icvLocalProcPct != null ? String(stored.icvLocalProcPct) : "");
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    setStatus("idle");
+    startTransition(async () => {
+      const result = await saveCompanyIcvDeepAction(
+        {
+          icv_certification: selected,
+          priority: priority as CompanyIcvDeepInput["priority"],
+          icvScore: score ? Number(score) : null,
+          icvLocalProcPct: localProc ? Number(localProc) : null,
+        },
+        "ICV Certification",
+      );
+      if (result.ok) { setStatus("saved"); setStatusMessage("Saved"); } else { setStatus("error"); setStatusMessage(result.error); }
+    });
+  }
+
+  return (
+    <DeepChecklistBody
+      description="ICV-certified companies and suppliers, ICV certificate/score and compliance requirements you want tracked."
+      items={ICV_DEEP_ITEMS.icv_certification}
+      selected={selected}
+      onToggle={(item) => setSelected((prev) => prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item])}
+      showPriority
+      priority={priority}
+      onPriorityChange={setPriority}
+      extraContent={
+        <div className="mt-4 rounded-md border p-3" style={{ borderColor: "var(--elev8-g200)" }}>
+          <p className="text-[13px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
+            Your current ICV baseline <span className="font-normal text-[11px]" style={{ color: "var(--elev8-g500)" }}>(optional, sharpens gap analysis)</span>
+          </p>
+          <p className="mb-2 text-[12px]" style={{ color: "var(--elev8-g500)" }}>Where you stand today, so gatewAI can measure improvement and flag gaps ahead of audits.</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Current ICV score"><input className={inputClass} type="number" min={0} max={100} placeholder="e.g. 35" value={score} onChange={(e) => setScore(e.target.value)} /></Field>
+            <Field label="Local procurement %"><input className={inputClass} type="number" min={0} max={100} placeholder="e.g. 40" value={localProc} onChange={(e) => setLocalProc(e.target.value)} /></Field>
+          </div>
+        </div>
+      }
+      onSave={handleSave}
+      isPending={isPending}
+      status={status}
+      statusMessage={statusMessage}
+    />
+  );
+}
+
+
 
 export function CompanyConfigForm({
   company,
@@ -4273,19 +4622,110 @@ export function CompanyConfigForm({
             </SettingsGroup>
           </>
         )}
+
+        {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("sustainability") && (
+          <>
+            <SettingsGroup
+              title="Sustainability: Preferences"
+              summary={
+                (company.sustainability_deep as { sustainability_prefs?: string[] })?.sustainability_prefs?.length
+                  ? `${(company.sustainability_deep as { sustainability_prefs?: string[] }).sustainability_prefs!.length} interests`
+                  : "Not set"
+              }
+              isComplete={Boolean((company.sustainability_deep as { sustainability_prefs?: string[] })?.sustainability_prefs?.length)}
+            >
+              <SustainabilityPrefsSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Sustainability: ESG Reporting & GHG Emission"
+              summary={
+                (company.sustainability_deep as { esg_ghg?: string[] })?.esg_ghg?.length
+                  ? `${(company.sustainability_deep as { esg_ghg?: string[] }).esg_ghg!.length} selected`
+                  : "Not set"
+              }
+              isComplete={Boolean((company.sustainability_deep as { esg_ghg?: string[] })?.esg_ghg?.length)}
+            >
+              <EsgGhgSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="Sustainability: Green Product Certification"
+              summary={
+                (company.sustainability_deep as { priority?: string })?.priority
+                  ? SUS_ICV_PRIORITY_LABELS[(company.sustainability_deep as { priority?: string }).priority!]
+                  : "Not set"
+              }
+              isComplete={Boolean((company.sustainability_deep as { priority?: string })?.priority)}
+            >
+              <GreenCertSection company={company} />
+            </SettingsGroup>
+          </>
+        )}
+
+        {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("icv") && (
+          <>
+            <SettingsGroup
+              title="ICV: Preferences"
+              summary={
+                (company.icv_deep as { icv_prefs?: string[] })?.icv_prefs?.length
+                  ? `${(company.icv_deep as { icv_prefs?: string[] }).icv_prefs!.length} interests`
+                  : "Not set"
+              }
+              isComplete={Boolean((company.icv_deep as { icv_prefs?: string[] })?.icv_prefs?.length)}
+            >
+              <IcvPrefsSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="ICV: Local Content & Procurement"
+              summary={
+                (company.icv_deep as { icv_local_content?: string[] })?.icv_local_content?.length
+                  ? `${(company.icv_deep as { icv_local_content?: string[] }).icv_local_content!.length} selected`
+                  : "Not set"
+              }
+              isComplete={Boolean((company.icv_deep as { icv_local_content?: string[] })?.icv_local_content?.length)}
+            >
+              <IcvLocalContentSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="ICV: Workforce & Capability"
+              summary={
+                (company.icv_deep as { icv_workforce?: string[] })?.icv_workforce?.length
+                  ? `${(company.icv_deep as { icv_workforce?: string[] }).icv_workforce!.length} selected`
+                  : "Not set"
+              }
+              isComplete={Boolean((company.icv_deep as { icv_workforce?: string[] })?.icv_workforce?.length)}
+            >
+              <IcvWorkforceSection company={company} />
+            </SettingsGroup>
+
+            <SettingsGroup
+              title="ICV: Certification"
+              summary={
+                (company.icv_deep as { priority?: string })?.priority
+                  ? SUS_ICV_PRIORITY_LABELS[(company.icv_deep as { priority?: string }).priority!]
+                  : "Not set"
+              }
+              isComplete={Boolean((company.icv_deep as { priority?: string })?.priority)}
+            >
+              <IcvCertificationSection company={company} />
+            </SettingsGroup>
+          </>
+        )}
       </div>
 
-      <div className="mt-10">
-        <h2 className="text-[13px] font-semibold" style={{ color: "var(--elev8-g600)" }}>
-          Coming next in Enterprise Configuration
+      <div className="mt-10 rounded-lg border p-4" style={{ borderColor: "#CDEFDA", background: "#E9F8EF" }}>
+        <h2 className="text-[13px] font-semibold" style={{ color: "#00874A" }}>
+          All 8 pillars are now available
         </h2>
-        <ul className="mt-2 space-y-1.5">
-          {UPCOMING_STEPS.map((s) => (
-            <li key={s} className="text-[13px]" style={{ color: "var(--elev8-g500)" }}>
-              {s}
-            </li>
-          ))}
-        </ul>
+        <p className="mt-1 text-[13px]" style={{ color: "var(--elev8-g600)" }}>
+          Governance, Procurement, B2B, Import, Export, Investment,
+          Sustainability and ICV all have their own preference
+          sub-groups built. Whichever you selected in Pillar Selection
+          above will show their sections here.
+        </p>
       </div>
     </div>
   );
