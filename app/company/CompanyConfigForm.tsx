@@ -112,6 +112,7 @@ import {
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
+import { Tag } from "@/components/ui";
 import {
   getRealStateNamesForCountryAction,
   listCompanyAuditLogAction,
@@ -905,20 +906,7 @@ function CorridorFreeTextStates({
       {selected.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {selected.map((s, i) => (
-            <span
-              key={`${s}-${i}`}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]"
-              style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}
-            >
-              {s}
-              <button
-                type="button"
-                onClick={() => onChange(selected.filter((_, idx) => idx !== i))}
-                className="opacity-70 hover:opacity-100"
-              >
-                x
-              </button>
-            </span>
+            <Tag key={`${s}-${i}`} label={s} onRemove={() => onChange(selected.filter((_, idx) => idx !== i))} />
           ))}
         </div>
       )}
@@ -2891,10 +2879,7 @@ function ImportLogisticsSection({ company }: { company: CompanyRow }) {
       {form.ports.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {form.ports.map((p) => (
-            <span key={p} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]" style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}>
-              {p}
-              <button type="button" onClick={() => setForm((f) => ({ ...f, ports: f.ports.filter((x) => x !== p) }))} className="opacity-70 hover:opacity-100">x</button>
-            </span>
+            <Tag key={p} label={p} onRemove={() => setForm((f) => ({ ...f, ports: f.ports.filter((x) => x !== p) }))} />
           ))}
         </div>
       )}
@@ -2984,10 +2969,7 @@ function ImportPrefsSection({ company }: { company: CompanyRow }) {
       {countries.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {countries.map((c) => (
-            <span key={c} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]" style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}>
-              {c}
-              <button type="button" onClick={() => setCountries((prev) => prev.filter((x) => x !== c))} className="opacity-70 hover:opacity-100">x</button>
-            </span>
+            <Tag key={c} label={c} onRemove={() => setCountries((prev) => prev.filter((x) => x !== c))} />
           ))}
         </div>
       )}
@@ -3322,10 +3304,7 @@ function ExportLogisticsSection({ company }: { company: CompanyRow }) {
       {form.ports.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {form.ports.map((p) => (
-            <span key={p} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]" style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}>
-              {p}
-              <button type="button" onClick={() => setForm((f) => ({ ...f, ports: f.ports.filter((x) => x !== p) }))} className="opacity-70 hover:opacity-100">x</button>
-            </span>
+            <Tag key={p} label={p} onRemove={() => setForm((f) => ({ ...f, ports: f.ports.filter((x) => x !== p) }))} />
           ))}
         </div>
       )}
@@ -3411,10 +3390,7 @@ function ExportPrefsSection({ company }: { company: CompanyRow }) {
       {countries.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {countries.map((c) => (
-            <span key={c} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]" style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}>
-              {c}
-              <button type="button" onClick={() => setCountries((prev) => prev.filter((x) => x !== c))} className="opacity-70 hover:opacity-100">x</button>
-            </span>
+            <Tag key={c} label={c} onRemove={() => setCountries((prev) => prev.filter((x) => x !== c))} />
           ))}
         </div>
       )}
@@ -3524,10 +3500,7 @@ function InvestmentPrefsSection({ company }: { company: CompanyRow }) {
       {countries.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {countries.map((c) => (
-            <span key={c} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]" style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}>
-              {c}
-              <button type="button" onClick={() => setCountries((prev) => prev.filter((x) => x !== c))} className="opacity-70 hover:opacity-100">x</button>
-            </span>
+            <Tag key={c} label={c} onRemove={() => setCountries((prev) => prev.filter((x) => x !== c))} />
           ))}
         </div>
       )}

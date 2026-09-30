@@ -15,6 +15,7 @@ import {
 import type { PillarConditionRow } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
+import { Tag } from "@/components/ui";
 import { saveSustainabilityPayloadAction } from "./actions";
 
 const inputClass =
@@ -87,21 +88,7 @@ function ChipListEditor({
       {items.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {items.map((item, i) => (
-            <span
-              key={`${item}-${i}`}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]"
-              style={{ background: "#E6F5EC", color: "var(--elev8-green-dk)" }}
-            >
-              {item}
-              <button
-                type="button"
-                onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-                className="opacity-70 hover:opacity-100"
-                aria-label={`Remove ${item}`}
-              >
-                x
-              </button>
-            </span>
+            <Tag key={`${item}-${i}`} label={item} onRemove={() => onChange(items.filter((_, idx) => idx !== i))} />
           ))}
         </div>
       )}
