@@ -112,7 +112,7 @@ import {
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
-import { Tag } from "@/components/ui";
+import { Tag, StatusBadge, Banner } from "@/components/ui";
 import {
   getRealStateNamesForCountryAction,
   listCompanyAuditLogAction,
@@ -1496,26 +1496,14 @@ function PillarSelectionSection({ company }: { company: CompanyRow }) {
               className="flex flex-col items-start gap-1.5 rounded-lg border p-4 text-start transition-colors"
               style={
                 isOn
-                  ? { borderColor: "var(--elev8-blue)", background: "#EEF4FC" }
+                  ? { borderColor: "var(--brand-blue)", background: "var(--status-info-bg)" }
                   : { borderColor: "var(--elev8-g200)", background: "white" }
               }
             >
               {source === "ai" && isOn && (
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10.5px] font-medium"
-                  style={{ background: "#E9F8EF", color: "#00874A" }}
-                >
-                  AI Suggested{confidence ? ` - ${confidence}` : ""}
-                </span>
+                <StatusBadge tone="success" label={`AI Suggested${confidence ? ` - ${confidence}` : ""}`} />
               )}
-              {source === "manual" && isOn && (
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10.5px] font-medium"
-                  style={{ background: "#EEF4FC", color: "var(--elev8-blue)" }}
-                >
-                  Your Pick
-                </span>
-              )}
+              {source === "manual" && isOn && <StatusBadge tone="info" label="Your Pick" />}
               <span className="text-[13.5px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
                 {p.label}
               </span>
@@ -1627,25 +1615,24 @@ function ComplianceSection({ company }: { company: CompanyRow }) {
           Powers your credibility score and tender eligibility. Add expiry dates so gatewAI can alert you before they lapse.
         </p>
         {suggestions && suggestions.length > 0 && (
-          <div
-            className="mb-3 flex flex-wrap items-center gap-2 rounded-md border px-3 py-2"
-            style={{ background: "#E9F8EF", borderColor: "#CDEFDA" }}
-          >
-            <span className="text-[12px] font-semibold" style={{ color: "#00874A" }}>
-              Common for {company.sector}:
-            </span>
-            {suggestions.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => toggle("certsHeld", c)}
-                className="rounded-md border px-2.5 py-1 text-[11px] font-medium"
-                style={{ borderColor: "#CDEFDA", color: "#00874A", background: "white" }}
-              >
-                + {c}
-              </button>
-            ))}
-          </div>
+          <Banner tone="success">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[12px] font-semibold" style={{ color: "var(--status-success-text)" }}>
+                Common for {company.sector}:
+              </span>
+              {suggestions.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => toggle("certsHeld", c)}
+                  className="rounded-md border px-2.5 py-1 text-[11px] font-medium"
+                  style={{ borderColor: "#CDEFDA", color: "var(--status-success-text)", background: "white" }}
+                >
+                  + {c}
+                </button>
+              ))}
+            </div>
+          </Banner>
         )}
         <div className="flex flex-wrap gap-2">
           {REQUIRED_CERTIFICATIONS.map((c) => (
@@ -2771,12 +2758,10 @@ function ImportCorridorsSection({ company }: { company: CompanyRow }) {
                 <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.incoterm}</span>
                 {c.duty > 0 && <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.duty}% duty</span>}
                 {c.transit > 0 && <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.transit}d transit</span>}
-                <span
-                  className="rounded-full px-2 py-0.5 font-medium"
-                  style={c.risk === "High" ? { background: "#FDECEC", color: "var(--elev8-red)" } : c.risk === "Low" ? { background: "#E9F8EF", color: "#00874A" } : { background: "#FFF7E6", color: "#8A6A1A" }}
-                >
-                  {c.risk} Risk
-                </span>
+                <StatusBadge
+                  tone={c.risk === "High" ? "danger" : c.risk === "Low" ? "success" : "warning"}
+                  label={`${c.risk} Risk`}
+                />
               </div>
               <p className="mt-1.5 text-[12px]" style={{ color: "var(--elev8-g500)" }}>{c.products}</p>
             </div>
@@ -3203,12 +3188,10 @@ function ExportCorridorsSection({ company }: { company: CompanyRow }) {
                 <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.incoterm}</span>
                 {c.duty > 0 && <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.duty}% duty</span>}
                 {c.transit > 0 && <span className="rounded-full px-2 py-0.5" style={{ background: "var(--elev8-g100)" }}>{c.transit}d transit</span>}
-                <span
-                  className="rounded-full px-2 py-0.5 font-medium"
-                  style={c.risk === "High" ? { background: "#FDECEC", color: "var(--elev8-red)" } : c.risk === "Low" ? { background: "#E9F8EF", color: "#00874A" } : { background: "#FFF7E6", color: "#8A6A1A" }}
-                >
-                  {c.risk} Risk
-                </span>
+                <StatusBadge
+                  tone={c.risk === "High" ? "danger" : c.risk === "Low" ? "success" : "warning"}
+                  label={`${c.risk} Risk`}
+                />
               </div>
               <p className="mt-1.5 text-[12px]" style={{ color: "var(--elev8-g500)" }}>{c.products}</p>
             </div>
@@ -3727,7 +3710,7 @@ type CompareCorridor = {
 
 function CorridorCompareCol({ c, win }: { c: CompareCorridor; win: boolean }) {
   return (
-    <div className="rounded-md border p-3" style={win ? { borderColor: "var(--elev8-green)", background: "#E9F8EF" } : { borderColor: "var(--elev8-g200)" }}>
+    <div className="rounded-md border p-3" style={win ? { borderColor: "var(--brand-green)", background: "var(--status-success-bg)" } : { borderColor: "var(--elev8-g200)" }}>
       {win && <span className="text-[11px] font-semibold" style={{ color: "#00874A" }}>Recommended</span>}
       <p className="mt-1 text-[13px] font-semibold" style={{ color: "var(--elev8-ink)" }}>{c.o} to {c.d} ({c.corridorType})</p>
       {([["Customs Duty", `${c.duty || 0}%`], ["Freight (est.)", fmtUSD(c.freight || 0)], ["Transit Time", `${c.transit || 0} days`], ["Demand", c.demand || "-"], ["Risk", c.risk || "-"], ["Incoterm", c.incoterm || "-"]] as const).map(([label, val]) => (
@@ -4689,16 +4672,18 @@ export function CompanyConfigForm({
         )}
       </div>
 
-      <div className="mt-10 rounded-lg border p-4" style={{ borderColor: "#CDEFDA", background: "#E9F8EF" }}>
-        <h2 className="text-[13px] font-semibold" style={{ color: "#00874A" }}>
-          All 8 pillars are now available
-        </h2>
-        <p className="mt-1 text-[13px]" style={{ color: "var(--elev8-g600)" }}>
-          Governance, Procurement, B2B, Import, Export, Investment,
-          Sustainability and ICV all have their own preference
-          sub-groups built. Whichever you selected in Pillar Selection
-          above will show their sections here.
-        </p>
+      <div className="mt-10">
+        <Banner tone="success">
+          <h2 className="text-[13px] font-semibold" style={{ color: "var(--status-success-text)" }}>
+            All 8 pillars are now available
+          </h2>
+          <p className="mt-1 text-[13px]" style={{ color: "var(--elev8-g600)" }}>
+            Governance, Procurement, B2B, Import, Export, Investment,
+            Sustainability and ICV all have their own preference
+            sub-groups built. Whichever you selected in Pillar Selection
+            above will show their sections here.
+          </p>
+        </Banner>
       </div>
     </div>
   );

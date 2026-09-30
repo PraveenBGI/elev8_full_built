@@ -19,6 +19,7 @@
 import { useState, useTransition } from "react";
 import type { PillarId } from "@/lib/modules/config-engine/stages";
 import type { PillarConditionRow } from "@/lib/modules/config-engine/adapter";
+import { Tag } from "@/components/ui";
 import {
   addConditionAction,
   deleteConditionAction,
@@ -70,22 +71,15 @@ function LockedFieldsEditor({
       {fields.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {fields.map((f) => (
-            <span
+            <Tag
               key={f}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[12px]"
-              style={{ background: "#FDECEC", color: "var(--elev8-red)" }}
-            >
-              {f}
-              <button
-                type="button"
-                onClick={() => commit(fields.filter((x) => x !== f))}
-                disabled={isPending}
-                className="opacity-70 hover:opacity-100"
-                aria-label={`Unlock ${f}`}
-              >
-                x
-              </button>
-            </span>
+              label={f}
+              tone="danger"
+              mono
+              disabled={isPending}
+              actionLabel="Unlock"
+              onRemove={() => commit(fields.filter((x) => x !== f))}
+            />
           ))}
         </div>
       )}

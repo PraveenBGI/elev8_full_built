@@ -21,7 +21,7 @@ import type {
 } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag } from "@/components/ui";
+import { Tag, StatusBadge, Banner } from "@/components/ui";
 import { saveExportPayloadAction } from "./actions";
 
 const inputClass =
@@ -370,12 +370,7 @@ export function ExportForm({
                       </div>
                       <div className="mt-2">
                         {fta ? (
-                          <span
-                            className="rounded-full px-2.5 py-0.5 text-[11.5px] font-medium"
-                            style={{ background: "#E9F8EF", color: "#00874A" }}
-                          >
-                            FTA: {fta.agreement_name}
-                          </span>
+                          <StatusBadge tone="success" label={`FTA: ${fta.agreement_name}`} />
                         ) : (
                           <span className="text-[11.5px]" style={{ color: "var(--elev8-g400)" }}>
                             No FTA coverage on file
@@ -397,15 +392,12 @@ export function ExportForm({
             </button>
 
             {uncoveredMarkets.length > 0 && (
-              <p
-                className="mt-3 rounded-md px-3 py-2 text-[12.5px]"
-                style={{ background: "#FFF7E6", color: "#8A6A1A" }}
-              >
+              <Banner tone="warning">
                 {uncoveredMarkets.length} target market(s) have no
                 corridor configured yet: {uncoveredMarkets.join(", ")}.
                 Buyer-matching intelligence won&apos;t cover these
                 markets until a corridor is added.
-              </p>
+              </Banner>
             )}
           </SettingsGroup>
 

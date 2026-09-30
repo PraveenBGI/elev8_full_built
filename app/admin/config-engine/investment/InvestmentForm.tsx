@@ -13,7 +13,7 @@ import {
 import type { PillarConditionRow, ZoneRow } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag } from "@/components/ui";
+import { Tag, Banner } from "@/components/ui";
 import { saveInvestmentPayloadAction } from "./actions";
 
 const inputClass =
@@ -193,13 +193,10 @@ export function InvestmentForm({
               Special economic zones / free zones
             </label>
             {zones.length === 0 ? (
-              <p
-                className="rounded-md px-3 py-2 text-[12.5px]"
-                style={{ background: "#FFF7E6", color: "#8A6A1A" }}
-              >
+              <Banner tone="warning">
                 No zones defined in Master Data yet. Add at least one
                 there first.
-              </p>
+              </Banner>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {zones.map((z) => (
@@ -335,15 +332,12 @@ export function InvestmentForm({
               ))}
             </div>
             {noIncentiveBands.length > 0 && (
-              <p
-                className="mt-3 rounded-md px-3 py-2 text-[12.5px]"
-                style={{ background: "#FFF7E6", color: "#8A6A1A" }}
-              >
+              <Banner tone="warning">
                 {noIncentiveBands.length} ticket band(s) fall entirely
                 below the committee review threshold:{" "}
                 {noIncentiveBands.map((t) => t.label).join(", ")}. These
                 deals will never reach committee governance.
-              </p>
+              </Banner>
             )}
           </SettingsGroup>
 

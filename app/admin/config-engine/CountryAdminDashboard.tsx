@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { CountryIdentityRow, StateRow } from "@/lib/modules/config-engine/adapter";
 import type { Stage } from "@/lib/modules/config-engine/stages";
 import { readinessToStageStatus } from "@/lib/modules/config-engine/stages";
+import { StatusBadge } from "@/components/ui";
 
 function StatusDot({ status }: { status: "done" | "in_progress" | "pending" }) {
   const color =
@@ -130,16 +131,10 @@ export function CountryAdminDashboard({
                   {s.name}
                 </span>
                 <div className="flex items-center gap-3">
-                  <span
-                    className="rounded-full px-2.5 py-0.5 text-[11.5px] font-medium"
-                    style={
-                      s.config_control === "state"
-                        ? { background: "#EEF4FC", color: "var(--elev8-blue)" }
-                        : { background: "var(--elev8-g100)", color: "var(--elev8-g500)" }
-                    }
-                  >
-                    {s.config_control === "state" ? "Delegated" : "Central"}
-                  </span>
+                  <StatusBadge
+                    tone={s.config_control === "state" ? "info" : "neutral"}
+                    label={s.config_control === "state" ? "Delegated" : "Central"}
+                  />
                   <span className="text-[12px]" style={{ color: "var(--elev8-g400)" }}>
                     {s.approval_status}
                   </span>

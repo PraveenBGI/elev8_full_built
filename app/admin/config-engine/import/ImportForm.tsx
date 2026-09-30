@@ -18,7 +18,7 @@ import type {
 } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag } from "@/components/ui";
+import { Tag, Banner } from "@/components/ui";
 import { saveImportPayloadAction } from "./actions";
 
 const inputClass =
@@ -294,13 +294,10 @@ export function ImportForm({
               routed through and cleared at a named point below.
             </p>
             {portsAirports.length === 0 ? (
-              <p
-                className="rounded-md px-3 py-2 text-[12.5px]"
-                style={{ background: "#FFF7E6", color: "#8A6A1A" }}
-              >
+              <Banner tone="warning">
                 No Ports, Airports or Customs Points defined in Master
                 Data yet. Add at least one there first.
-              </p>
+              </Banner>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {portsAirports.map((p) => (
@@ -348,12 +345,7 @@ export function ImportForm({
               </div>
             )}
             {hsCodes.length === 0 ? (
-              <p
-                className="rounded-md px-3 py-2 text-[12.5px]"
-                style={{ background: "#FFF7E6", color: "#8A6A1A" }}
-              >
-                No HS codes defined in Master Data yet.
-              </p>
+              <Banner tone="warning">No HS codes defined in Master Data yet.</Banner>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {hsCodes.map((h) => (

@@ -25,20 +25,30 @@ export function Tag({
   onRemove,
   disabled = false,
   tone = "success",
+  mono = false,
+  actionLabel = "Remove",
 }: {
   label: string;
   onRemove: () => void;
   disabled?: boolean;
   /** "danger" for a restricted/prohibited item -- e.g. Import's own
-      restricted-products list, confirmed as a real, distinct case while
+      restricted-products list, or a country-locked field path in
+      PillarGovernancePanel -- confirmed as real, distinct cases while
       retrofitting this component, not invented speculatively. */
   tone?: "success" | "danger";
+  /** Monospace label -- for field-path tags (e.g. "evalWeights.icv"). */
+  mono?: boolean;
+  /** The verb announced to a screen reader, e.g. "Unlock" instead of
+      the default "Remove" -- PillarGovernancePanel's locked-field tags
+      unlock a field rather than delete anything, a real difference a
+      screen-reader user should hear. */
+  actionLabel?: string;
 }) {
   const bg = tone === "danger" ? "var(--status-danger-bg)" : "var(--status-success-bg)";
   const color = tone === "danger" ? "var(--status-danger-text)" : "var(--status-success-text)";
   return (
     <span
-      className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px]"
+      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] ${mono ? "font-mono text-[12px]" : ""}`}
       style={{ background: bg, color }}
     >
       {label}
@@ -46,7 +56,7 @@ export function Tag({
         type="button"
         onClick={onRemove}
         disabled={disabled}
-        aria-label={`Remove ${label}`}
+        aria-label={`${actionLabel} ${label}`}
         className="opacity-70 hover:opacity-100 disabled:opacity-40"
       >
         <svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10" fill="none">
