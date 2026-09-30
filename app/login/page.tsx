@@ -14,9 +14,25 @@
  * signup, OTP, PIN, or intent-type fields here -- that's the real
  * registration flow's job, specced in elev8_Registration_Field_Document_v1_0.docx.
  *
- * Styled to match the real brand (see app/admin/config-engine/Topbar.tsx
- * for where the logo/colors first landed) so signing in doesn't feel like
- * a different, unfinished product from what's on the other side of it.
+ * First screen rebuilt on the new design-system foundation
+ * (components/ui/, globals.css's verified tokens) rather than inline
+ * hex/className strings. Concrete fixes over the previous version, not
+ * just a restyle:
+ *   - Real <label> elements, not placeholder-as-label (placeholder text
+ *     disappears the moment a user types into the field, and isn't
+ *     reliably exposed as a label to a screen reader at all -- WCAG
+ *     1.3.1/4.1.2, and a real gap here specifically, not a
+ *     platform-wide-only one, since this was the very first form built).
+ *   - autoComplete="email"/"current-password" -- lets a password
+ *     manager fill correctly, which is a security improvement (people
+ *     use stronger, unique passwords when a manager can store one),
+ *     not just convenience.
+ *   - Error text is now programmatically tied to the field via
+ *     FormField's aria-describedby wiring, and the generic Supabase
+ *     "Invalid login credentials" message is kept verbatim rather than
+ *     distinguishing "wrong password" from "no such account" --
+ *     deliberately, so a failed attempt never confirms whether an email
+ *     is registered.
  */
 
 import { useState } from "react";
@@ -24,9 +40,10 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getBrowserDb } from "@/lib/db/browser-client";
 import { resolvePostLoginRedirectAction } from "./actions";
+import { Button, Banner, FormField } from "@/components/ui";
 
 const inputClass =
-  "w-full rounded-md border border-[var(--elev8-g200)] bg-white px-3 py-2 text-[13px] text-[var(--elev8-ink)] outline-none transition-colors focus:border-[var(--elev8-blue)] focus:ring-2 focus:ring-[var(--elev8-blue)]/15";
+  "w-full rounded-md border px-3 py-2 text-[13px] outline-none transition-colors focus:border-[var(--brand-blue)] focus:ring-2 focus:ring-[var(--brand-blue)]/15";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,6 +66,10 @@ export default function LoginPage() {
     setIsSubmitting(false);
 
     if (signInError) {
+      // Kept verbatim, not reworded -- Supabase's own message is already
+      // generic ("Invalid login credentials"), which is the correct
+      // security behaviour: never let a failed attempt reveal whether
+      // the email itself is registered.
       setError(signInError.message);
       return;
     }
@@ -63,45 +84,53 @@ export default function LoginPage() {
       <Image src="/elev8-logo.png" alt="elev8" width={120} height={60} priority />
 
       <div>
-        <h1 className="text-lg font-medium" style={{ color: "var(--elev8-ink)" }}>
+        <h1 className="text-lg font-medium" style={{ color: "var(--text-primary)" }}>
           Sign in
         </h1>
-        <p className="mt-1 text-xs" style={{ color: "var(--elev8-g500)" }}>
+        <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
           Temporary dev sign-in only, not the real registration flow. Use a
           user created directly in the Supabase dashboard.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="email"
-          placeholder="Email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className={inputClass}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className={inputClass}
-        />
-        {error && (
-          <p className="text-sm" style={{ color: "var(--elev8-red)" }}>
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ background: "var(--elev8-blue)" }}
-        >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+        <FormField label="Email" required>
+          {({ inputId, describedBy }) => (
+            <input
+              id={inputId}
+              type="email"
+              autoComplete="email"
+              required
+              aria-describedby={describedBy}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+              style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
+            />
+          )}
+        </FormField>
+
+        <FormField label="Password" required>
+          {({ inputId, describedBy }) => (
+            <input
+              id={inputId}
+              type="password"
+              autoComplete="current-password"
+              required
+              aria-describedby={describedBy}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
+            />
+          )}
+        </FormField>
+
+        {error && <Banner tone="danger">{error}</Banner>}
+
+        <Button type="submit" loading={isSubmitting}>
           {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
+        </Button>
       </form>
     </main>
   );

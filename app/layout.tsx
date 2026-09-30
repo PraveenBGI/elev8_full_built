@@ -17,11 +17,27 @@ export const metadata: Metadata = {
   description: "elev8 trade facilitation framework",
 };
 
+/**
+ * lang/dir are read from LOCALE below rather than hardcoded, so wiring
+ * in real locale detection (a cookie, a user preference, an Accept-
+ * Language header) later is a one-line change here, not a rewrite of
+ * every page. No locale system exists yet -- this is the seam for it,
+ * not the feature itself. RTL_LOCALES covers Arabic now; add a locale
+ * here the day it's needed, nothing else in the app has to change,
+ * since every existing screen already uses Tailwind's logical spacing
+ * utilities (ps-/pe- prefixes, not pl-/pr-) that flip automatically under
+ * dir="rtl" -- see globals.css's own note on this.
+ */
+const RTL_LOCALES = new Set(["ar", "he", "fa", "ur"]);
+const LOCALE = "en";
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const dir = RTL_LOCALES.has(LOCALE) ? "rtl" : "ltr";
+
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang={LOCALE} dir={dir} className="h-full antialiased">
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
