@@ -111,7 +111,12 @@ import {
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
-import { Tag, StatusBadge, Banner } from "@/components/ui";
+import { Tag, StatusBadge, Banner, CountryPicker } from "@/components/ui";
+import type {
+  WorldRegionRow,
+  WorldSubRegionRow,
+  WorldCountryRow,
+} from "@/lib/modules/global-master-data/adapter";
 import {
   getRealStateNamesForCountryAction,
   listCompanyAuditLogAction,
@@ -2915,20 +2920,19 @@ function ImportLogisticsSection({ company }: { company: CompanyRow }) {
   );
 }
 
-function ImportPrefsSection({ company }: { company: CompanyRow }) {
+type WorldCountryProps = {
+  worldRegions: WorldRegionRow[];
+  worldSubRegions: WorldSubRegionRow[];
+  worldCountries: WorldCountryRow[];
+};
+
+function ImportPrefsSection({ company, worldRegions, worldSubRegions, worldCountries }: { company: CompanyRow } & WorldCountryProps) {
   const [countries, setCountries] = useState<string[]>(company.import_countries);
-  const [countryDraft, setCountryDraft] = useState("");
   const storedReq = company.import_req as Partial<ImportRequirementInput>;
   const [req, setReq] = useState<ImportRequirementInput>({ ...DEFAULT_IMPORT_REQ, ...storedReq });
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  function addCountry() {
-    if (!countryDraft.trim() || countries.includes(countryDraft)) return;
-    setCountries((prev) => [...prev, countryDraft]);
-    setCountryDraft("");
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -2952,16 +2956,15 @@ function ImportPrefsSection({ company }: { company: CompanyRow }) {
         uses to match suppliers.
       </p>
       <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>Preferred sourcing countries</label>
-      {countries.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {countries.map((c) => (
-            <Tag key={c} label={c} onRemove={() => setCountries((prev) => prev.filter((x) => x !== c))} />
-          ))}
-        </div>
-      )}
-      <div className="mb-5 flex gap-2">
-        <input className={inputClass} placeholder="e.g. Turkey" value={countryDraft} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCountry(); } }} onChange={(e) => setCountryDraft(e.target.value)} />
-        <button type="button" onClick={addCountry} className="shrink-0 rounded-md px-4 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>Add</button>
+      <div className="mb-5">
+        <CountryPicker
+          regions={worldRegions}
+          subRegions={worldSubRegions}
+          countries={worldCountries}
+          selected={countries}
+          onAdd={(name) => setCountries((prev) => (prev.includes(name) ? prev : [...prev, name]))}
+          onRemove={(name) => setCountries((prev) => prev.filter((x) => x !== name))}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -3328,21 +3331,14 @@ function ExportLogisticsSection({ company }: { company: CompanyRow }) {
   );
 }
 
-function ExportPrefsSection({ company }: { company: CompanyRow }) {
+function ExportPrefsSection({ company, worldRegions, worldSubRegions, worldCountries }: { company: CompanyRow } & WorldCountryProps) {
   const [countries, setCountries] = useState<string[]>(company.export_countries);
-  const [countryDraft, setCountryDraft] = useState("");
   const [tier, setTier] = useState<Record<string, string>>(company.export_tier);
   const [budget, setBudget] = useState<Record<string, string>>(company.export_budget);
   const [timeline, setTimeline] = useState<Record<string, string>>(company.export_timeline);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  function addCountry() {
-    if (!countryDraft.trim() || countries.includes(countryDraft)) return;
-    setCountries((prev) => [...prev, countryDraft]);
-    setCountryDraft("");
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -3371,16 +3367,15 @@ function ExportPrefsSection({ company }: { company: CompanyRow }) {
         target timeline you want to push into each.
       </p>
       <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>Preferred export countries</label>
-      {countries.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {countries.map((c) => (
-            <Tag key={c} label={c} onRemove={() => setCountries((prev) => prev.filter((x) => x !== c))} />
-          ))}
-        </div>
-      )}
-      <div className="mb-5 flex gap-2">
-        <input className={inputClass} placeholder="e.g. Kenya" value={countryDraft} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCountry(); } }} onChange={(e) => setCountryDraft(e.target.value)} />
-        <button type="button" onClick={addCountry} className="shrink-0 rounded-md px-4 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>Add</button>
+      <div className="mb-5">
+        <CountryPicker
+          regions={worldRegions}
+          subRegions={worldSubRegions}
+          countries={worldCountries}
+          selected={countries}
+          onAdd={(name) => setCountries((prev) => (prev.includes(name) ? prev : [...prev, name]))}
+          onRemove={(name) => setCountries((prev) => prev.filter((x) => x !== name))}
+        />
       </div>
 
       {countries.length > 0 && (
@@ -3434,9 +3429,8 @@ function ExportPrefsSection({ company }: { company: CompanyRow }) {
   );
 }
 
-function InvestmentPrefsSection({ company }: { company: CompanyRow }) {
+function InvestmentPrefsSection({ company, worldRegions, worldSubRegions, worldCountries }: { company: CompanyRow } & WorldCountryProps) {
   const [countries, setCountries] = useState<string[]>(company.investment_countries);
-  const [countryDraft, setCountryDraft] = useState("");
   const [tier, setTier] = useState<Record<string, string>>(company.investment_tier);
   const [budget, setBudget] = useState<Record<string, string>>(company.investment_budget);
   const [timeline, setTimeline] = useState<Record<string, string>>(company.investment_timeline);
@@ -3445,12 +3439,6 @@ function InvestmentPrefsSection({ company }: { company: CompanyRow }) {
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  function addCountry() {
-    if (!countryDraft.trim() || countries.includes(countryDraft)) return;
-    setCountries((prev) => [...prev, countryDraft]);
-    setCountryDraft("");
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -3481,16 +3469,15 @@ function InvestmentPrefsSection({ company }: { company: CompanyRow }) {
         and funding opportunities.
       </p>
       <label className="mb-2 block text-[12.5px] font-medium" style={{ color: "var(--elev8-g600)" }}>Preferred investment markets</label>
-      {countries.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {countries.map((c) => (
-            <Tag key={c} label={c} onRemove={() => setCountries((prev) => prev.filter((x) => x !== c))} />
-          ))}
-        </div>
-      )}
-      <div className="mb-4 flex gap-2">
-        <input className={inputClass} placeholder="e.g. Kenya" value={countryDraft} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCountry(); } }} onChange={(e) => setCountryDraft(e.target.value)} />
-        <button type="button" onClick={addCountry} className="shrink-0 rounded-md px-4 py-2 text-sm font-medium text-white" style={{ background: "var(--elev8-blue)" }}>Add</button>
+      <div className="mb-4">
+        <CountryPicker
+          regions={worldRegions}
+          subRegions={worldSubRegions}
+          countries={worldCountries}
+          selected={countries}
+          onAdd={(name) => setCountries((prev) => (prev.includes(name) ? prev : [...prev, name]))}
+          onRemove={(name) => setCountries((prev) => prev.filter((x) => x !== name))}
+        />
       </div>
 
       {countries.length > 0 && (
@@ -4182,11 +4169,17 @@ export function CompanyConfigForm({
   countries,
   homeCountryStates,
   sectors,
+  worldRegions,
+  worldSubRegions,
+  worldCountries,
 }: {
   company: CompanyRow;
   countries: { id: string; name: string }[];
   homeCountryStates: string[];
   sectors: { id: string; name: string }[];
+  worldRegions: WorldRegionRow[];
+  worldSubRegions: WorldSubRegionRow[];
+  worldCountries: WorldCountryRow[];
 }) {
   const enterpriseStepsDone = [
     Boolean(company.type && company.sector),
@@ -4497,7 +4490,7 @@ export function CompanyConfigForm({
               summary={company.import_countries.length > 0 ? `${company.import_countries.length} countries` : "Not set"}
               isComplete={company.import_countries.length > 0}
             >
-              <ImportPrefsSection company={company} />
+              <ImportPrefsSection company={company} worldRegions={worldRegions} worldSubRegions={worldSubRegions} worldCountries={worldCountries} />
             </SettingsGroup>
           </>
         )}
@@ -4537,7 +4530,7 @@ export function CompanyConfigForm({
               summary={company.export_countries.length > 0 ? `${company.export_countries.length} markets` : "Not set"}
               isComplete={company.export_countries.length > 0}
             >
-              <ExportPrefsSection company={company} />
+              <ExportPrefsSection company={company} worldRegions={worldRegions} worldSubRegions={worldSubRegions} worldCountries={worldCountries} />
             </SettingsGroup>
           </>
         )}
@@ -4549,7 +4542,7 @@ export function CompanyConfigForm({
               summary={company.investment_countries.length > 0 ? `${company.investment_countries.length} markets` : "Not set"}
               isComplete={company.investment_countries.length > 0}
             >
-              <InvestmentPrefsSection company={company} />
+              <InvestmentPrefsSection company={company} worldRegions={worldRegions} worldSubRegions={worldSubRegions} worldCountries={worldCountries} />
             </SettingsGroup>
 
             <SettingsGroup

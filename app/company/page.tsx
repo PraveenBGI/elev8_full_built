@@ -16,7 +16,7 @@ import {
   getRealStateNamesForCountry,
   listCountriesForDropdown,
 } from "@/lib/modules/company-config/adapter";
-import { listActiveSectors } from "@/lib/modules/global-master-data/adapter";
+import { listActiveSectors, listWorldRegionsWithCountries } from "@/lib/modules/global-master-data/adapter";
 import { CreateCompanyForm } from "./CreateCompanyForm";
 import { CompanyConfigForm } from "./CompanyConfigForm";
 
@@ -25,6 +25,7 @@ export default async function CompanyPage() {
   const scope = await getMyCompanyScope();
   const countries = await listCountriesForDropdown();
   const sectors = await listActiveSectors();
+  const worldRegionData = await listWorldRegionsWithCountries();
 
   if (!scope) {
     return <CreateCompanyForm countries={countries} />;
@@ -51,6 +52,9 @@ export default async function CompanyPage() {
       countries={countries}
       homeCountryStates={homeCountryStates}
       sectors={sectors}
+      worldRegions={worldRegionData.regions}
+      worldSubRegions={worldRegionData.subRegions}
+      worldCountries={worldRegionData.countries}
     />
   );
 }
