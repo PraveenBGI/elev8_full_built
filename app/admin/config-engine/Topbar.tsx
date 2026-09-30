@@ -33,7 +33,7 @@ export function Topbar({
       <Image src="/elev8-logo.png" alt="elev8" width={92} height={46} priority />
 
       <div
-        className="border-l pl-4 text-[11px] font-medium tracking-wide"
+        className="border-s ps-4 text-[11px] font-medium tracking-wide"
         style={{ borderColor: "var(--elev8-g200)", color: "var(--elev8-g500)" }}
       >
         Country Configuration

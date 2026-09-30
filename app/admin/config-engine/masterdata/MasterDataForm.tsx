@@ -142,7 +142,7 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
 
       {hsCodes.length > 0 && (
         <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-start text-[13px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Code</th>
@@ -157,7 +157,7 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
                   <td className="px-3 py-2">{h.code}</td>
                   <td className="px-3 py-2">{h.description}</td>
                   <td className="px-3 py-2">{h.category}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end">
                     <button
                       type="button"
                       onClick={() => handleDelete(h.id)}
@@ -466,7 +466,7 @@ function FtaTable({ initialFtas }: { initialFtas: FreeTradeAgreementRow[] }) {
 
       {ftas.length > 0 && (
         <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-start text-[13px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Agreement</th>
@@ -485,7 +485,7 @@ function FtaTable({ initialFtas }: { initialFtas: FreeTradeAgreementRow[] }) {
                   <td className="px-3 py-2">
                     {f.preferential_tariff_rate != null ? `${f.preferential_tariff_rate}%` : "Not set"}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end">
                     <button
                       type="button"
                       onClick={() => handleDelete(f.id)}
@@ -651,7 +651,7 @@ function ZoneTable({ initialZones }: { initialZones: ZoneRow[] }) {
 
       {zones.length > 0 && (
         <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-start text-[13px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Zone name</th>
@@ -668,7 +668,7 @@ function ZoneTable({ initialZones }: { initialZones: ZoneRow[] }) {
                   <td className="px-3 py-2">{z.type}</td>
                   <td className="px-3 py-2">{z.location}</td>
                   <td className="px-3 py-2">{z.sector}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end">
                     <button
                       type="button"
                       onClick={() => handleDelete(z.id)}
@@ -800,7 +800,7 @@ function PortAirportTable({ initialPorts }: { initialPorts: PortAirportRow[] }) 
 
       {ports.length > 0 && (
         <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-start text-[13px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Name</th>
@@ -817,7 +817,7 @@ function PortAirportTable({ initialPorts }: { initialPorts: PortAirportRow[] }) 
                   <td className="px-3 py-2">{p.type}</td>
                   <td className="px-3 py-2">{p.location}</td>
                   <td className="px-3 py-2">{p.is_customs_point ? "Yes" : "No"}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end">
                     <button
                       type="button"
                       onClick={() => handleDelete(p.id)}

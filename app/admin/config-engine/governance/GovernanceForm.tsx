@@ -103,7 +103,7 @@ function AuthorityTable({ initialAuthorities }: { initialAuthorities: AuthorityR
 
       {rows.length > 0 && (
         <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-start text-[13px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Ref</th>
@@ -122,7 +122,7 @@ function AuthorityTable({ initialAuthorities }: { initialAuthorities: AuthorityR
                   <td className="px-3 py-2">{a.type}</td>
                   <td className="px-3 py-2">{a.domain}</td>
                   <td className="px-3 py-2">{a.headquarters}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end">
                     <button
                       type="button"
                       onClick={() => handleDelete(a.id)}
@@ -246,7 +246,7 @@ function StakeholderTable({ initialStakeholders }: { initialStakeholders: Stakeh
     <div>
       {rows.length > 0 && (
         <div className="mb-4 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full text-start text-[13px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Ref</th>
@@ -263,7 +263,7 @@ function StakeholderTable({ initialStakeholders }: { initialStakeholders: Stakeh
                   <td className="px-3 py-2">{s.name}</td>
                   <td className="px-3 py-2">{s.sectors.join(", ")}</td>
                   <td className="px-3 py-2">{s.domain}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-end">
                     <button
                       type="button"
                       onClick={() => handleDelete(s.id)}

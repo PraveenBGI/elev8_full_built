@@ -1002,7 +1002,7 @@ function MarketPrioritySection({
       </p>
 
       <div className="mb-5 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-        <table className="w-full text-left text-[12.5px]">
+        <table className="w-full text-start text-[12.5px]">
           <thead>
             <tr style={{ background: "var(--elev8-g50)" }}>
               <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Country</th>
@@ -1061,7 +1061,7 @@ function MarketPrioritySection({
               <div className="px-3 py-2 text-[13px] font-medium" style={{ color: "var(--elev8-ink)" }}>
                 {country?.name ?? countryId}, state priority
               </div>
-              <table className="w-full text-left text-[12.5px]">
+              <table className="w-full text-start text-[12.5px]">
                 <thead>
                   <tr style={{ background: "var(--elev8-g50)" }}>
                     <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>State / Governorate</th>
@@ -1505,7 +1505,7 @@ function PillarSelectionSection({ company }: { company: CompanyRow }) {
               key={p.id}
               type="button"
               onClick={() => togglePillar(p.id)}
-              className="flex flex-col items-start gap-1.5 rounded-lg border p-4 text-left transition-colors"
+              className="flex flex-col items-start gap-1.5 rounded-lg border p-4 text-start transition-colors"
               style={
                 isOn
                   ? { borderColor: "var(--elev8-blue)", background: "#EEF4FC" }
@@ -2286,7 +2286,7 @@ function B2BProductsSection({ company }: { company: CompanyRow }) {
       </label>
       {form.sell.length > 0 && (
         <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[12px]">
+          <table className="w-full text-start text-[12px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 {["Category", "Product", "HS", "Country", "MOQ", "Certs", "Budget", "Timeline", ""].map((h) => (
@@ -2337,7 +2337,7 @@ function B2BProductsSection({ company }: { company: CompanyRow }) {
       </label>
       {form.source.length > 0 && (
         <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[12px]">
+          <table className="w-full text-start text-[12px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 {["Category", "Product", "HS", "Price", "Lead time", "Source", "Budget", "Timeline", ""].map((h) => (
@@ -2652,7 +2652,7 @@ function ImportProductsSection({ company }: { company: CompanyRow }) {
       </p>
       {items.length > 0 && (
         <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[12px]">
+          <table className="w-full text-start text-[12px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 {["Category", "Product", "HS", "Price", "Lead time", "Source", "Budget", "Timeline", ""].map((h) => (
@@ -3097,7 +3097,7 @@ function ExportProductsSection({ company }: { company: CompanyRow }) {
       </p>
       {items.length > 0 && (
         <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[12px]">
+          <table className="w-full text-start text-[12px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 {["Category", "Product", "HS", "Country", "MOQ", "Certs", "Budget", "Timeline", ""].map((h) => (
@@ -3425,7 +3425,7 @@ function ExportPrefsSection({ company }: { company: CompanyRow }) {
 
       {countries.length > 0 && (
         <div className="overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[12.5px]">
+          <table className="w-full text-start text-[12.5px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Country</th>
@@ -3538,7 +3538,7 @@ function InvestmentPrefsSection({ company }: { company: CompanyRow }) {
 
       {countries.length > 0 && (
         <div className="mb-5 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-          <table className="w-full text-left text-[12.5px]">
+          <table className="w-full text-start text-[12.5px]">
             <thead>
               <tr style={{ background: "var(--elev8-g50)" }}>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Country</th>

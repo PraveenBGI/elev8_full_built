@@ -394,7 +394,7 @@ export function ProcurementForm({
             </p>
             {form.kpi.length > 0 && (
               <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-                <table className="w-full text-left text-[12.5px]">
+                <table className="w-full text-start text-[12.5px]">
                   <thead>
                     <tr style={{ background: "var(--elev8-g50)" }}>
                       {["Area", "KPI", "Micro", "Small", "Medium", "Large", "Intl MFN", "Intl RoW", ""].map(

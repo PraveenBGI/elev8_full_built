@@ -266,7 +266,7 @@ export function IcvForm({
             </p>
             {form.obligationAllocation.length > 0 && (
               <div className="mb-3 overflow-x-auto rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-                <table className="w-full text-left text-[12.5px]">
+                <table className="w-full text-start text-[12.5px]">
                   <thead>
                     <tr style={{ background: "var(--elev8-g50)" }}>
                       {["Sector", "Micro %", "Small %", "Medium %", "LCC %", "Riyada %", ""].map((h) => (
@@ -360,7 +360,7 @@ export function IcvForm({
               ))}
             </div>
             <div className="overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-              <table className="w-full text-left text-[12.5px]">
+              <table className="w-full text-start text-[12.5px]">
                 <thead>
                   <tr style={{ background: "var(--elev8-g50)" }}>
                     <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Category</th>
@@ -423,7 +423,7 @@ export function IcvForm({
               />
             </div>
             <div className="mb-5 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-              <table className="w-full text-left text-[12.5px]">
+              <table className="w-full text-start text-[12.5px]">
                 <thead>
                   <tr style={{ background: "var(--elev8-g50)" }}>
                     <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Category</th>
@@ -456,7 +456,7 @@ export function IcvForm({
               />
             </div>
             <div className="mb-5 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-              <table className="w-full text-left text-[12.5px]">
+              <table className="w-full text-start text-[12.5px]">
                 <thead>
                   <tr style={{ background: "var(--elev8-g50)" }}>
                     <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Category</th>
@@ -488,7 +488,7 @@ export function IcvForm({
               />
             </div>
             <div className="mb-5 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-              <table className="w-full text-left text-[12.5px]">
+              <table className="w-full text-start text-[12.5px]">
                 <thead>
                   <tr style={{ background: "var(--elev8-g50)" }}>
                     <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Category</th>
@@ -519,7 +519,7 @@ export function IcvForm({
               />
             </div>
             <div className="mb-5 overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-              <table className="w-full text-left text-[12.5px]">
+              <table className="w-full text-start text-[12.5px]">
                 <thead>
                   <tr style={{ background: "var(--elev8-g50)" }}>
                     <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Category</th>
@@ -549,7 +549,7 @@ export function IcvForm({
               />
             </div>
             <div className="overflow-hidden rounded-md border" style={{ borderColor: "var(--elev8-g200)" }}>
-              <table className="w-full text-left text-[12.5px]">
+              <table className="w-full text-start text-[12.5px]">
                 <thead>
                   <tr style={{ background: "var(--elev8-g50)" }}>
                     <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Classification</th>
