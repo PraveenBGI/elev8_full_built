@@ -42,3 +42,60 @@ export async function listActiveSectors(): Promise<SectorRow[]> {
   if (error) throw error;
   return data ?? [];
 }
+
+export type WorldRegionRow = { id: string; name: string; sort_order: number };
+export type WorldSubRegionRow = { id: string; region_id: string; name: string; sort_order: number };
+export type WorldCountryRow = {
+  id: string;
+  name: string;
+  iso2: string | null;
+  iso3: string | null;
+  region_id: string;
+  sub_region_id: string | null;
+  sort_order: number;
+};
+
+/**
+ * World Region Reference -- resolves the "no world-country list" gap
+ * flagged repeatedly across Export/Investment/ICV's free-text market
+ * and sourcing-country fields. Deliberately distinct from
+ * listCountriesForDropdown() in company-config/adapter.ts, which lists
+ * platform-ONBOARDED countries (Oman, India, Tanzania) for things like
+ * Geography's home-country picker -- this lists every country a
+ * company might reference for trade purposes, onboarded or not.
+ *
+ * Two flat queries, not a nested Supabase relationship select
+ * (.select("world_countries(name)")) -- no precedent for that syntax
+ * anywhere in this codebase, same reasoning as getStateById() in
+ * config-engine/adapter.ts.
+ */
+export async function listWorldRegionsWithCountries(): Promise<{
+  regions: WorldRegionRow[];
+  subRegions: WorldSubRegionRow[];
+  countries: WorldCountryRow[];
+}> {
+  const db = await getDb();
+
+  const [regionsRes, subRegionsRes, countriesRes] = await Promise.all([
+    db.from("world_regions").select("id, name, sort_order").order("sort_order"),
+    db
+      .from("world_sub_regions")
+      .select("id, region_id, name, sort_order")
+      .order("sort_order"),
+    db
+      .from("world_countries")
+      .select("id, name, iso2, iso3, region_id, sub_region_id, sort_order")
+      .eq("is_active", true)
+      .order("sort_order"),
+  ]);
+
+  if (regionsRes.error) throw regionsRes.error;
+  if (subRegionsRes.error) throw subRegionsRes.error;
+  if (countriesRes.error) throw countriesRes.error;
+
+  return {
+    regions: regionsRes.data ?? [],
+    subRegions: subRegionsRes.data ?? [],
+    countries: countriesRes.data ?? [],
+  };
+}

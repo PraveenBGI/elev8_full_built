@@ -55,3 +55,62 @@ begin
       raise notice 'PASS: sector name uniqueness is enforced at the database level';
   end;
 end $$;
+
+-- World Region Reference (20260930000001) -- 7 regions, sub-regions
+-- genuinely optional (South Asia/Central Asia have none), countries
+-- correctly attached to both.
+set role authenticated;
+set request.jwt.claim.sub = 'dddddddd-0000-0000-0000-000000000001';
+
+do $$
+declare v_regions int; v_subregions int; v_countries int;
+begin
+  select count(*) into v_regions from world_regions;
+  select count(*) into v_subregions from world_sub_regions;
+  select count(*) into v_countries from world_countries;
+  if v_regions != 7 then
+    raise exception 'FAIL: expected exactly 7 world regions, got %', v_regions;
+  end if;
+  if v_subregions != 18 then
+    raise exception 'FAIL: expected exactly 18 world sub-regions, got %', v_subregions;
+  end if;
+  if v_countries < 40 then
+    raise exception 'FAIL: expected at least 40 seeded countries, got %', v_countries;
+  end if;
+  raise notice 'PASS: any authenticated user can read World Region Reference (regions, sub-regions, countries)';
+end $$;
+
+do $$
+declare v_total_count int; v_null_subregion_count int;
+begin
+  select count(*) into v_total_count
+  from world_countries wc
+  join world_regions wr on wr.id = wc.region_id
+  where wr.name in ('South Asia', 'Central Asia');
+
+  select count(*) into v_null_subregion_count
+  from world_countries wc
+  join world_regions wr on wr.id = wc.region_id
+  where wr.name in ('South Asia', 'Central Asia') and wc.sub_region_id is null;
+
+  if v_total_count < 6 then
+    raise exception 'FAIL: expected at least 6 South Asia/Central Asia countries, got %', v_total_count;
+  end if;
+  if v_total_count != v_null_subregion_count then
+    raise exception 'FAIL: expected every South Asia/Central Asia country to have a null sub_region_id, but only % of % do', v_null_subregion_count, v_total_count;
+  end if;
+  raise notice 'PASS: South Asia and Central Asia countries exist with no sub-region layer, as designed';
+end $$;
+
+reset role;
+
+do $$
+begin
+  begin
+    insert into world_regions (name) values ('Middle East');
+    raise exception 'FAIL: duplicate region name was allowed to insert';
+  exception
+    when unique_violation then
+      raise notice 'PASS: world region name uniqueness is enforced at the database level';
+  end;
+end $$;
