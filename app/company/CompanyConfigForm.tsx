@@ -13,7 +13,6 @@
 import { useState, useTransition } from "react";
 import {
   COMPANY_TYPES,
-  COMPANY_SECTORS,
   COMPANY_SIZES,
   ANNUAL_REVENUE_BANDS,
   TRADE_EXPERIENCE_BANDS,
@@ -196,9 +195,11 @@ function Chip({ label, on, onClick }: { label: string; on: boolean; onClick: () 
 function IdentitySection({
   company,
   countries,
+  sectors,
 }: {
   company: CompanyRow;
   countries: { id: string; name: string }[];
+  sectors: { id: string; name: string }[];
 }) {
   const [form, setForm] = useState<CompanyIdentityInput>({
     name: company.name,
@@ -300,9 +301,9 @@ function IdentitySection({
             }
           >
             <option value="">Choose...</option>
-            {COMPANY_SECTORS.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {sectors.map((s) => (
+              <option key={s.id} value={s.name}>
+                {s.name}
               </option>
             ))}
           </select>
@@ -4180,10 +4181,12 @@ export function CompanyConfigForm({
   company,
   countries,
   homeCountryStates,
+  sectors,
 }: {
   company: CompanyRow;
   countries: { id: string; name: string }[];
   homeCountryStates: string[];
+  sectors: { id: string; name: string }[];
 }) {
   const enterpriseStepsDone = [
     Boolean(company.type && company.sector),
@@ -4256,7 +4259,7 @@ export function CompanyConfigForm({
           isComplete={Boolean(company.type && company.sector)}
           defaultOpen
         >
-          <IdentitySection company={company} countries={countries} />
+          <IdentitySection company={company} countries={countries} sectors={sectors} />
         </SettingsGroup>
 
         <SettingsGroup

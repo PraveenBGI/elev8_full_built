@@ -28,19 +28,15 @@ export const COMPANY_TYPES = [
   "Financial Institution",
 ] as const;
 
-export const COMPANY_SECTORS = [
-  "Energy",
-  "Oil & Gas",
-  "Manufacturing",
-  "Construction",
-  "ICT",
-  "Healthcare",
-  "Logistics",
-  "Food & Agriculture",
-  "Tourism",
-  "Mining",
-  "Financial Services",
-] as const;
+// COMPANY_SECTORS (the old hardcoded 11-value enum) is deliberately
+// removed, not deprecated-and-kept: Sector is now real, DB-backed
+// reference data (the new global `sectors` table, see
+// lib/modules/global-master-data/adapter.ts and
+// 20260930000000_global_sector_master.sql), matching the FRD's own
+// requirement that Sector be "pulled from the database -- Active
+// Sectors." A stale compile-time enum sitting next to the real
+// database-backed source of truth would be actively misleading, not
+// harmlessly redundant, so it's gone rather than kept as an alias.
 
 export const COMPANY_SIZES = [
   "1-10 employees",
@@ -118,7 +114,11 @@ export const CompanyIdentitySchema = z.object({
   name: z.string().trim().min(1, "Company name is required"),
   countryId: z.string().uuid("Registration country is required"),
   type: z.enum(COMPANY_TYPES).nullable(),
-  sector: z.enum(COMPANY_SECTORS).nullable(),
+  // Validated as a non-empty trimmed string, not a fixed enum -- Sector
+  // is real, DB-backed reference data (the global sectors table) whose
+  // valid values can change without a code deploy, matching every other
+  // DB-backed picker in this project (home_state, corridor countries).
+  sector: z.string().trim().min(1).nullable(),
   size: z.enum(COMPANY_SIZES).nullable(),
   yearEstablished: z.coerce.number().int().min(1800).max(2100).nullable(),
   annualRevenue: z.enum(ANNUAL_REVENUE_BANDS).nullable(),

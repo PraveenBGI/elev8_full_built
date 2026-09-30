@@ -110,6 +110,19 @@ describe("CompanyIdentitySchema", () => {
     );
   });
 
+  it("accepts any non-empty sector name, since Sector is now real DB-backed reference data (the global sectors table) rather than a fixed compile-time enum", () => {
+    const result = CompanyIdentitySchema.safeParse({
+      ...valid,
+      sector: "A Sector Not In The Original Hardcoded List",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("still rejects an empty-string sector", () => {
+    const result = CompanyIdentitySchema.safeParse({ ...valid, sector: "" });
+    expect(result.success).toBe(false);
+  });
+
   it("allows every optional field to be null", () => {
     const result = CompanyIdentitySchema.safeParse({
       ...valid,
