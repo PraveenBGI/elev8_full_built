@@ -114,3 +114,31 @@ begin
       raise notice 'PASS: world region name uniqueness is enforced at the database level';
   end;
 end $$;
+
+-- Global Style of Incorporation Master (20260930000002) -- same shape
+-- and discipline as Sector Master.
+set role authenticated;
+set request.jwt.claim.sub = 'dddddddd-0000-0000-0000-000000000001';
+
+do $$
+declare v_count int;
+begin
+  select count(*) into v_count from styles_of_incorporation;
+  if v_count < 12 then
+    raise exception 'FAIL: expected at least 12 seeded styles of incorporation, got %', v_count;
+  end if;
+  raise notice 'PASS: any authenticated user can read the global Style of Incorporation Master';
+end $$;
+
+reset role;
+
+do $$
+begin
+  begin
+    insert into styles_of_incorporation (name) values ('Sole Proprietorship');
+    raise exception 'FAIL: duplicate style-of-incorporation name was allowed to insert';
+  exception
+    when unique_violation then
+      raise notice 'PASS: style-of-incorporation name uniqueness is enforced at the database level';
+  end;
+end $$;

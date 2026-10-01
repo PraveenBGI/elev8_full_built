@@ -87,6 +87,23 @@ begin
   raise notice 'PASS: owner can read and update their own company (Business Identity + Role + Trade Intent)';
 end $$;
 
+-- Style of Incorporation (20260930000002) -- a plain text column on
+-- companies, matched by name against the global master table, same
+-- modeling choice as sector.
+do $$
+declare v_style text;
+begin
+  update companies
+  set style_of_incorporation = 'Limited Liability Company (LLC)'
+  where country_id = 'eeee0000-0000-0000-0000-000000000001';
+
+  select style_of_incorporation into v_style from companies where country_id = 'eeee0000-0000-0000-0000-000000000001';
+  if v_style != 'Limited Liability Company (LLC)' then
+    raise exception 'FAIL: owner could not save Style of Incorporation, got %', v_style;
+  end if;
+  raise notice 'PASS: owner can save Style of Incorporation on Business Identity';
+end $$;
+
 -- Geography & Corridors (20260924000000) -- home_country_id is a real
 -- FK to countries, corridor_country_ids/corridor_states hold the
 -- follower's chosen international corridors and per-corridor state

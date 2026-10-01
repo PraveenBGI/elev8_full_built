@@ -119,6 +119,11 @@ export const CompanyIdentitySchema = z.object({
   // valid values can change without a code deploy, matching every other
   // DB-backed picker in this project (home_state, corridor countries).
   sector: z.string().trim().min(1).nullable(),
+  // Same DB-backed-text modeling choice as sector, see
+  // lib/modules/global-master-data/adapter.ts's
+  // listActiveStylesOfIncorporation() and
+  // 20260930000002_global_style_of_incorporation.sql.
+  styleOfIncorporation: z.string().trim().min(1).nullable(),
   size: z.enum(COMPANY_SIZES).nullable(),
   yearEstablished: z.coerce.number().int().min(1800).max(2100).nullable(),
   annualRevenue: z.enum(ANNUAL_REVENUE_BANDS).nullable(),

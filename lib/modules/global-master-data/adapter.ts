@@ -43,6 +43,23 @@ export async function listActiveSectors(): Promise<SectorRow[]> {
   return data ?? [];
 }
 
+export type StyleOfIncorporationRow = { id: string; name: string; is_active: boolean; sort_order: number };
+
+/**
+ * Active styles of incorporation only, same ordering convention as
+ * listActiveSectors() -- sort_order, not alphabetical.
+ */
+export async function listActiveStylesOfIncorporation(): Promise<StyleOfIncorporationRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("styles_of_incorporation")
+    .select("id, name, is_active, sort_order")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export type WorldRegionRow = { id: string; name: string; sort_order: number };
 export type WorldSubRegionRow = { id: string; region_id: string; name: string; sort_order: number };
 export type WorldCountryRow = {

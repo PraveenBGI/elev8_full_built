@@ -87,6 +87,7 @@ describe("CompanyIdentitySchema", () => {
     countryId: "11111111-1111-4111-8111-111111111111",
     type: "Seller / Supplier Organization" as const,
     sector: "Manufacturing" as const,
+    styleOfIncorporation: "Limited Liability Company (LLC)" as const,
     size: "51-200 employees" as const,
     yearEstablished: 2005,
     annualRevenue: "$10M to $50M" as const,
@@ -123,11 +124,25 @@ describe("CompanyIdentitySchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts any non-empty style of incorporation, same DB-backed-reference-data reasoning as sector", () => {
+    const result = CompanyIdentitySchema.safeParse({
+      ...valid,
+      styleOfIncorporation: "A Style Not In The Original Seed List",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("still rejects an empty-string style of incorporation", () => {
+    const result = CompanyIdentitySchema.safeParse({ ...valid, styleOfIncorporation: "" });
+    expect(result.success).toBe(false);
+  });
+
   it("allows every optional field to be null", () => {
     const result = CompanyIdentitySchema.safeParse({
       ...valid,
       type: null,
       sector: null,
+      styleOfIncorporation: null,
       size: null,
       yearEstablished: null,
       annualRevenue: null,

@@ -213,16 +213,19 @@ function IdentitySection({
   company,
   countries,
   sectors,
+  stylesOfIncorporation,
 }: {
   company: CompanyRow;
   countries: { id: string; name: string }[];
   sectors: { id: string; name: string }[];
+  stylesOfIncorporation: { id: string; name: string }[];
 }) {
   const [form, setForm] = useState<CompanyIdentityInput>({
     name: company.name,
     countryId: company.country_id,
     type: company.type as CompanyIdentityInput["type"],
     sector: company.sector as CompanyIdentityInput["sector"],
+    styleOfIncorporation: company.style_of_incorporation as CompanyIdentityInput["styleOfIncorporation"],
     size: company.size as CompanyIdentityInput["size"],
     yearEstablished: company.year_established,
     annualRevenue: company.annual_revenue as CompanyIdentityInput["annualRevenue"],
@@ -319,6 +322,27 @@ function IdentitySection({
           >
             <option value="">Choose...</option>
             {sectors.map((s) => (
+              <option key={s.id} value={s.name}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Style of incorporation">
+          <select
+            className={inputClass}
+            value={form.styleOfIncorporation ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                styleOfIncorporation: e.target.value
+                  ? (e.target.value as CompanyIdentityInput["styleOfIncorporation"])
+                  : null,
+              }))
+            }
+          >
+            <option value="">Choose...</option>
+            {stylesOfIncorporation.map((s) => (
               <option key={s.id} value={s.name}>
                 {s.name}
               </option>
@@ -4211,6 +4235,7 @@ export function CompanyConfigForm({
   countries,
   homeCountryStates,
   sectors,
+  stylesOfIncorporation,
   worldRegions,
   worldSubRegions,
   worldCountries,
@@ -4219,6 +4244,7 @@ export function CompanyConfigForm({
   countries: { id: string; name: string }[];
   homeCountryStates: string[];
   sectors: { id: string; name: string }[];
+  stylesOfIncorporation: { id: string; name: string }[];
   worldRegions: WorldRegionRow[];
   worldSubRegions: WorldSubRegionRow[];
   worldCountries: WorldCountryRow[];
@@ -4291,7 +4317,7 @@ export function CompanyConfigForm({
           isComplete={Boolean(company.type && company.sector)}
           defaultOpen
         >
-          <IdentitySection company={company} countries={countries} sectors={sectors} />
+          <IdentitySection company={company} countries={countries} sectors={sectors} stylesOfIncorporation={stylesOfIncorporation} />
         </SettingsGroup>
 
         <SettingsGroup

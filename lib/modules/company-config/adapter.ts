@@ -134,6 +134,7 @@ export type CompanyRow = {
   trade_years: string | null;
   countries_exported_to: number | null;
   differentiator: string | null;
+  style_of_incorporation: string | null;
   pref_level: "company" | "individual";
   primary_role: string | null;
   secondary_roles: string[];
@@ -188,7 +189,7 @@ export type CompanyRow = {
 };
 
 const COMPANY_COLUMNS =
-  "id, country_id, name, type, sector, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters, import_products, import_corridors, import_logistics, import_countries, import_req, export_products, export_corridors, export_logistics, export_countries, export_tier, export_budget, export_timeline, investment_countries, investment_tier, investment_budget, investment_timeline, investment_req, landed_cost, corridor_compare_reviewed, finance_instruments, sustainability_deep, icv_deep";
+  "id, country_id, name, type, sector, style_of_incorporation, size, year_established, annual_revenue, trade_years, countries_exported_to, differentiator, pref_level, primary_role, secondary_roles, sell_intents, buy_intents, strategic_intent, existing_partners, competitors, home_country_id, home_state, home_city, corridor_country_ids, corridor_states, market_priority, state_priority, goals, commercial_terms, pillar_selection, compliance, risk_reviewed, doc_checklist, procurement_rfq_prefs, procurement_tender_prefs, procurement_contract_prefs, b2b_products, buyer_target, buyer_segments, supplier_target, supplier_filters, import_products, import_corridors, import_logistics, import_countries, import_req, export_products, export_corridors, export_logistics, export_countries, export_tier, export_budget, export_timeline, investment_countries, investment_tier, investment_budget, investment_timeline, investment_req, landed_cost, corridor_compare_reviewed, finance_instruments, sustainability_deep, icv_deep";
 
 export async function getCompanyById(companyId: string): Promise<CompanyRow | null> {
   const db = await getDb();
@@ -215,6 +216,7 @@ export async function updateCompanyIdentity(
       country_id: parsed.countryId,
       type: parsed.type,
       sector: parsed.sector,
+      style_of_incorporation: parsed.styleOfIncorporation,
       size: parsed.size,
       year_established: parsed.yearEstablished,
       annual_revenue: parsed.annualRevenue,
