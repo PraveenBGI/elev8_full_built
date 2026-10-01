@@ -6,7 +6,8 @@ import Link from "next/link";
 import type { CountryIdentityRow, StateRow } from "@/lib/modules/config-engine/adapter";
 import type { Stage } from "@/lib/modules/config-engine/stages";
 import { readinessToStageStatus } from "@/lib/modules/config-engine/stages";
-import { StatusBadge } from "@/components/ui";
+import { StatusBadge, PageBanner } from "@/components/ui";
+import { Landmark } from "lucide-react";
 
 function StatusDot({ status }: { status: "done" | "in_progress" | "pending" }) {
   const color =
@@ -60,16 +61,11 @@ export function CountryAdminDashboard({
 
   return (
     <div className="max-w-[1000px]">
-      <p className="text-[12px] font-medium uppercase tracking-wide" style={{ color: "var(--elev8-g400)" }}>
-        Country Admin
-      </p>
-      <h1 className="mt-1 text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        {country?.name ?? "Your country"}
-      </h1>
-      <p className="mt-1.5 mb-6 text-sm" style={{ color: "var(--elev8-g500)" }}>
-        {country?.master_currency ? `${country.master_currency}, ` : ""}
-        {country?.approval_status === "published" ? "Published" : "Not yet published"}
-      </p>
+      <PageBanner
+        icon={Landmark}
+        title={country?.name ?? "Your country"}
+        description={`Country Admin${country?.master_currency ? ` -- ${country.master_currency}` : ""} -- ${country?.approval_status === "published" ? "Published" : "Not yet published"}`}
+      />
 
       <div
         className="mb-6 flex items-center gap-6 rounded-xl border bg-white p-5 shadow-[var(--elev8-shadow-sm)]"

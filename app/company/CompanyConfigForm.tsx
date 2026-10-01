@@ -111,7 +111,19 @@ import {
 } from "@/lib/modules/company-config/schemas";
 import type { CompanyRow } from "@/lib/modules/company-config/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
-import { Tag, StatusBadge, Banner, CountryPicker } from "@/components/ui";
+import { Tag, StatusBadge, Banner, CountryPicker, PageBanner } from "@/components/ui";
+import {
+  Building2,
+  ShieldCheck,
+  ShoppingCart,
+  Handshake,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  TrendingUp,
+  Leaf,
+  MapPinned,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   WorldRegionRow,
   WorldSubRegionRow,
@@ -4164,6 +4176,36 @@ function IcvCertificationSection({ company }: { company: CompanyRow }) {
 
 
 
+/**
+ * One small icon per pillar, shown once above that pillar's own
+ * SettingsGroup sections -- a cheap, real visual improvement (per this
+ * session's design discussion) that costs nothing beyond the already-
+ * installed icon library: no gradient, no illustration, just enough to
+ * break up 8 consecutive pillars' worth of plain-text section titles.
+ */
+const PILLAR_ICONS: Record<string, LucideIcon> = {
+  governance: ShieldCheck,
+  procurement: ShoppingCart,
+  b2b: Handshake,
+  import: ArrowDownToLine,
+  export: ArrowUpFromLine,
+  investment: TrendingUp,
+  sustainability: Leaf,
+  icv: MapPinned,
+};
+
+function PillarHeading({ pillarId, label }: { pillarId: string; label: string }) {
+  const Icon = PILLAR_ICONS[pillarId];
+  return (
+    <div className="mb-1 mt-6 flex items-center gap-2 first:mt-0">
+      {Icon && <Icon aria-hidden="true" className="h-4 w-4" style={{ color: "var(--brand-blue)" }} strokeWidth={2} />}
+      <h2 className="text-[13px] font-semibold uppercase tracking-wide" style={{ color: "var(--brand-blue)" }}>
+        {label}
+      </h2>
+    </div>
+  );
+}
+
 export function CompanyConfigForm({
   company,
   countries,
@@ -4194,14 +4236,11 @@ export function CompanyConfigForm({
 
   return (
     <div className="max-w-[820px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        {company.name}
-      </h1>
-      <p className="mt-1.5 mb-5 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        Enterprise Configuration. What you set here shapes which
-        opportunities, alerts, and recommendations gatewAI surfaces for
-        your company.
-      </p>
+      <PageBanner
+        icon={Building2}
+        title={company.name}
+        description="Enterprise Configuration. What you set here shapes which opportunities, alerts, and recommendations gatewAI surfaces for your company."
+      />
 
       <div
         className="mb-7 flex items-center gap-5 rounded-xl border bg-white p-4 shadow-[var(--elev8-shadow-sm)]"
@@ -4339,6 +4378,7 @@ export function CompanyConfigForm({
 
         {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("governance") && (
           <>
+            <PillarHeading pillarId="governance" label="Governance" />
             <SettingsGroup
               title="Governance: Compliance & Certs"
               summary={
@@ -4373,6 +4413,7 @@ export function CompanyConfigForm({
 
         {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("procurement") && (
           <>
+            <PillarHeading pillarId="procurement" label="Procurement" />
             <SettingsGroup
               title="Procurement: RFQ Preferences"
               summary={
@@ -4417,6 +4458,7 @@ export function CompanyConfigForm({
 
         {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("b2b") && (
           <>
+            <PillarHeading pillarId="b2b" label="B2B" />
             <SettingsGroup
               title="B2B: Products & Services"
               summary={
@@ -4457,6 +4499,7 @@ export function CompanyConfigForm({
 
         {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("import") && (
           <>
+            <PillarHeading pillarId="import" label="Import" />
             <SettingsGroup
               title="Import: Products & Services"
               summary={company.import_products.length > 0 ? `${company.import_products.length} sourcing needs` : "Not set"}
@@ -4497,6 +4540,7 @@ export function CompanyConfigForm({
 
         {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("export") && (
           <>
+            <PillarHeading pillarId="export" label="Export" />
             <SettingsGroup
               title="Export: Products & Services"
               summary={company.export_products.length > 0 ? `${company.export_products.length} products` : "Not set"}
@@ -4537,6 +4581,7 @@ export function CompanyConfigForm({
 
         {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("investment") && (
           <>
+            <PillarHeading pillarId="investment" label="Investment" />
             <SettingsGroup
               title="Investment: Preferences"
               summary={company.investment_countries.length > 0 ? `${company.investment_countries.length} markets` : "Not set"}
@@ -4577,6 +4622,7 @@ export function CompanyConfigForm({
 
         {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("sustainability") && (
           <>
+            <PillarHeading pillarId="sustainability" label="Sustainability" />
             <SettingsGroup
               title="Sustainability: Preferences"
               summary={
@@ -4617,6 +4663,7 @@ export function CompanyConfigForm({
 
         {(company.pillar_selection as { pillars?: string[] })?.pillars?.includes("icv") && (
           <>
+            <PillarHeading pillarId="icv" label="ICV" />
             <SettingsGroup
               title="ICV: Preferences"
               summary={

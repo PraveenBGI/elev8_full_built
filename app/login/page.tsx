@@ -40,7 +40,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getBrowserDb } from "@/lib/db/browser-client";
 import { resolvePostLoginRedirectAction } from "./actions";
-import { Button, Banner, FormField } from "@/components/ui";
+import { Button, Banner, FormField, PageBanner } from "@/components/ui";
+import { LogIn } from "lucide-react";
 
 const inputClass =
   "w-full rounded-md border px-3 py-2 text-[13px] outline-none transition-colors focus:border-[var(--brand-blue)] focus:ring-2 focus:ring-[var(--brand-blue)]/15";
@@ -83,15 +84,11 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
       <Image src="/elev8-logo.png" alt="elev8" width={120} height={60} priority />
 
-      <div>
-        <h1 className="text-lg font-medium" style={{ color: "var(--text-primary)" }}>
-          Sign in
-        </h1>
-        <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
-          Temporary dev sign-in only, not the real registration flow. Use a
-          user created directly in the Supabase dashboard.
-        </p>
-      </div>
+      <PageBanner
+        icon={LogIn}
+        title="Sign in"
+        description="Temporary dev sign-in only, not the real registration flow. Use a user created directly in the Supabase dashboard."
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
         <FormField label="Email" required>
