@@ -93,12 +93,20 @@ function Field({
   );
 }
 
-function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
+function HsCodeTable({
+  initialHsCodes,
+  hsChapters,
+}: {
+  initialHsCodes: HsCodeRow[];
+  hsChapters: { id: string; chapter: string; description: string }[];
+}) {
+  const chapterById = new Map(hsChapters.map((c) => [c.id, c]));
   const [hsCodes, setHsCodes] = useState(initialHsCodes);
   const [draft, setDraft] = useState<HsCodeInput>({
     code: "",
     description: "",
     category: HS_CATEGORIES[0],
+    hsChapterId: null,
   });
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -120,9 +128,15 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
       // the source of truth rather than guess one client-side.
       setHsCodes((rows) => [
         ...rows,
-        { id: `pending-${draft.code}`, ...draft },
+        {
+          id: `pending-${draft.code}`,
+          code: draft.code,
+          description: draft.description,
+          category: draft.category,
+          hs_chapter_id: draft.hsChapterId,
+        },
       ]);
-      setDraft({ code: "", description: "", category: HS_CATEGORIES[0] });
+      setDraft({ code: "", description: "", category: HS_CATEGORIES[0], hsChapterId: null });
     });
   }
 
@@ -150,6 +164,7 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Code</th>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Description</th>
                 <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>Category</th>
+                <th className="px-3 py-2 font-medium" style={{ color: "var(--elev8-g600)" }}>HS Chapter</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -159,6 +174,11 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
                   <td className="px-3 py-2">{h.code}</td>
                   <td className="px-3 py-2">{h.description}</td>
                   <td className="px-3 py-2">{h.category}</td>
+                  <td className="px-3 py-2 text-[12px]" style={{ color: "var(--elev8-g500)" }}>
+                    {h.hs_chapter_id && chapterById.has(h.hs_chapter_id)
+                      ? `Ch. ${chapterById.get(h.hs_chapter_id)!.chapter}`
+                      : "-"}
+                  </td>
                   <td className="px-3 py-2 text-end">
                     <button
                       type="button"
@@ -177,7 +197,7 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
         </div>
       )}
 
-      <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_2fr_1.4fr_auto] sm:items-end">
+      <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_2fr_1.4fr_1.4fr_auto] sm:items-end">
         <Field label="Code" error={fieldErrors.code}>
           <input
             className={inputClass}
@@ -204,6 +224,20 @@ function HsCodeTable({ initialHsCodes }: { initialHsCodes: HsCodeRow[] }) {
             {HS_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {c}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="HS Chapter (optional)">
+          <select
+            className={inputClass}
+            value={draft.hsChapterId ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, hsChapterId: e.target.value || null }))}
+          >
+            <option value="">Not linked</option>
+            {hsChapters.map((c) => (
+              <option key={c.id} value={c.id}>
+                Ch. {c.chapter} -- {c.description}
               </option>
             ))}
           </select>
@@ -1085,6 +1119,7 @@ function TaxSettingsSection({ initial }: { initial: TaxSettingsInput }) {
 
 export function MasterDataForm({
   hsCodes,
+  hsChapters,
   taxSettings,
   ftas,
   registrationTypes,
@@ -1094,6 +1129,7 @@ export function MasterDataForm({
   portsAirports,
 }: {
   hsCodes: HsCodeRow[];
+  hsChapters: { id: string; chapter: string; description: string }[];
   taxSettings: TaxSettingsInput;
   ftas: FreeTradeAgreementRow[];
   registrationTypes: string[];
@@ -1153,7 +1189,7 @@ export function MasterDataForm({
           isComplete={hsCodes.length > 0}
           defaultOpen
         >
-          <HsCodeTable initialHsCodes={hsCodes} />
+          <HsCodeTable initialHsCodes={hsCodes} hsChapters={hsChapters} />
         </SettingsGroup>
 
         <SettingsGroup

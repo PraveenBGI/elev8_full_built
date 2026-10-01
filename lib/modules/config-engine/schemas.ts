@@ -98,6 +98,13 @@ export const HsCodeSchema = z.object({
   code: z.string().trim().min(1, "HS code is required"),
   description: z.string().trim().min(1, "Description is required"),
   category: z.enum(HS_CATEGORIES),
+  // Optional link to the global HS Code Chapters master (see
+  // lib/modules/global-master-data/adapter.ts), distinct from category
+  // above -- that's elev8's own business categorization, this is an
+  // optional tie to the real international Harmonized System chapter,
+  // never required since forcing a match would pressure admins into
+  // guessing one.
+  hsChapterId: z.string().uuid().nullable(),
 });
 
 export type HsCodeInput = z.infer<typeof HsCodeSchema>;

@@ -60,6 +60,59 @@ end $$;
 
 reset role;
 
+-- hs_chapter_id (20260930000004) -- optional link to the global HS
+-- Code Chapters master, nullable, never required. Uses its own
+-- throwaway chapter row ('ZZ'), never one of the 19 real seeded
+-- chapters -- global-master-data.test.sql asserts an exact minimum
+-- count against that seed data, and this file runs before it in the
+-- CI sequence (see .github/workflows/ci.yml); deleting a real seeded
+-- chapter here to test ON DELETE SET NULL would silently break that
+-- later, unrelated assertion. Confirmed as a real failure, not a
+-- hypothetical one, while first writing this test -- caught by running
+-- the full tests/db/*.sql sequence together before trusting this file
+-- passing in isolation was enough.
+do $$
+declare v_chapter_id uuid;
+begin
+  insert into hs_code_chapters (chapter, description, section)
+  values ('ZZ', 'Test-only throwaway chapter', 'Test Section')
+  returning id into v_chapter_id;
+
+  update country_hs_codes
+  set hs_chapter_id = v_chapter_id
+  where country_id = 'eeeeeeee-0000-0000-0000-000000000001' and code = '8501.10';
+
+  if not exists (
+    select 1 from country_hs_codes
+    where code = '8501.10' and hs_chapter_id = v_chapter_id
+  ) then
+    raise exception 'FAIL: could not link a country HS code to a global chapter';
+  end if;
+  raise notice 'PASS: a country HS code can be optionally linked to a global HS chapter';
+end $$;
+
+-- Deleting the chapter must only null out the link, never delete the
+-- country's own HS code entry -- the migration's own stated intent,
+-- verified rather than assumed.
+do $$
+declare v_chapter_id uuid;
+declare v_remaining_count int;
+begin
+  select id into v_chapter_id from hs_code_chapters where chapter = 'ZZ';
+  delete from hs_code_chapters where id = v_chapter_id;
+
+  select count(*) into v_remaining_count
+  from country_hs_codes
+  where code = '8501.10' and hs_chapter_id is null;
+
+  if v_remaining_count != 1 then
+    raise exception 'FAIL: deleting a global HS chapter should set hs_chapter_id to null, not delete the country HS code row';
+  end if;
+  raise notice 'PASS: deleting a global HS chapter only nulls the link (ON DELETE SET NULL), the country HS code entry survives';
+end $$;
+
+reset role;
+
 -- ── country_ftas' fixed shape (20260920000001) ──────────────────────────
 -- Confirms the ALTER actually produced the right constraints, not just
 -- that the migration ran without SQL errors.

@@ -17,6 +17,7 @@ import {
   listCountryPortsAirports,
   listCountryZones,
 } from "@/lib/modules/config-engine/adapter";
+import { listHsCodeChapters } from "@/lib/modules/global-master-data/adapter";
 import { MasterDataForm } from "./MasterDataForm";
 
 export default async function MasterDataPage() {
@@ -43,6 +44,7 @@ export default async function MasterDataPage() {
 
   const [
     hsCodes,
+    hsChapters,
     taxSettings,
     ftas,
     registrationTypes,
@@ -52,6 +54,7 @@ export default async function MasterDataPage() {
     portsAirports,
   ] = await Promise.all([
     listCountryHsCodes(scope.countryId),
+    listHsCodeChapters(),
     getCountryTaxSettings(scope.countryId),
     listCountryFtas(scope.countryId),
     getCountryRegistrationTypes(scope.countryId),
@@ -64,6 +67,7 @@ export default async function MasterDataPage() {
   return (
     <MasterDataForm
       hsCodes={hsCodes}
+      hsChapters={hsChapters}
       taxSettings={taxSettings}
       ftas={ftas}
       registrationTypes={registrationTypes}

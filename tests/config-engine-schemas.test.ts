@@ -141,13 +141,34 @@ describe("toCountryRow", () => {
 });
 
 describe("HsCodeSchema", () => {
-  it("accepts a valid HS code entry", () => {
+  it("accepts a valid HS code entry with no chapter link", () => {
     const result = HsCodeSchema.safeParse({
       code: "8501.10",
       description: "Electric motors",
       category: "Electronics & ICT",
+      hsChapterId: null,
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts a valid HS code entry WITH a chapter link", () => {
+    const result = HsCodeSchema.safeParse({
+      code: "8501.10",
+      description: "Electric motors",
+      category: "Electronics & ICT",
+      hsChapterId: "11111111-1111-4111-8111-111111111111",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a non-UUID chapter link", () => {
+    const result = HsCodeSchema.safeParse({
+      code: "8501.10",
+      description: "Electric motors",
+      category: "Electronics & ICT",
+      hsChapterId: "not-a-uuid",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects an empty code", () => {
@@ -155,6 +176,7 @@ describe("HsCodeSchema", () => {
       code: "",
       description: "Electric motors",
       category: "Electronics & ICT",
+      hsChapterId: null,
     });
     expect(result.success).toBe(false);
   });
@@ -164,6 +186,7 @@ describe("HsCodeSchema", () => {
       code: "8501.10",
       description: "Electric motors",
       category: "Not A Real Category",
+      hsChapterId: null,
     });
     expect(result.success).toBe(false);
   });

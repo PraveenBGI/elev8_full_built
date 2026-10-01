@@ -249,13 +249,14 @@ export type HsCodeRow = {
   code: string;
   description: string;
   category: string;
+  hs_chapter_id: string | null;
 };
 
 export async function listCountryHsCodes(countryId: string): Promise<HsCodeRow[]> {
   const db = await getDb();
   const { data, error } = await db
     .from("country_hs_codes")
-    .select("id, code, description, category")
+    .select("id, code, description, category, hs_chapter_id")
     .eq("country_id", countryId)
     .order("code");
 
@@ -274,6 +275,7 @@ export async function addCountryHsCode(
     code: parsed.code,
     description: parsed.description,
     category: parsed.category,
+    hs_chapter_id: parsed.hsChapterId,
   });
   if (error) throw error;
 }
