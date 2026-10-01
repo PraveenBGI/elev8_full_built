@@ -18,7 +18,8 @@ import type {
 } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag, Banner } from "@/components/ui";
+import { Tag, Banner, PageBanner } from "@/components/ui";
+import { ArrowDownToLine } from "lucide-react";
 import { saveImportPayloadAction } from "./actions";
 
 const inputClass =
@@ -184,15 +185,11 @@ export function ImportForm({
 
   return (
     <div className="max-w-[860px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        Import
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        Every import is either a permanent cost or a temporary one.
-        Configure what can be imported and at what duty, then use the
-        substitution watchlist to flag where high import dependency is
-        really a hidden domestic manufacturing opportunity.
-      </p>
+      <PageBanner
+        icon={ArrowDownToLine}
+        title="Import"
+        description="Every import is either a permanent cost or a temporary one. Configure what can be imported and at what duty, then use the substitution watchlist to flag where high import dependency is really a hidden domestic manufacturing opportunity."
+      />
 
       <form onSubmit={handleSubmit}>
         <div

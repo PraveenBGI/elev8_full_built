@@ -15,7 +15,8 @@ import {
 import type { PillarConditionRow } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag } from "@/components/ui";
+import { Tag, PageBanner } from "@/components/ui";
+import { Leaf } from "lucide-react";
 import { saveSustainabilityPayloadAction } from "./actions";
 
 const inputClass =
@@ -180,15 +181,11 @@ export function SustainabilityForm({
 
   return (
     <div className="max-w-[920px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        Sustainability
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        The pillar that protects everything the other seven build. Set
-        the national reporting framework once, and every enterprise&apos;s
-        ESG score, every green tender requirement, and every
-        green-investment flag reads from it.
-      </p>
+      <PageBanner
+        icon={Leaf}
+        title="Sustainability"
+        description="The pillar that protects everything the other seven build. Set the national reporting framework once, and every enterprise&apos;s ESG score, every green tender requirement, and every green-investment flag reads from it."
+      />
 
       <form onSubmit={handleSubmit}>
         <div

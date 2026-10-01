@@ -13,7 +13,8 @@ import {
 } from "@/lib/modules/config-engine/schemas";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag } from "@/components/ui";
+import { Tag, PageBanner } from "@/components/ui";
+import { Handshake } from "lucide-react";
 import type { PillarConditionRow } from "@/lib/modules/config-engine/adapter";
 import { saveB2bPayloadAction } from "./actions";
 
@@ -141,14 +142,11 @@ export function B2bForm({
 
   return (
     <div className="max-w-[820px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        B2B
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        The connective tissue between every other pillar: where Procurement
-        demand meets suppliers, where Import buyers find local
-        distributors, and where Export-ready manufacturers get discovered.
-      </p>
+      <PageBanner
+        icon={Handshake}
+        title="B2B"
+        description="The connective tissue between every other pillar: where Procurement demand meets suppliers, where Import buyers find local distributors, and where Export-ready manufacturers get discovered."
+      />
 
       <form onSubmit={handleSubmit}>
         <div

@@ -11,7 +11,7 @@ import { Landmark } from "lucide-react";
 
 function StatusDot({ status }: { status: "done" | "in_progress" | "pending" }) {
   const color =
-    status === "done" ? "var(--elev8-green)" : status === "in_progress" ? "var(--elev8-orange)" : "var(--elev8-g200)";
+    status === "done" ? "var(--elev8-green)" : status === "in_progress" ? "var(--status-warning-text)" : "var(--elev8-g200)";
   return <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />;
 }
 

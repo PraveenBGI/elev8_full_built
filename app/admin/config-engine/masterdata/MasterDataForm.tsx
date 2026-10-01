@@ -36,7 +36,8 @@ import type {
   ZoneRow,
 } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
-import { Tag } from "@/components/ui";
+import { Tag, PageBanner } from "@/components/ui";
+import { Database } from "lucide-react";
 import {
   addFtaAction,
   addHsCodeAction,
@@ -1136,13 +1137,11 @@ export function MasterDataForm({
 
   return (
     <div className="max-w-[720px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        Country Master Data
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        HS codes, tax settings, and other reference data every pillar reads
-        from.
-      </p>
+      <PageBanner
+        icon={Database}
+        title="Country Master Data"
+        description="HS codes, tax settings, and other reference data every pillar reads from."
+      />
 
       <div
         className="rounded-xl border bg-white px-5 shadow-[var(--elev8-shadow-sm)]"

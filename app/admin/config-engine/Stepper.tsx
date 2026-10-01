@@ -13,6 +13,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Stage, StageStatus } from "@/lib/modules/config-engine/stages";
+import { StatusBadge } from "@/components/ui";
 
 export function Stepper({
   stages,
@@ -43,7 +44,7 @@ export function Stepper({
             <div
               className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium"
               style={{
-                background: status === "done" ? "var(--elev8-green)" : "var(--elev8-g100)",
+                background: status === "done" ? "var(--status-success-text)" : "var(--elev8-g100)",
                 color: status === "done" ? "#fff" : "var(--elev8-g500)",
               }}
             >
@@ -57,29 +58,15 @@ export function Stepper({
                 {s.label}
               </div>
               {s.id !== "welcome" && s.id !== "review" && (
-                <StatusBadge status={status} />
+                <StatusBadge
+                  tone={status === "done" ? "success" : status === "in_progress" ? "warning" : "neutral"}
+                  label={status === "done" ? "Complete" : status === "in_progress" ? "In progress" : "Not started"}
+                />
               )}
             </div>
           </Link>
         );
       })}
     </nav>
-  );
-}
-
-function StatusBadge({ status }: { status: StageStatus }) {
-  const styles: Record<StageStatus, { bg: string; color: string; label: string }> = {
-    done: { bg: "#E6F5EC", color: "var(--elev8-green-dk)", label: "Complete" },
-    in_progress: { bg: "#FFF6E5", color: "var(--elev8-orange)", label: "In progress" },
-    pending: { bg: "var(--elev8-g100)", color: "var(--elev8-g500)", label: "Not started" },
-  };
-  const s = styles[status];
-  return (
-    <span
-      className="mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium"
-      style={{ background: s.bg, color: s.color }}
-    >
-      {s.label}
-    </span>
   );
 }

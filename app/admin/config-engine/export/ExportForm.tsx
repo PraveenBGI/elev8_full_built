@@ -21,7 +21,8 @@ import type {
 } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag, StatusBadge, Banner } from "@/components/ui";
+import { Tag, StatusBadge, Banner, PageBanner } from "@/components/ui";
+import { ArrowUpFromLine } from "lucide-react";
 import { saveExportPayloadAction } from "./actions";
 
 const inputClass =
@@ -211,14 +212,11 @@ export function ExportForm({
 
   return (
     <div className="max-w-[900px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        Export
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        Which sectors to grow abroad, which markets to prioritize, which
-        corridors carry that trade, and how ready an exporter needs to be
-        before the platform actively recommends them into an opportunity.
-      </p>
+      <PageBanner
+        icon={ArrowUpFromLine}
+        title="Export"
+        description="Which sectors to grow abroad, which markets to prioritize, which corridors carry that trade, and how ready an exporter needs to be before the platform actively recommends them into an opportunity."
+      />
 
       <form onSubmit={handleSubmit}>
         <div

@@ -21,6 +21,8 @@
 import { useState, useTransition } from "react";
 import type { StateRow } from "@/lib/modules/config-engine/adapter";
 import type { StateInput } from "@/lib/modules/config-engine/schemas";
+import { PageBanner } from "@/components/ui";
+import { Map } from "lucide-react";
 import {
   addStateAction,
   removeStateAction,
@@ -172,14 +174,11 @@ export function StateClusterForm({ states }: { states: StateRow[] }) {
 
   return (
     <div className="max-w-[720px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        State Cluster
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        Turn on the states active on this platform, flag any as a Thrust
-        Cluster, and choose whether each one is centrally configured or
-        delegated to its own State Admin.
-      </p>
+      <PageBanner
+        icon={Map}
+        title="State Cluster"
+        description="Turn on the states active on this platform, flag any as a Thrust Cluster, and choose whether each one is centrally configured or delegated to its own State Admin."
+      />
 
       {rows.length > 0 ? (
         <div className="mb-5 space-y-3">

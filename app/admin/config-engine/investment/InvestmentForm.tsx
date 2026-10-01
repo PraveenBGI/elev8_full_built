@@ -13,7 +13,8 @@ import {
 import type { PillarConditionRow, ZoneRow } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag, Banner } from "@/components/ui";
+import { Tag, Banner, PageBanner } from "@/components/ui";
+import { TrendingUp } from "lucide-react";
 import { saveInvestmentPayloadAction } from "./actions";
 
 const inputClass =
@@ -148,14 +149,11 @@ export function InvestmentForm({
 
   return (
     <div className="max-w-[860px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        Investment
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        Which sectors the country actively promotes to investors, what
-        incentives exist, how due diligence and committee governance
-        work, and how investor profiles get matched to opportunities.
-      </p>
+      <PageBanner
+        icon={TrendingUp}
+        title="Investment"
+        description="Which sectors the country actively promotes to investors, what incentives exist, how due diligence and committee governance work, and how investor profiles get matched to opportunities."
+      />
 
       <form onSubmit={handleSubmit}>
         <div

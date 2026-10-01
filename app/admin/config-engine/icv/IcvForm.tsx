@@ -13,7 +13,8 @@ import {
 import type { PillarConditionRow } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag } from "@/components/ui";
+import { Tag, PageBanner } from "@/components/ui";
+import { MapPinned } from "lucide-react";
 import { saveIcvPayloadAction } from "./actions";
 
 const inputClass =
@@ -185,16 +186,11 @@ export function IcvForm({
 
   return (
     <div className="max-w-[920px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        ICV / Local Content
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        Governance sets the rules, Procurement creates demand, Import
-        reveals dependency, Export grows markets, Investment builds
-        capacity. ICV is what turns all of that into domestic value that
-        compounds. Every percentage below is an independently
-        configurable award weight, not a single 100% split.
-      </p>
+      <PageBanner
+        icon={MapPinned}
+        title="ICV / Local Content"
+        description="Governance sets the rules, Procurement creates demand, Import reveals dependency, Export grows markets, Investment builds capacity. ICV is what turns all of that into domestic value that compounds. Every percentage below is an independently configurable award weight, not a single 100% split."
+      />
 
       <form onSubmit={handleSubmit}>
         <div

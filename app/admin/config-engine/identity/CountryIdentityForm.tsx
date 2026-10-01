@@ -21,6 +21,8 @@ import type { CountryIdentityRow } from "@/lib/modules/config-engine/adapter";
 import type { CountryIdentityInput } from "@/lib/modules/config-engine/schemas";
 import { saveCountryIdentityAction } from "./actions";
 import { SettingsGroup } from "@/components/SettingsGroup";
+import { Banner, PageBanner } from "@/components/ui";
+import { Fingerprint } from "lucide-react";
 
 function rowToFormInput(row: CountryIdentityRow): CountryIdentityInput {
   return {
@@ -133,20 +135,18 @@ export function CountryIdentityForm({ country }: { country: CountryIdentityRow }
 
   return (
     <div className="max-w-[640px]">
-      <h1 className="text-[22px] font-semibold text-[var(--elev8-ink)]">
-        Country Identity
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed text-[var(--elev8-g500)]">
-        The foundation every other pillar reads from: currency, tax year, and
-        classification. Everything else in this platform inherits from what
-        you set here.
-      </p>
-
+      <PageBanner
+        icon={Fingerprint}
+        title="Country Identity"
+        description="The foundation every other pillar reads from: currency, tax year, and classification. Everything else in this platform inherits from what you set here."
+      />
       {country.approval_status !== "draft" && (
-        <p className="mb-5 rounded-md bg-[#FFF6E5] px-3 py-2 text-sm text-[var(--elev8-orange)]">
-          This country&apos;s configuration is currently{" "}
-          <strong>{country.approval_status}</strong>.
-        </p>
+        <div className="mb-5">
+          <Banner tone="warning">
+            This country&apos;s configuration is currently{" "}
+            <strong>{country.approval_status}</strong>.
+          </Banner>
+        </div>
       )}
 
       <form onSubmit={handleSubmit}>

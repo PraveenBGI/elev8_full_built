@@ -21,7 +21,8 @@ import {
 } from "@/lib/modules/config-engine/schemas";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
-import { Tag } from "@/components/ui";
+import { Tag, PageBanner } from "@/components/ui";
+import { ShoppingCart } from "lucide-react";
 import type { PillarConditionRow } from "@/lib/modules/config-engine/adapter";
 import { saveProcurementPayloadAction } from "./actions";
 
@@ -137,15 +138,11 @@ export function ProcurementForm({
 
   return (
     <div className="max-w-[820px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        Procurement
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        How public and private demand reaches the market: which tender
-        types are legal instruments here, at what value they trigger
-        which process, and how bids get scored. This becomes the shared
-        evaluation engine every tender on the platform runs through.
-      </p>
+      <PageBanner
+        icon={ShoppingCart}
+        title="Procurement"
+        description="How public and private demand reaches the market: which tender types are legal instruments here, at what value they trigger which process, and how bids get scored. This becomes the shared evaluation engine every tender on the platform runs through."
+      />
 
       <form onSubmit={handleSubmit}>
         <div

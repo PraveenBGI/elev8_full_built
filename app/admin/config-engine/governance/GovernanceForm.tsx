@@ -20,6 +20,8 @@ import {
 import type { AuthorityRow, PillarConditionRow, StakeholderRow } from "@/lib/modules/config-engine/adapter";
 import { SettingsGroup } from "@/components/SettingsGroup";
 import { PillarGovernancePanel } from "@/components/PillarGovernancePanel";
+import { PageBanner } from "@/components/ui";
+import { ShieldCheck } from "lucide-react";
 import {
   addAuthorityAction,
   addStakeholderAction,
@@ -509,14 +511,11 @@ export function GovernanceForm({
 
   return (
     <div className="max-w-[720px]">
-      <h1 className="text-[22px] font-semibold" style={{ color: "var(--elev8-ink)" }}>
-        Governance
-      </h1>
-      <p className="mt-1.5 mb-7 text-sm leading-relaxed" style={{ color: "var(--elev8-g500)" }}>
-        Authorities, stakeholders, escalation, and data governance. Every
-        other pillar that needs an approval authority reads from what you
-        register here.
-      </p>
+      <PageBanner
+        icon={ShieldCheck}
+        title="Governance"
+        description="Authorities, stakeholders, escalation, and data governance. Every other pillar that needs an approval authority reads from what you register here."
+      />
 
       <div
         className="rounded-xl border bg-white px-5 shadow-[var(--elev8-shadow-sm)]"
