@@ -60,6 +60,31 @@ export async function listActiveStylesOfIncorporation(): Promise<StyleOfIncorpor
   return data ?? [];
 }
 
+export type HsCodeChapterRow = {
+  id: string;
+  chapter: string;
+  description: string;
+  section: string;
+  sort_order: number;
+};
+
+/**
+ * Chapter-level (2-digit) HS code reference only -- see
+ * 20260930000003_global_hs_code_chapters.sql for why 6-digit
+ * subheadings aren't seeded. Does not touch country_hs_codes (the
+ * existing per-country table) -- reconciling the two is real, separate
+ * follow-on work, not done by this function.
+ */
+export async function listHsCodeChapters(): Promise<HsCodeChapterRow[]> {
+  const db = await getDb();
+  const { data, error } = await db
+    .from("hs_code_chapters")
+    .select("id, chapter, description, section, sort_order")
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export type WorldRegionRow = { id: string; name: string; sort_order: number };
 export type WorldSubRegionRow = { id: string; region_id: string; name: string; sort_order: number };
 export type WorldCountryRow = {

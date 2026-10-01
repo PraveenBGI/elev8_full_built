@@ -142,3 +142,32 @@ begin
       raise notice 'PASS: style-of-incorporation name uniqueness is enforced at the database level';
   end;
 end $$;
+
+-- Global HS Code Chapters (20260930000003) -- chapter-level only, see
+-- the migration's own comment for why 6-digit subheadings aren't
+-- seeded here.
+set role authenticated;
+set request.jwt.claim.sub = 'dddddddd-0000-0000-0000-000000000001';
+
+do $$
+declare v_count int;
+begin
+  select count(*) into v_count from hs_code_chapters;
+  if v_count < 19 then
+    raise exception 'FAIL: expected at least 19 seeded HS code chapters, got %', v_count;
+  end if;
+  raise notice 'PASS: any authenticated user can read the global HS Code Chapters master';
+end $$;
+
+reset role;
+
+do $$
+begin
+  begin
+    insert into hs_code_chapters (chapter, description, section) values ('27', 'Duplicate test', 'Mineral Products');
+    raise exception 'FAIL: duplicate chapter number was allowed to insert';
+  exception
+    when unique_violation then
+      raise notice 'PASS: HS code chapter number uniqueness is enforced at the database level';
+  end;
+end $$;
